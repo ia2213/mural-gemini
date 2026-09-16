@@ -28,7 +28,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         }
     }
 
-    func connect(api: APIClient, instructions: String, history: [[String: Any]]) async throws {
+    func connect(api: APIClient, instructions: String, history: [[String: Any]], provider: AIProvider = .hermes, customEndpoint: String = "", customModel: String = "") async throws {
         disconnect()
         closing = false
         let token = UUID(); attempt = token
@@ -36,8 +36,6 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         guard granted else { throw TransportError.microphone }
         try Task.checkCancellation()
         guard attempt == token else { throw CancellationError() }
-        // WebRTC reapplies this configuration when its audio unit starts.
-        // Setting AVAudioSession alone loses the speaker preference at that point.
         let audioConfiguration = RTCAudioSessionConfiguration()
         audioConfiguration.category = AVAudioSession.Category.playAndRecord.rawValue
         audioConfiguration.mode = AVAudioSession.Mode.voiceChat.rawValue
@@ -64,39 +62,18 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         localTrack = track; isMuted = false
         peer.add(track, streamIds: ["mural-audio"])
         let dataConfig = RTCDataChannelConfiguration(); dataConfig.isOrdered = true
-        guard let channel = peer.dataChannel(forLabel: "gemini-events", configuration: dataConfig) else { throw TransportError.connection }
+        guard let channel = peer.dataChannel(forLabel: "events", configuration: dataConfig) else { throw TransportError.connection }
         self.channel = channel; channel.delegate = self
-        let offer: RTCSessionDescription = try await withCheckedThrowingContinuation { c in
-            peer.offer(for: RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "true", "OfferToReceiveVideo": "false"], optionalConstraints: nil)) { sdp, error in
-                if let error { c.resume(throwing: error) } else if let sdp { c.resume(returning: sdp) } else { c.resume(throwing: TransportError.connection) }
-            }
-        }
-        try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
-            peer.setLocalDescription(offer) { error in if let error { c.resume(throwing: error) } else { c.resume() } }
-        }
-        let deadline = Date().addingTimeInterval(10)
-        while peer.iceGatheringState != .complete {
-            try await Task.sleep(for: .milliseconds(100))
-            guard attempt == token else { throw CancellationError() }
-            guard Date() < deadline else { throw TransportError.timeout }
-        }
-        guard let sdp = peer.localDescription?.sdp else { throw TransportError.connection }
-        let result = try await api.post("gemini-2.5-flash:generateContent", body: [
-            "systemInstruction": ["parts": [["text": instructions]]],
-            "contents": [["role": "user", "parts": [["text": "Start conversation"]]]]
-        ])
+
+        let initialResult = try await api.respond(instructions: instructions, input: "Start conversation", provider: provider, customEndpoint: customEndpoint, customModel: customModel)
         guard attempt == token else { throw CancellationError() }
         let sessionID = UUID().uuidString
         onEvent?(["type": "mural.session.created", "session": ["id": sessionID]])
-        if let transport = result["transport"] as? [String: Any], let answer = transport["sdp"] as? String {
-            try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
-                peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: answer)) { error in
-                    if let error { c.resume(throwing: error) } else { c.resume() }
-                }
-            }
-        }
         started = true
         onEvent?(["type": "session.started", "session": ["id": sessionID]])
+        if !initialResult.text.isEmpty {
+            onEvent?(["type": "session.output_transcript.delta", "delta": initialResult.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
+        }
         startMetering()
     }
 

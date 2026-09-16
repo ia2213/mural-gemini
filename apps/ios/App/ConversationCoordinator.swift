@@ -134,7 +134,8 @@ import MuralCore
         let instructions = TeachingPolicy.voice(language: language, learner: learner, theme: selectedTheme, interests: store.preferences.interests, meaningLanguage: store.preferences.meaningLanguage)
         connectionTask = Task { [weak self] in
             guard let self else { return }
-            do { try await self.transport.connect(api: self.api, instructions: instructions, history: history) }
+            let provider = AIProvider(rawValue: self.store.preferences.providerID) ?? .hermes
+            do { try await self.transport.connect(api: self.api, instructions: instructions, history: history, provider: provider, customEndpoint: self.store.preferences.customEndpoint, customModel: self.store.preferences.customModel) }
             catch is CancellationError { return }
             catch {
                 guard self.session?.id == generation, self.state == .connecting || self.state == .active else { return }
