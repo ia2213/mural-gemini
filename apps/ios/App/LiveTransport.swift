@@ -41,7 +41,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         let audioConfiguration = RTCAudioSessionConfiguration()
         audioConfiguration.category = AVAudioSession.Category.playAndRecord.rawValue
         audioConfiguration.mode = AVAudioSession.Mode.voiceChat.rawValue
-        audioConfiguration.categoryOptions = [.defaultToSpeaker, .allowBluetoothHFP]
+        audioConfiguration.categoryOptions = [.defaultToSpeaker, .allowBluetooth]
         RTCAudioSessionConfiguration.setWebRTC(audioConfiguration)
         let audio = RTCAudioSession.sharedInstance()
         audio.lockForConfiguration()
