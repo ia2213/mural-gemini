@@ -26,7 +26,7 @@ struct SoftGlass: ViewModifier {
     var tint: Color = .white.opacity(0.45)
     func body(content: Content) -> some View {
         if reduceTransparency { content.background(.white, in: Capsule()) }
-        else { content.glassEffect(.regular.tint(tint).interactive(), in: .capsule) }
+        else { content.background(.ultraThinMaterial, in: Capsule()) }
     }
 }
 
