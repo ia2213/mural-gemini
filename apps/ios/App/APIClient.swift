@@ -16,73 +16,98 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         config.httpCookieStorage = nil; config.urlCache = nil
         session = URLSession(configuration: config, delegate: NoRedirect(), delegateQueue: nil)
     }
-    func post(_ path: String, body: [String: Any]) async throws -> [String: Any] {
-        guard let key = CredentialStore.read() else { throw APIError.missingKey }
-        let endpoint = path.contains("http") ? path : "https://generativelanguage.googleapis.com/v1beta/models/" + path + "?key=" + key
-        guard let url = URL(string: endpoint) else { throw APIError.invalidResponse }
+    
+    func postURL(_ urlString: String, body: [String: Any], apiKey: String = "") async throws -> [String: Any] {
+        guard let url = URL(string: urlString) else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !apiKey.isEmpty {
+            request.setValue("Bearer " + apiKey, forHTTPHeaderField: "Authorization")
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await session.data(for: request)
         try Task.checkCancellation()
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200..<300).contains(http.statusCode) else { throw ProviderFailure(status: http.statusCode, body: data, reference: http.value(forHTTPHeaderField: "x-goog-request-id")) }
+        guard (200..<300).contains(http.statusCode) else { throw ProviderFailure(status: http.statusCode, body: data, reference: http.value(forHTTPHeaderField: "x-request-id") ?? http.value(forHTTPHeaderField: "x-goog-request-id")) }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw APIError.invalidResponse }
         return json
     }
-    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false) async throws -> APIResult {
-        var contents: [[String: Any]] = [
-            ["role": "user", "parts": [["text": input]]]
-        ]
-        var generationConfig: [String: Any] = [
-            "maxOutputTokens": schema == nil ? 1400 : 2200
-        ]
-        if let schema {
-            generationConfig["responseMimeType"] = "application/json"
-            generationConfig["responseSchema"] = schema
-        }
-        var body: [String: Any] = [
-            "systemInstruction": ["parts": [["text": instructions]]],
-            "contents": contents,
-            "generationConfig": generationConfig
-        ]
-        if search {
-            body["tools"] = [["googleSearch": [String: Any]()]]
-        }
-        let json = try await post("gemini-2.5-flash:generateContent", body: body)
-        guard let candidates = json["candidates"] as? [[String: Any]],
-              let firstCandidate = candidates.first,
-              let content = firstCandidate["content"] as? [String: Any],
-              let parts = content["parts"] as? [[String: Any]] else {
-            throw APIError.incomplete
-        }
-        var text = ""
-        for part in parts {
-            if let partText = part["text"] as? String { text += partText }
-        }
-        var sources: [SourceLink] = []
-        if let grounding = firstCandidate["groundingMetadata"] as? [String: Any],
-           let chunks = grounding["groundingChunks"] as? [[String: Any]] {
-            for chunk in chunks {
-                if let web = chunk["web"] as? [String: Any], let url = web["uri"] as? String {
-                    let source = SourceLink(title: web["title"] as? String ?? "Source", url: url)
-                    if source.safeURL != nil && !sources.contains(where: { $0.url == url }) { sources.append(source) }
+
+    func post(_ path: String, body: [String: Any]) async throws -> [String: Any] {
+        let key = CredentialStore.read() ?? ""
+        let endpoint = path.contains("http") ? path : "https://generativelanguage.googleapis.com/v1beta/models/" + path + "?key=" + key
+        return try await postURL(endpoint, body: body, apiKey: key)
+    }
+
+    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, provider: AIProvider = .hermes, customEndpoint: String = "", customModel: String = "") async throws -> APIResult {
+        let key = CredentialStore.read() ?? ""
+        let endpoint: String = {
+            if (provider == .custom || provider == .hermes) && !customEndpoint.isEmpty { return customEndpoint }
+            return provider.defaultEndpoint
+        }()
+
+        if provider == .gemini {
+            var contents: [[String: Any]] = [["role": "user", "parts": [["text": input]]]]
+            var genConfig: [String: Any] = ["maxOutputTokens": schema == nil ? 1400 : 2200]
+            if let schema { genConfig["responseMimeType"] = "application/json"; genConfig["responseSchema"] = schema }
+            var body: [String: Any] = ["systemInstruction": ["parts": [["text": instructions]]], "contents": contents, "generationConfig": genConfig]
+            if search { body["tools"] = [["googleSearch": [String: Any]()]] }
+
+            let urlString = endpoint.contains("?") ? "\(endpoint)&key=\(key)" : "\(endpoint)?key=\(key)"
+            let json = try await postURL(urlString, body: body, apiKey: key)
+            
+            guard let candidates = json["candidates"] as? [[String: Any]],
+                  let firstCandidate = candidates.first,
+                  let content = firstCandidate["content"] as? [String: Any],
+                  let parts = content["parts"] as? [[String: Any]] else { throw APIError.incomplete }
+            var text = ""
+            for part in parts { if let partText = part["text"] as? String { text += partText } }
+            var sources: [SourceLink] = []
+            if let grounding = firstCandidate["groundingMetadata"] as? [String: Any],
+               let chunks = grounding["groundingChunks"] as? [[String: Any]] {
+                for chunk in chunks {
+                    if let web = chunk["web"] as? [String: Any], let url = web["uri"] as? String {
+                        let source = SourceLink(title: web["title"] as? String ?? "Source", url: url)
+                        if source.safeURL != nil && !sources.contains(where: { $0.url == url }) { sources.append(source) }
+                    }
                 }
             }
+            var usage = APIUsage()
+            if let u = json["usageMetadata"] as? [String: Any] {
+                usage.input = u["promptTokenCount"] as? Int ?? 0; usage.output = u["candidatesTokenCount"] as? Int ?? 0
+            }
+            if let grounding = firstCandidate["groundingMetadata"] as? [String: Any],
+               let queries = grounding["webSearchQueries"] as? [Any] { usage.searches = queries.count }
+            guard !text.isEmpty else { throw APIError.incomplete }
+            return APIResult(text: text, sources: sources, usage: usage)
+        } else {
+            // OpenAI-compatible format (Hermes, Groq, OpenRouter, OpenAI, Custom)
+            let model = (provider == .custom || provider == .hermes) && !customModel.isEmpty ? customModel : provider.defaultModel
+            let messages: [[String: Any]] = [
+                ["role": "system", "content": instructions],
+                ["role": "user", "content": input]
+            ]
+            let body: [String: Any] = [
+                "model": model,
+                "messages": messages,
+                "max_tokens": schema == nil ? 1400 : 2200
+            ]
+            let json = try await postURL(endpoint, body: body, apiKey: key)
+            guard let choices = json["choices"] as? [[String: Any]],
+                  let firstChoice = choices.first,
+                  let message = firstChoice["message"] as? [String: Any],
+                  let text = message["content"] as? String else { throw APIError.incomplete }
+            var usage = APIUsage()
+            if let u = json["usage"] as? [String: Any] {
+                usage.input = u["prompt_tokens"] as? Int ?? 0
+                usage.output = u["completion_tokens"] as? Int ?? 0
+            }
+            guard !text.isEmpty else { throw APIError.incomplete }
+            return APIResult(text: text, sources: [], usage: usage)
         }
-        var usage = APIUsage()
-        if let u = json["usageMetadata"] as? [String: Any] {
-            usage.input = u["promptTokenCount"] as? Int ?? 0
-            usage.output = u["candidatesTokenCount"] as? Int ?? 0
-        }
-        if let grounding = firstCandidate["groundingMetadata"] as? [String: Any],
-           let queries = grounding["webSearchQueries"] as? [Any] {
-            usage.searches = queries.count
-        }
-        guard !text.isEmpty else { throw APIError.incomplete }
-        return APIResult(text: text, sources: sources, usage: usage)
     }
+
     static func object(_ fields: [String: Any]) -> [String: Any] { ["type": "OBJECT", "properties": fields, "required": fields.keys.sorted()] }
     static let string: [String: Any] = ["type": "STRING"]
     static func assessmentSchema(language: LanguageModule) -> [String: Any] { object([
@@ -98,13 +123,13 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         case missingKey, invalidResponse, incomplete, refused, http(Int)
         var errorDescription: String? {
             switch self {
-            case .missingKey: "Add your Gemini key in Settings to begin."
-            case .invalidResponse, .incomplete: "Gemini returned an incomplete response. Please try again."
+            case .missingKey: "Please configure your API key or endpoint in Settings."
+            case .invalidResponse, .incomplete: "The AI provider returned an incomplete response. Please try again."
             case .refused: "Mural couldn’t complete that request. Try a different topic."
-            case .http(401), .http(403): "Your Gemini key wasn’t accepted. Check it in Settings."
-            case .http(404): "This API key may not have access to the requested model. Check your Google AI Studio project."
-            case .http(429): "Gemini’s usage or rate limit was reached. Check your project’s billing and limits."
-            case .http(let status): "Gemini couldn’t complete the request (HTTP \(status)). Please try again."
+            case .http(401), .http(403): "Your API key or endpoint wasn’t accepted. Check Settings."
+            case .http(404): "This model or endpoint was not found. Check your provider settings."
+            case .http(429): "The provider's rate limit was reached. Try again shortly."
+            case .http(let status): "The AI service couldn’t complete the request (HTTP \(status)). Please try again."
             }
         }
     }

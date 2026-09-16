@@ -320,27 +320,51 @@ struct SettingsView: View {
                     }
                 }
                 Section {
+                    Picker("AI Provider", selection: Binding(get: { AIProvider(rawValue: store.preferences.providerID) ?? .hermes }, set: { provider in
+                        store.updatePreferences { $0.providerID = provider.rawValue }
+                    })) {
+                        ForEach(AIProvider.allCases) { p in
+                            Text(p.displayName).tag(p)
+                        }
+                    }
+                    
+                    let activeProvider = AIProvider(rawValue: store.preferences.providerID) ?? .hermes
+                    
+                    if activeProvider == .hermes || activeProvider == .custom {
+                        TextField("Endpoint URL", text: Binding(get: { store.preferences.customEndpoint.isEmpty ? activeProvider.defaultEndpoint : store.preferences.customEndpoint }, set: { val in
+                            store.updatePreferences { $0.customEndpoint = val }
+                        }))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        
+                        TextField("Model Name (optional)", text: Binding(get: { store.preferences.customModel }, set: { val in
+                            store.updatePreferences { $0.customModel = val }
+                        }))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    }
+                    
                     DisclosureGroup(isExpanded: $showingAPIKey) {
                         if hasKey { Label("Your key is saved on this iPhone", systemImage: "checkmark.shield") }
-                        SecureField(hasKey ? "Replace Gemini key" : "Gemini API key", text: $key)
+                        SecureField("API Key (optional for Hermes)", text: $key)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().privacySensitive().accessibilityIdentifier("api-key")
                         Button(hasKey ? "Save replacement key" : "Save key") {
-                            do { try CredentialStore.save(key); key = ""; hasKey = true; message = "Saved securely. Start a conversation to connect." }
+                            do { try CredentialStore.save(key); key = ""; hasKey = true; message = "Saved securely." }
                             catch { message = error.localizedDescription }
-                        }.disabled(key.isEmpty || coordinator.isRunning)
-                        Link("Open Google AI Studio keys", destination: URL(string: "https://aistudio.google.com/app/apikey")!)
+                        }.disabled(coordinator.isRunning)
+                        if !activeProvider.keyURL.isEmpty {
+                            Link("Get \(activeProvider.displayName) API Key", destination: URL(string: activeProvider.keyURL)!)
+                        }
                         if hasKey {
                             Button("Remove key", role: .destructive) {
                                 do { try CredentialStore.delete(); hasKey = false; message = "Your key has been removed." }
                                 catch { message = error.localizedDescription }
                             }.disabled(coordinator.isRunning)
                         }
-                        Text("Your Google Gemini account pays for usage. The key stays in this iPhone’s Keychain and is sent only to Gemini.")
-                            .font(.footnote).foregroundStyle(MuralColor.secondary)
-                    } label: { Label("Use your own API key", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
+                    } label: { Label("API Key Settings", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
                     if let message { Text(message).font(.footnote).foregroundStyle(MuralColor.secondary) }
-                } header: { Text("Advanced") } footer: {
-                    if !hasKey { Text("This version uses your Gemini API key to start a conversation.") }
+                } header: { Text("AI Engine & Provider") } footer: {
+                    Text("Select your preferred AI service: Hermes Agent, Google Gemini (Free), Groq (Free), OpenRouter (Free), OpenAI or custom endpoint.")
                 }
                 Section {
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {

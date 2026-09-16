@@ -176,6 +176,61 @@ public struct SessionRecord: Codable, Identifiable, Sendable {
     }
 }
 
+public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
+    case hermes = "hermes"
+    case gemini = "gemini"
+    case groq = "groq"
+    case openrouter = "openrouter"
+    case openai = "openai"
+    case custom = "custom"
+    
+    public var id: String { rawValue }
+    
+    public var displayName: String {
+        switch self {
+        case .hermes: return "Hermes Agent (Local / Remote)"
+        case .gemini: return "Google Gemini (2.5 Flash - Free)"
+        case .groq: return "Groq (Llama 3.3 70B - Free)"
+        case .openrouter: return "OpenRouter (Free Models)"
+        case .openai: return "OpenAI"
+        case .custom: return "Custom OpenAI Endpoint"
+        }
+    }
+    
+    public var defaultEndpoint: String {
+        switch self {
+        case .hermes: return "http://localhost:8765/v1/chat/completions"
+        case .gemini: return "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        case .groq: return "https://api.groq.com/openai/v1/chat/completions"
+        case .openrouter: return "https://openrouter.ai/api/v1/chat/completions"
+        case .openai: return "https://api.openai.com/v1/chat/completions"
+        case .custom: return "http://192.168.1.100:8000/v1/chat/completions"
+        }
+    }
+    
+    public var defaultModel: String {
+        switch self {
+        case .hermes: return "hermes-3-llama-3.1-8b"
+        case .gemini: return "gemini-2.5-flash"
+        case .groq: return "llama-3.3-70b-versatile"
+        case .openrouter: return "meta-llama/llama-3.3-70b-instruct:free"
+        case .openai: return "gpt-4o-mini"
+        case .custom: return "default"
+        }
+    }
+    
+    public var keyURL: String {
+        switch self {
+        case .hermes: return "https://hermes-agent.nousresearch.com/"
+        case .gemini: return "https://aistudio.google.com/app/apikey"
+        case .groq: return "https://console.groq.com/keys"
+        case .openrouter: return "https://openrouter.ai/keys"
+        case .openai: return "https://platform.openai.com/api-keys"
+        case .custom: return ""
+        }
+    }
+}
+
 public struct Preferences: Codable, Sendable {
     public var learningLanguageID = LanguageRegistry.defaultID
     public var meaningVisible = true
@@ -185,6 +240,9 @@ public struct Preferences: Codable, Sendable {
     public var interests = ""
     public var hasOnboarded = false
     public var aiConsentVersion: Int?
+    public var providerID: String = "hermes"
+    public var customEndpoint: String = ""
+    public var customModel: String = ""
     public init() {}
 }
 
