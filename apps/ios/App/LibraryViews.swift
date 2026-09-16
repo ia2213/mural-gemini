@@ -336,13 +336,13 @@ struct SettingsView: View {
                         }))
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        
-                        TextField("Model Name (optional)", text: Binding(get: { store.preferences.customModel }, set: { val in
-                            store.updatePreferences { $0.customModel = val }
-                        }))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
                     }
+                    
+                    TextField("Model Name (override: e.g. \(activeProvider.defaultModel))", text: Binding(get: { store.preferences.customModel }, set: { val in
+                        store.updatePreferences { $0.customModel = val }
+                    }))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
                     
                     DisclosureGroup(isExpanded: $showingAPIKey) {
                         if hasKey { Label("Your key is saved on this iPhone", systemImage: "checkmark.shield") }

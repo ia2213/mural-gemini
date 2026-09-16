@@ -48,13 +48,14 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         }()
 
         if provider == .gemini {
+            let model = !customModel.isEmpty ? customModel : provider.defaultModel
             var contents: [[String: Any]] = [["role": "user", "parts": [["text": input]]]]
             var genConfig: [String: Any] = ["maxOutputTokens": schema == nil ? 1400 : 2200]
             if let schema { genConfig["responseMimeType"] = "application/json"; genConfig["responseSchema"] = schema }
             var body: [String: Any] = ["systemInstruction": ["parts": [["text": instructions]]], "contents": contents, "generationConfig": genConfig]
             if search { body["tools"] = [["googleSearch": [String: Any]()]] }
 
-            let urlString = endpoint.contains("?") ? "\(endpoint)&key=\(key)" : "\(endpoint)?key=\(key)"
+            let urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(key)"
             let json = try await postURL(urlString, body: body, apiKey: key)
             
             guard let candidates = json["candidates"] as? [[String: Any]],

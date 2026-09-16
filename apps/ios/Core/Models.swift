@@ -189,7 +189,7 @@ public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
     public var displayName: String {
         switch self {
         case .hermes: return "Hermes Agent (Local / Remote)"
-        case .gemini: return "Google Gemini (2.5 Flash - Free)"
+        case .gemini: return "Google Gemini (2.0 Flash - Free)"
         case .groq: return "Groq (Llama 3.3 70B - Free)"
         case .openrouter: return "OpenRouter (Free Models)"
         case .openai: return "OpenAI"
@@ -200,7 +200,7 @@ public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
     public var defaultEndpoint: String {
         switch self {
         case .hermes: return "http://localhost:8765/v1/chat/completions"
-        case .gemini: return "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        case .gemini: return "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
         case .groq: return "https://api.groq.com/openai/v1/chat/completions"
         case .openrouter: return "https://openrouter.ai/api/v1/chat/completions"
         case .openai: return "https://api.openai.com/v1/chat/completions"
@@ -211,7 +211,7 @@ public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
     public var defaultModel: String {
         switch self {
         case .hermes: return "hermes-3-llama-3.1-8b"
-        case .gemini: return "gemini-2.5-flash"
+        case .gemini: return "gemini-2.0-flash"
         case .groq: return "llama-3.3-70b-versatile"
         case .openrouter: return "meta-llama/llama-3.3-70b-instruct:free"
         case .openai: return "gpt-4o-mini"
