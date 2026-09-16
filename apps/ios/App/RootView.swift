@@ -67,7 +67,7 @@ struct RootView: View {
     private func shell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         NavigationStack {
             content().background(MuralColor.cream).toolbar {
-                ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }.sharedBackgroundVisibility(.hidden)
+                ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { coordinator.showSettings = true } label: { Image(systemName: "slider.horizontal.3") }
                         .accessibilityLabel("Settings")
