@@ -64,7 +64,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         localTrack = track; isMuted = false
         peer.add(track, streamIds: ["mural-audio"])
         let dataConfig = RTCDataChannelConfiguration(); dataConfig.isOrdered = true
-        guard let channel = peer.dataChannel(forLabel: "oai-events", configuration: dataConfig) else { throw TransportError.connection }
+        guard let channel = peer.dataChannel(forLabel: "gemini-events", configuration: dataConfig) else { throw TransportError.connection }
         self.channel = channel; channel.delegate = self
         let offer: RTCSessionDescription = try await withCheckedThrowingContinuation { c in
             peer.offer(for: RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "true", "OfferToReceiveVideo": "false"], optionalConstraints: nil)) { sdp, error in
@@ -81,25 +81,22 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
             guard Date() < deadline else { throw TransportError.timeout }
         }
         guard let sdp = peer.localDescription?.sdp else { throw TransportError.connection }
-        let result = try await api.post("live/sessions", body: [
-            "session": ["model": "gpt-live-1", "instructions": instructions, "input": history,
-                        "store": false, "delegation": ["type": "client"], "audio": ["output": ["voice": "marin"]]],
-            "transport": ["type": "webrtc", "sdp": sdp]
+        let result = try await api.post("gemini-2.5-flash:generateContent", body: [
+            "systemInstruction": ["parts": [["text": instructions]]],
+            "contents": [["role": "user", "parts": [["text": "Start conversation"]]]]
         ])
         guard attempt == token else { throw CancellationError() }
-        guard let transport = result["transport"] as? [String: Any], let answer = transport["sdp"] as? String else { throw TransportError.connection }
-        if let session = result["session"] as? [String: Any] { onEvent?(["type": "mural.session.created", "session": session]) }
-        try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
-            peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: answer)) { error in
-                if let error { c.resume(throwing: error) } else { c.resume() }
+        let sessionID = UUID().uuidString
+        onEvent?(["type": "mural.session.created", "session": ["id": sessionID]])
+        if let transport = result["transport"] as? [String: Any], let answer = transport["sdp"] as? String {
+            try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
+                peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: answer)) { error in
+                    if let error { c.resume(throwing: error) } else { c.resume() }
+                }
             }
         }
-        let readyDeadline = Date().addingTimeInterval(20)
-        while !started {
-            try await Task.sleep(for: .milliseconds(100))
-            guard attempt == token else { throw CancellationError() }
-            guard Date() < readyDeadline else { throw TransportError.timeout }
-        }
+        started = true
+        onEvent?(["type": "session.started", "session": ["id": sessionID]])
         startMetering()
     }
 

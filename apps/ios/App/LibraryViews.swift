@@ -76,7 +76,7 @@ struct CurrentTopicView: View {
                         Button("Talk about this", systemImage: "waveform") { coordinator.discuss(brief); selected(); dismiss() }
                             .font(.headline).padding(18).frame(maxWidth: .infinity).background(MuralColor.orange, in: Capsule())
                     }
-                    Text("Search uses your OpenAI API account. Sources stay attached to the topic.").font(.footnote).foregroundStyle(MuralColor.secondary)
+                    Text("Search uses your Gemini API account. Sources stay attached to the topic.").font(.footnote).foregroundStyle(MuralColor.secondary)
                 }.padding(26)
             }.background(MuralColor.cream).foregroundStyle(MuralColor.ink)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
@@ -322,25 +322,25 @@ struct SettingsView: View {
                 Section {
                     DisclosureGroup(isExpanded: $showingAPIKey) {
                         if hasKey { Label("Your key is saved on this iPhone", systemImage: "checkmark.shield") }
-                        SecureField(hasKey ? "Replace OpenAI key" : "OpenAI API key", text: $key)
+                        SecureField(hasKey ? "Replace Gemini key" : "Gemini API key", text: $key)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().privacySensitive().accessibilityIdentifier("api-key")
                         Button(hasKey ? "Save replacement key" : "Save key") {
                             do { try CredentialStore.save(key); key = ""; hasKey = true; message = "Saved securely. Start a conversation to connect." }
                             catch { message = error.localizedDescription }
                         }.disabled(key.isEmpty || coordinator.isRunning)
-                        Link("Open OpenAI API keys", destination: URL(string: "https://platform.openai.com/api-keys")!)
+                        Link("Open Google AI Studio keys", destination: URL(string: "https://aistudio.google.com/app/apikey")!)
                         if hasKey {
                             Button("Remove key", role: .destructive) {
                                 do { try CredentialStore.delete(); hasKey = false; message = "Your key has been removed." }
                                 catch { message = error.localizedDescription }
                             }.disabled(coordinator.isRunning)
                         }
-                        Text("Your OpenAI account pays for usage. The key stays in this iPhone’s Keychain and is sent only to OpenAI.")
+                        Text("Your Google Gemini account pays for usage. The key stays in this iPhone’s Keychain and is sent only to Gemini.")
                             .font(.footnote).foregroundStyle(MuralColor.secondary)
                     } label: { Label("Use your own API key", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
                     if let message { Text(message).font(.footnote).foregroundStyle(MuralColor.secondary) }
                 } header: { Text("Advanced") } footer: {
-                    if !hasKey { Text("This version uses your OpenAI API key to start a conversation.") }
+                    if !hasKey { Text("This version uses your Gemini API key to start a conversation.") }
                 }
                 Section {
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {
@@ -349,9 +349,9 @@ struct SettingsView: View {
                     LabeledContent("Recorded voice time", value: "\(Int(totalVoiceSeconds / 60)) min \(Int(totalVoiceSeconds) % 60) sec")
                     LabeledContent("Voice estimate", value: String(format: "$%.2f USD", totalVoiceSeconds / 60 * 0.05))
                     LabeledContent("Search calls recorded", value: "\(store.sessions.reduce(0) { $0 + $1.searchCalls })")
-                    Link("OpenAI usage and billing", destination: URL(string: "https://platform.openai.com/usage")!)
+                    Link("Google AI Studio usage", destination: URL(string: "https://aistudio.google.com/")!)
                 } header: { Text("Keep it comfortable") } footer: {
-                    Text("Voice estimate uses $0.05/min as of 11 September 2026. Translation, teaching and search cost extra. Interrupted requests can be billed without a usage record here. Your OpenAI dashboard is authoritative. The time limit is local, not a billing cap.")
+                    Text("Voice estimate uses $0.05/min as of 11 September 2026. Translation, teaching and search cost extra. Interrupted requests can be billed without a usage record here. Your Google AI dashboard is authoritative. The time limit is local, not a billing cap.")
                 }
                 Section {
                     Button("Export learning backup", systemImage: "square.and.arrow.up") {
@@ -372,9 +372,9 @@ struct SettingsView: View {
                 } header: { Text("Help and privacy") }
                 Section {
                     Text("Mural 0.1 · Personal build").font(.footnote)
-                    Text("Voice: GPT-Live-1 · Teacher: GPT-5.6 Luna").font(.footnote)
-                    Link("OpenAI data controls", destination: URL(string: "https://developers.openai.com/api/docs/guides/your-data")!)
-                    Text("Audio and selected text go to OpenAI while you practise. Requests disable provider storage where supported; abuse-monitoring retention may still apply. Raw audio is not saved by Mural.").font(.footnote)
+                    Text("Voice & Teacher: Gemini 2.5 Flash").font(.footnote)
+                    Link("Gemini data controls", destination: URL(string: "https://ai.google.dev/terms")!)
+                    Text("Audio and selected text go to Gemini while you practise. Requests disable provider storage where supported; abuse-monitoring retention may still apply. Raw audio is not saved by Mural.").font(.footnote)
                     Button("Open-source notices") { notices = true }
                 }
             }.scrollContentBackground(.hidden).background(MuralColor.cream).tint(MuralColor.secondary)
