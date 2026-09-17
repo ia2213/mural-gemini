@@ -47,17 +47,25 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
     func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, customModel: String = "") async throws -> APIResult {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
-        let modelName = !customModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? customModel.trimmingCharacters(in: .whitespacesAndNewlines) : "llama-3.1-8b-instant"
+        var rawModel = !customModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? customModel.trimmingCharacters(in: .whitespacesAndNewlines) : "llama-3.1-8b-instant"
+        if rawModel.hasPrefix("Ilama") { rawModel = "l" + rawModel.dropFirst() }
         let messages: [[String: Any]] = [
             ["role": "system", "content": instructions],
             ["role": "user", "content": input]
         ]
-        let body: [String: Any] = [
-            "model": modelName,
+        var body: [String: Any] = [
+            "model": rawModel,
             "messages": messages,
             "max_tokens": schema == nil ? 1400 : 2200
         ]
-        let json = try await postURL(endpoint, body: body, apiKey: key)
+        var json: [String: Any]
+        do {
+            json = try await postURL(endpoint, body: body, apiKey: key)
+        } catch let failure as ProviderFailure where failure.status == 404 {
+            let fallbackModel = rawModel == "llama3-8b-8192" ? "llama-3.1-8b-instant" : "llama3-8b-8192"
+            body["model"] = fallbackModel
+            json = try await postURL(endpoint, body: body, apiKey: key)
+        }
         guard let choices = json["choices"] as? [[String: Any]],
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
