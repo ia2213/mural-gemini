@@ -331,11 +331,14 @@ struct SettingsView: View {
                     let activeProvider = AIProvider(rawValue: store.preferences.providerID) ?? .hermes
                     
                     if activeProvider == .hermes || activeProvider == .custom {
-                        TextField("Endpoint URL", text: Binding(get: { store.preferences.customEndpoint.isEmpty ? activeProvider.defaultEndpoint : store.preferences.customEndpoint }, set: { val in
-                            store.updatePreferences { $0.customEndpoint = val }
-                        }))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Server Endpoint URL").font(.caption).foregroundStyle(MuralColor.secondary)
+                            TextField("http://192.168.x.x:8765/v1/chat/completions", text: Binding(get: { store.preferences.customEndpoint }, set: { val in
+                                store.updatePreferences { $0.customEndpoint = val }
+                            }))
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        }
                     }
                     
                     TextField("Model Name (override: e.g. \(activeProvider.defaultModel))", text: Binding(get: { store.preferences.customModel }, set: { val in

@@ -104,7 +104,7 @@ enum CredentialStore {
     static var hasKey: Bool { read() != nil }
     static func save(_ key: String) throws {
         let value = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.contains(where: \.isWhitespace) else { throw KeyError.invalid }
+        guard !value.isEmpty, !value.contains(where: \.isWhitespace) else { throw KeyError.invalid }
         let data = Data(value.utf8)
         let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         if status == errSecItemNotFound {

@@ -46,6 +46,9 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, provider: AIProvider = .hermes, customEndpoint: String = "", customModel: String = "") async throws -> APIResult {
         let key = CredentialStore.read() ?? ""
+        if key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && provider != .hermes && provider != .custom {
+            throw APIError.missingKey
+        }
         let endpoint: String = {
             if (provider == .custom || provider == .hermes) && !customEndpoint.isEmpty { return customEndpoint }
             return provider.defaultEndpoint
@@ -128,7 +131,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         case missingKey, invalidResponse, incomplete, refused, http(Int)
         var errorDescription: String? {
             switch self {
-            case .missingKey: "Please configure your API key or endpoint in Settings."
+            case .missingKey: "Please enter your API Key for the selected provider in Settings."
             case .invalidResponse, .incomplete: "The AI provider returned an incomplete response. Please try again."
             case .refused: "Mural couldn’t complete that request. Try a different topic."
             case .http(401), .http(403): "Your API key or endpoint wasn’t accepted. Check Settings."
