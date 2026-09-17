@@ -44,30 +44,19 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return try await postURL(endpoint, body: body, apiKey: key)
     }
 
-    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, customModel: String = "") async throws -> APIResult {
+    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false) async throws -> APIResult {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
-        var rawModel = customModel.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        rawModel = rawModel.replacingOccurrences(of: "ilama", with: "llama")
-        if rawModel.isEmpty || rawModel.contains("8192") || !rawModel.starts(with: "llama") && !rawModel.starts(with: "mixtral") && !rawModel.starts(with: "gemma") {
-            rawModel = "llama-3.1-8b-instant"
-        }
         let messages: [[String: Any]] = [
             ["role": "system", "content": instructions],
             ["role": "user", "content": input]
         ]
-        var body: [String: Any] = [
-            "model": rawModel,
+        let body: [String: Any] = [
+            "model": "llama-3.1-8b-instant",
             "messages": messages,
             "max_tokens": schema == nil ? 1400 : 2200
         ]
-        var json: [String: Any]
-        do {
-            json = try await postURL(endpoint, body: body, apiKey: key)
-        } catch {
-            body["model"] = "llama-3.1-8b-instant"
-            json = try await postURL(endpoint, body: body, apiKey: key)
-        }
+        let json = try await postURL(endpoint, body: body, apiKey: key)
         guard let choices = json["choices"] as? [[String: Any]],
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
