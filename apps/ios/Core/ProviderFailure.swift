@@ -16,13 +16,15 @@ public enum ProviderFailureKind: String, Sendable {
 public struct ProviderFailure: LocalizedError, Sendable {
     public let status: Int
     public let code: String?
+    public let message: String?
     public let reference: String?
     public var kind: ProviderFailureKind { .classify(status: status, code: code) }
     public init(status: Int, body: Data = Data(), reference: String? = nil) {
         self.status = status
         let json = body.count <= 16_384 ? (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] : nil
-        let code = (json?["error"] as? [String: Any])?["code"] as? String
-        self.code = Self.safeCode(code)
+        let errorObj = json?["error"] as? [String: Any]
+        self.code = Self.safeCode(errorObj?["code"] as? String ?? json?["code"] as? String)
+        self.message = errorObj?["message"] as? String ?? json?["message"] as? String
         self.reference = Self.safeReference(reference)
     }
     public static func safeCode(_ value: String?) -> String? {
@@ -35,15 +37,18 @@ public struct ProviderFailure: LocalizedError, Sendable {
         return value
     }
     public var errorDescription: String? {
-        let message: String = switch kind {
-        case .authentication: "Your API key or endpoint URL wasn’t accepted. Check Settings."
-        case .modelAccess: "This API key or server may not have access to the requested model. Check your settings and provider permissions."
-        case .quota: "Your AI provider has no available credit. Check your billing and usage limit."
-        case .rateLimit: "The AI provider is rate-limiting requests. Wait briefly and try again."
-        case .unavailable: "The AI service is temporarily unavailable. Please try again shortly."
-        case .invalidRequest: "The service could not accept this request. Check your endpoint URL and model name in Settings."
-        case .unknown: "The service could not complete this request. Please check your settings and internet connection."
+        if let msg = message, !msg.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Groq Error (HTTP \(status)): \(msg)"
         }
-        return reference.map { message + "\n\nReference: " + $0 } ?? message
+        let fallback: String = switch kind {
+        case .authentication: "Your Groq API key wasn’t accepted (HTTP 401). Check your key in Settings."
+        case .modelAccess: "Groq model access error (HTTP \(status)). Check your model name or Groq permissions."
+        case .quota: "Groq usage limit or quota reached."
+        case .rateLimit: "Groq is rate-limiting requests. Please wait a moment."
+        case .unavailable: "Groq service is temporarily unavailable."
+        case .invalidRequest: "Groq rejected the request parameters."
+        case .unknown: "Groq request failed (HTTP \(status))."
+        }
+        return reference.map { fallback + "\n\nReference: " + $0 } ?? fallback
     }
 }
