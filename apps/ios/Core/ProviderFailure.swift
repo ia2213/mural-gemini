@@ -36,14 +36,14 @@ public struct ProviderFailure: LocalizedError, Sendable {
     }
     public var errorDescription: String? {
         let message: String = switch kind {
-        case .authentication: "Your Gemini key wasn’t accepted. Check it in Settings."
-        case .modelAccess: "This API key may not have access to the requested model. Check your Google AI Studio project."
-        case .quota: "Your Google AI Studio project has no available API credit. Check its billing and usage limit before trying again."
-        case .rateLimit: "Gemini is limiting requests. Wait briefly and try again. If this continues, check your project’s billing and limits."
-        case .unavailable: "The voice or teaching service is temporarily unavailable. Please try again shortly."
-        case .invalidRequest: "The service could not accept this request. If this continues, contact support."
-        case .unknown: "The service could not complete this request. Please try again later."
+        case .authentication: "Your API key or endpoint URL wasn’t accepted. Check Settings."
+        case .modelAccess: "This API key or server may not have access to the requested model. Check your settings and provider permissions."
+        case .quota: "Your AI provider has no available credit. Check your billing and usage limit."
+        case .rateLimit: "The AI provider is rate-limiting requests. Wait briefly and try again."
+        case .unavailable: "The AI service is temporarily unavailable. Please try again shortly."
+        case .invalidRequest: "The service could not accept this request. Check your endpoint URL and model name in Settings."
+        case .unknown: "The service could not complete this request. Please check your settings and internet connection."
         }
-        return reference.map { message + "\n\nGemini reference: " + $0 } ?? message
+        return reference.map { message + "\n\nReference: " + $0 } ?? message
     }
 }

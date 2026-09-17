@@ -34,9 +34,13 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return json
     }
 
-    func post(_ path: String, body: [String: Any]) async throws -> [String: Any] {
+    func post(_ path: String, body: [String: Any], provider: AIProvider = .hermes, customEndpoint: String = "", customModel: String = "") async throws -> [String: Any] {
         let key = CredentialStore.read() ?? ""
-        let endpoint = path.contains("http") ? path : "https://generativelanguage.googleapis.com/v1beta/models/" + path + "?key=" + key
+        if path.contains("http") { return try await postURL(path, body: body, apiKey: key) }
+        let endpoint: String = {
+            if (provider == .custom || provider == .hermes) && !customEndpoint.isEmpty { return customEndpoint }
+            return provider.defaultEndpoint
+        }()
         return try await postURL(endpoint, body: body, apiKey: key)
     }
 
