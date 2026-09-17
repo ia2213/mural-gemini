@@ -77,33 +77,25 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("multipart/form-data; boundary=" + boundary, forHTTPHeaderField: "Content-Type")
 
         var body = Data()
         func addField(_ name: String, _ value: String) {
-            body.append("--\(boundary)
-\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"\(name)\"
-\n
-\n".data(using: .utf8)!)
-            body.append("\(value)
-\n".data(using: .utf8)!)
+            let part = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + name + "\"
+
+" + value + "\r\n"
+            if let data = part.data(using: .utf8) { body.append(data) }
         }
         addField("model", "whisper-large-v3-turbo")
         addField("response_format", "json")
         if !language.isEmpty { addField("language", language) }
 
-        body.append("--\(boundary)
-\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"
-\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/m4a
-\n
-\n".data(using: .utf8)!)
+        let fileHeader = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"
+Content-Type: audio/m4a\r\n\r\n"
+        if let data = fileHeader.data(using: .utf8) { body.append(data) }
         body.append(audioData)
-        body.append("
-\n--\(boundary)--
-\n".data(using: .utf8)!)
+        let fileFooter = "\r\n--" + boundary + "--\r\n"
+        if let data = fileFooter.data(using: .utf8) { body.append(data) }
 
         request.httpBody = body
         let (data, response) = try await session.data(for: request)
