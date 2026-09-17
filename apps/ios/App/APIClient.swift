@@ -80,22 +80,31 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         request.setValue("multipart/form-data; boundary=" + boundary, forHTTPHeaderField: "Content-Type")
 
         var body = Data()
+        let crlf = Data([0x0D, 0x0A])
         func addField(_ name: String, _ value: String) {
-            let part = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + name + "\"
-
-" + value + "\r\n"
-            if let data = part.data(using: .utf8) { body.append(data) }
+            body.append(Data("--\(boundary)".utf8))
+            body.append(crlf)
+            body.append(Data("Content-Disposition: form-data; name=\"\(name)\"".utf8))
+            body.append(crlf)
+            body.append(crlf)
+            body.append(Data(value.utf8))
+            body.append(crlf)
         }
         addField("model", "whisper-large-v3-turbo")
         addField("response_format", "json")
         if !language.isEmpty { addField("language", language) }
 
-        let fileHeader = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"
-Content-Type: audio/m4a\r\n\r\n"
-        if let data = fileHeader.data(using: .utf8) { body.append(data) }
+        body.append(Data("--\(boundary)".utf8))
+        body.append(crlf)
+        body.append(Data("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"".utf8))
+        body.append(crlf)
+        body.append(Data("Content-Type: audio/m4a".utf8))
+        body.append(crlf)
+        body.append(crlf)
         body.append(audioData)
-        let fileFooter = "\r\n--" + boundary + "--\r\n"
-        if let data = fileFooter.data(using: .utf8) { body.append(data) }
+        body.append(crlf)
+        body.append(Data("--\(boundary)--".utf8))
+        body.append(crlf)
 
         request.httpBody = body
         let (data, response) = try await session.data(for: request)
