@@ -47,10 +47,9 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
     func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, customModel: String = "") async throws -> APIResult {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
-        var rawModel = customModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        if rawModel.hasPrefix("I") { rawModel = "l" + rawModel.dropFirst() }
-        let decommissioned = ["llama3-8b-8192", "llama3-70b-8192", "Ilama3-8b-8192", "Ilama-3.1-8b-instant"]
-        if rawModel.isEmpty || decommissioned.contains(rawModel) {
+        var rawModel = customModel.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        rawModel = rawModel.replacingOccurrences(of: "ilama", with: "llama")
+        if rawModel.isEmpty || rawModel.contains("8192") || !rawModel.starts(with: "llama") && !rawModel.starts(with: "mixtral") && !rawModel.starts(with: "gemma") {
             rawModel = "llama-3.1-8b-instant"
         }
         let messages: [[String: Any]] = [
@@ -65,7 +64,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         var json: [String: Any]
         do {
             json = try await postURL(endpoint, body: body, apiKey: key)
-        } catch let failure as ProviderFailure where failure.status == 400 || failure.status == 404 {
+        } catch {
             body["model"] = "llama-3.1-8b-instant"
             json = try await postURL(endpoint, body: body, apiKey: key)
         }

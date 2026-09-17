@@ -37,6 +37,9 @@ import MuralCore
             for i in archive.sessions.indices where archive.sessions[i].endedAt == nil {
                 archive.sessions[i].endedAt = .now; archive.sessions[i].endReason = "App closed before finalization"
             }
+            if archive.preferences.customModel.lowercased().contains("ilama") || archive.preferences.customModel.contains("8192") {
+                archive.preferences.customModel = ""
+            }
         } else {
             document = StoredArchive(payload: try Archive().encoded()); context.insert(document)
         }
