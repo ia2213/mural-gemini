@@ -5,10 +5,25 @@ import MuralCore
 
 enum ConnectionState: Equatable { case idle, connecting, active, closing, ended, failed }
 
+final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
+    @MainActor private let synth = AVSpeechSynthesizer()
+    @MainActor func speak(text: String, languageCode: String = "en-US") {
+        if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: languageCode) ?? AVSpeechSynthesisVoice(language: "en-US")
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        synth.speak(utterance)
+    }
+    @MainActor func stop() {
+        if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+    }
+}
+
 @MainActor final class LiveTransport: NSObject {
     var onEvent: (([String: Any]) -> Void)?
     var onLevels: ((Double, Double) -> Void)?
     var onFailure: ((String) -> Void)?
+    private let synthesizer = NativeSynthesizer()
     private var factory: RTCPeerConnectionFactory?
     private var peer: RTCPeerConnection?
     private var channel: RTCDataChannel?
@@ -65,7 +80,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         guard let channel = peer.dataChannel(forLabel: "events", configuration: dataConfig) else { throw TransportError.connection }
         self.channel = channel; channel.delegate = self
 
-        let initialResult = try await api.respond(instructions: instructions, input: "Start conversation", provider: provider, customEndpoint: customEndpoint, customModel: customModel)
+        let initialResult = try await api.respond(instructions: instructions, input: "Start conversation")
         guard attempt == token else { throw CancellationError() }
         let sessionID = UUID().uuidString
         onEvent?(["type": "mural.session.created", "session": ["id": sessionID]])
@@ -73,6 +88,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         onEvent?(["type": "session.started", "session": ["id": sessionID]])
         if !initialResult.text.isEmpty {
             onEvent?(["type": "session.output_transcript.delta", "delta": initialResult.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
+            synthesizer.speak(text: initialResult.text)
         }
         startMetering()
     }
@@ -91,6 +107,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         _ = send(["type": "session.close", "event_id": UUID().uuidString])
     }
     func disconnect() {
+        synthesizer.stop()
         networkRecovery.connected()
         attempt = UUID(); meterTask?.cancel(); meterTask = nil
         started = false; closing = true

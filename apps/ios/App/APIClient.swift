@@ -44,76 +44,75 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return try await postURL(endpoint, body: body, apiKey: key)
     }
 
-    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, provider: AIProvider = .hermes, customEndpoint: String = "", customModel: String = "") async throws -> APIResult {
-        let key = CredentialStore.read() ?? ""
-        if key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && provider != .hermes && provider != .custom {
-            throw APIError.missingKey
+    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false) async throws -> APIResult {
+        guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
+        let endpoint = "https://api.groq.com/openai/v1/chat/completions"
+        let messages: [[String: Any]] = [
+            ["role": "system", "content": instructions],
+            ["role": "user", "content": input]
+        ]
+        let body: [String: Any] = [
+            "model": "llama-3.1-8b-instant",
+            "messages": messages,
+            "max_tokens": schema == nil ? 1400 : 2200
+        ]
+        let json = try await postURL(endpoint, body: body, apiKey: key)
+        guard let choices = json["choices"] as? [[String: Any]],
+              let firstChoice = choices.first,
+              let message = firstChoice["message"] as? [String: Any],
+              let text = message["content"] as? String else { throw APIError.incomplete }
+        var usage = APIUsage()
+        if let u = json["usage"] as? [String: Any] {
+            usage.input = u["prompt_tokens"] as? Int ?? 0
+            usage.output = u["completion_tokens"] as? Int ?? 0
         }
-        let endpoint: String = {
-            if !customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) }
-            return provider.defaultEndpoint
-        }()
+        guard !text.isEmpty else { throw APIError.incomplete }
+        return APIResult(text: text, sources: [], usage: usage)
+    }
 
-        if provider == .gemini {
-            let model = !customModel.isEmpty ? customModel : provider.defaultModel
-            var contents: [[String: Any]] = [["role": "user", "parts": [["text": input]]]]
-            var genConfig: [String: Any] = ["maxOutputTokens": schema == nil ? 1400 : 2200]
-            if let schema { genConfig["responseMimeType"] = "application/json"; genConfig["responseSchema"] = schema }
-            var body: [String: Any] = ["systemInstruction": ["parts": [["text": instructions]]], "contents": contents, "generationConfig": genConfig]
-            if search { body["tools"] = [["googleSearch": [String: Any]()]] }
+    func transcribe(audioData: Data, language: String = "en") async throws -> String {
+        guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
+        let endpoint = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
-            let urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(key)"
-            let json = try await postURL(urlString, body: body, apiKey: key)
-            
-            guard let candidates = json["candidates"] as? [[String: Any]],
-                  let firstCandidate = candidates.first,
-                  let content = firstCandidate["content"] as? [String: Any],
-                  let parts = content["parts"] as? [[String: Any]] else { throw APIError.incomplete }
-            var text = ""
-            for part in parts { if let partText = part["text"] as? String { text += partText } }
-            var sources: [SourceLink] = []
-            if let grounding = firstCandidate["groundingMetadata"] as? [String: Any],
-               let chunks = grounding["groundingChunks"] as? [[String: Any]] {
-                for chunk in chunks {
-                    if let web = chunk["web"] as? [String: Any], let url = web["uri"] as? String {
-                        let source = SourceLink(title: web["title"] as? String ?? "Source", url: url)
-                        if source.safeURL != nil && !sources.contains(where: { $0.url == url }) { sources.append(source) }
-                    }
-                }
-            }
-            var usage = APIUsage()
-            if let u = json["usageMetadata"] as? [String: Any] {
-                usage.input = u["promptTokenCount"] as? Int ?? 0; usage.output = u["candidatesTokenCount"] as? Int ?? 0
-            }
-            if let grounding = firstCandidate["groundingMetadata"] as? [String: Any],
-               let queries = grounding["webSearchQueries"] as? [Any] { usage.searches = queries.count }
-            guard !text.isEmpty else { throw APIError.incomplete }
-            return APIResult(text: text, sources: sources, usage: usage)
-        } else {
-            // OpenAI-compatible format (Hermes, Groq, OpenRouter, OpenAI, Custom)
-            let model = !customModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? customModel.trimmingCharacters(in: .whitespacesAndNewlines) : provider.defaultModel
-            let messages: [[String: Any]] = [
-                ["role": "system", "content": instructions],
-                ["role": "user", "content": input]
-            ]
-            let body: [String: Any] = [
-                "model": model,
-                "messages": messages,
-                "max_tokens": schema == nil ? 1400 : 2200
-            ]
-            let json = try await postURL(endpoint, body: body, apiKey: key)
-            guard let choices = json["choices"] as? [[String: Any]],
-                  let firstChoice = choices.first,
-                  let message = firstChoice["message"] as? [String: Any],
-                  let text = message["content"] as? String else { throw APIError.incomplete }
-            var usage = APIUsage()
-            if let u = json["usage"] as? [String: Any] {
-                usage.input = u["prompt_tokens"] as? Int ?? 0
-                usage.output = u["completion_tokens"] as? Int ?? 0
-            }
-            guard !text.isEmpty else { throw APIError.incomplete }
-            return APIResult(text: text, sources: [], usage: usage)
+        var body = Data()
+        func addField(_ name: String, _ value: String) {
+            body.append("--\(boundary)
+\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(name)\"
+\n
+\n".data(using: .utf8)!)
+            body.append("\(value)
+\n".data(using: .utf8)!)
         }
+        addField("model", "whisper-large-v3-turbo")
+        addField("response_format", "json")
+        if !language.isEmpty { addField("language", language) }
+
+        body.append("--\(boundary)
+\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"audio.m4a\"
+\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/m4a
+\n
+\n".data(using: .utf8)!)
+        body.append(audioData)
+        body.append("
+\n--\(boundary)--
+\n".data(using: .utf8)!)
+
+        request.httpBody = body
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw ProviderFailure(status: (response as? HTTPURLResponse)?.statusCode ?? 500, body: data)
+        }
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let text = json["text"] as? String else { throw APIError.incomplete }
+        return text
     }
 
     static func object(_ fields: [String: Any]) -> [String: Any] { ["type": "OBJECT", "properties": fields, "required": fields.keys.sorted()] }

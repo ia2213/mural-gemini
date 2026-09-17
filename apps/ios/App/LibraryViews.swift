@@ -320,54 +320,27 @@ struct SettingsView: View {
                     }
                 }
                 Section {
-                    Picker("AI Provider", selection: Binding(get: { AIProvider(rawValue: store.preferences.providerID) ?? .hermes }, set: { provider in
-                        store.updatePreferences { $0.providerID = provider.rawValue }
-                    })) {
-                        ForEach(AIProvider.allCases) { p in
-                            Text(p.displayName).tag(p)
-                        }
-                    }
-                    
-                    let activeProvider = AIProvider(rawValue: store.preferences.providerID) ?? .hermes
-                    
-                    if activeProvider == .hermes || activeProvider == .custom {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Server Endpoint URL").font(.caption).foregroundStyle(MuralColor.secondary)
-                            TextField("http://192.168.x.x:8765/v1/chat/completions", text: Binding(get: { store.preferences.customEndpoint }, set: { val in
-                                store.updatePreferences { $0.customEndpoint = val }
-                            }))
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        }
-                    }
-                    
-                    TextField("Model Name (override: e.g. \(activeProvider.defaultModel))", text: Binding(get: { store.preferences.customModel }, set: { val in
-                        store.updatePreferences { $0.customModel = val }
-                    }))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    
                     DisclosureGroup(isExpanded: $showingAPIKey) {
-                        if hasKey { Label("Your key is saved on this iPhone", systemImage: "checkmark.shield") }
-                        SecureField("API Key (optional for Hermes)", text: $key)
+                        if hasKey { Label("Your Groq API key is saved on this iPhone", systemImage: "checkmark.shield") }
+                        SecureField(hasKey ? "Replace Groq API key (gsk_...)" : "Groq API key (gsk_...)", text: $key)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().privacySensitive().accessibilityIdentifier("api-key")
                         Button(hasKey ? "Save replacement key" : "Save key") {
                             do { try CredentialStore.save(key); key = ""; hasKey = true; message = "Saved securely." }
                             catch { message = error.localizedDescription }
-                        }.disabled(coordinator.isRunning)
-                        if !activeProvider.keyURL.isEmpty {
-                            Link("Get \(activeProvider.displayName) API Key", destination: URL(string: activeProvider.keyURL)!)
-                        }
+                        }.disabled(key.isEmpty || coordinator.isRunning)
+                        Link("Get a free Groq API key", destination: URL(string: "https://console.groq.com/keys")!)
                         if hasKey {
                             Button("Remove key", role: .destructive) {
                                 do { try CredentialStore.delete(); hasKey = false; message = "Your key has been removed." }
                                 catch { message = error.localizedDescription }
                             }.disabled(coordinator.isRunning)
                         }
-                    } label: { Label("API Key Settings", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
+                        Text("Your Groq account handles text & voice. The key stays in this iPhone’s Keychain.")
+                            .font(.footnote).foregroundStyle(MuralColor.secondary)
+                    } label: { Label("Groq API Key", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
                     if let message { Text(message).font(.footnote).foregroundStyle(MuralColor.secondary) }
-                } header: { Text("AI Engine & Provider") } footer: {
-                    Text("Select your preferred AI service: Hermes Agent, Google Gemini (Free), Groq (Free), OpenRouter (Free), OpenAI or custom endpoint.")
+                } header: { Text("Groq Engine") } footer: {
+                    Text("Mural uses Groq Llama 3.1 8B for intelligence, Groq Whisper Turbo for Speech-to-Text, and your iPhone's native iOS voice for Speech-to-Text.")
                 }
                 Section {
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {
