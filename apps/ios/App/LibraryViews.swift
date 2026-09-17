@@ -320,6 +320,12 @@ struct SettingsView: View {
                     }
                 }
                 Section {
+                    TextField("Groq Model (default: llama-3.1-8b-instant)", text: Binding(get: { store.preferences.customModel }, set: { val in
+                        store.updatePreferences { $0.customModel = val }
+                    }))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    
                     DisclosureGroup(isExpanded: $showingAPIKey) {
                         if hasKey { Label("Your Groq API key is saved on this iPhone", systemImage: "checkmark.shield") }
                         SecureField(hasKey ? "Replace Groq API key (gsk_...)" : "Groq API key (gsk_...)", text: $key)
@@ -340,7 +346,7 @@ struct SettingsView: View {
                     } label: { Label("Groq API Key", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
                     if let message { Text(message).font(.footnote).foregroundStyle(MuralColor.secondary) }
                 } header: { Text("Groq Engine") } footer: {
-                    Text("Mural uses Groq Llama 3.1 8B for intelligence, Groq Whisper Turbo for Speech-to-Text, and your iPhone's native iOS voice for Speech-to-Text.")
+                    Text("Mural uses Groq Llama 3.1 8B (or your specified model), Groq Whisper Turbo for STT, and your iPhone's native iOS voice for TTS.")
                 }
                 Section {
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {
