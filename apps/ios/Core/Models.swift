@@ -212,7 +212,7 @@ public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .hermes: return "hermes-3-llama-3.1-8b"
         case .gemini: return "gemini-2.0-flash"
-        case .groq: return "llama-3.3-70b-versatile"
+        case .groq: return "llama-3.1-8b-instant"
         case .openrouter: return "meta-llama/llama-3.3-70b-instruct:free"
         case .openai: return "gpt-4o-mini"
         case .custom: return "default"

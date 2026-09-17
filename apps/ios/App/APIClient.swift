@@ -50,7 +50,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             throw APIError.missingKey
         }
         let endpoint: String = {
-            if (provider == .custom || provider == .hermes) && !customEndpoint.isEmpty { return customEndpoint }
+            if !customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) }
             return provider.defaultEndpoint
         }()
 
@@ -91,7 +91,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             return APIResult(text: text, sources: sources, usage: usage)
         } else {
             // OpenAI-compatible format (Hermes, Groq, OpenRouter, OpenAI, Custom)
-            let model = (provider == .custom || provider == .hermes) && !customModel.isEmpty ? customModel : provider.defaultModel
+            let model = !customModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? customModel.trimmingCharacters(in: .whitespacesAndNewlines) : provider.defaultModel
             let messages: [[String: Any]] = [
                 ["role": "system", "content": instructions],
                 ["role": "user", "content": input]
