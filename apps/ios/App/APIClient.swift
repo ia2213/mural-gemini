@@ -71,6 +71,37 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return APIResult(text: text, sources: [], usage: usage)
     }
 
+    func respondHistory(instructions: String, history: [[String: String]], model: String = "") async throws -> APIResult {
+        guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
+        let endpoint = "https://api.groq.com/openai/v1/chat/completions"
+        let selectedModel = !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? model.trimmingCharacters(in: .whitespacesAndNewlines) : "openai/gpt-oss-120b"
+        
+        var messages: [[String: Any]] = [
+            ["role": "system", "content": instructions]
+        ]
+        for msg in history {
+            messages.append(["role": msg["role"] ?? "user", "content": msg["content"] ?? ""])
+        }
+        
+        let body: [String: Any] = [
+            "model": selectedModel,
+            "messages": messages,
+            "max_tokens": 1400
+        ]
+        let json = try await postURL(endpoint, body: body, apiKey: key)
+        guard let choices = json["choices"] as? [[String: Any]],
+              let firstChoice = choices.first,
+              let message = firstChoice["message"] as? [String: Any],
+              let text = message["content"] as? String else { throw APIError.incomplete }
+        var usage = APIUsage()
+        if let u = json["usage"] as? [String: Any] {
+            usage.input = u["prompt_tokens"] as? Int ?? 0
+            usage.output = u["completion_tokens"] as? Int ?? 0
+        }
+        guard !text.isEmpty else { throw APIError.incomplete }
+        return APIResult(text: text, sources: [], usage: usage)
+    }
+
     func transcribe(audioData: Data, language: String = "en") async throws -> String {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!

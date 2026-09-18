@@ -6,6 +6,13 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
 
 final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     @MainActor private let synth = AVSpeechSynthesizer()
+    @MainActor private var finishContinuation: CheckedContinuation<Void, Never>?
+    
+    @MainActor override init() {
+        super.init()
+        synth.delegate = self
+    }
+    
     @MainActor var isSpeaking: Bool { return synth.isSpeaking }
     
     @MainActor func speak(text: String, languageCode: String = "de-DE", rate: Float = 0.50, voiceIdentifier: String = "") {
@@ -21,9 +28,39 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         utterance.rate = min(max(rate, 0.25), 0.75)
         synth.speak(utterance)
     }
+
+    @MainActor func speakAsync(text: String, languageCode: String = "de-DE", rate: Float = 0.50, voiceIdentifier: String = "") async {
+        if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+        finishContinuation?.resume()
+        finishContinuation = nil
+        
+        let bcp = Self.bcp47Code(for: languageCode)
+        let utterance = AVSpeechUtterance(string: text)
+        
+        if !voiceIdentifier.isEmpty, let customVoice = AVSpeechSynthesisVoice(identifier: voiceIdentifier) {
+            utterance.voice = customVoice
+        } else {
+            utterance.voice = Self.bestVoice(for: bcp)
+        }
+        utterance.rate = min(max(rate, 0.25), 0.75)
+        
+        await withCheckedContinuation { continuation in
+            self.finishContinuation = continuation
+            synth.speak(utterance)
+        }
+    }
     
     @MainActor func stop() {
+        finishContinuation?.resume()
+        finishContinuation = nil
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor [weak self] in
+            self?.finishContinuation?.resume()
+            self?.finishContinuation = nil
+        }
     }
     private static func bcp47Code(for id: String) -> String {
         let clean = id.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -93,6 +130,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     private var languageCode: String = "de-DE"
     private var speechRate: Float = 0.50
     private var voiceIdentifier: String = ""
+    private var conversationHistory: [[String: String]] = []
     
     func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE", speechRate: Float = 0.50, voiceIdentifier: String = "") async throws {
         disconnect()
@@ -102,6 +140,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         self.languageCode = languageCode
         self.speechRate = speechRate
         self.voiceIdentifier = voiceIdentifier
+        self.conversationHistory = []
         let token = UUID(); attempt = token
         
         let granted = await AVAudioApplication.requestRecordPermission()
@@ -122,6 +161,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         onEvent?(["type": "session.started", "session": ["id": sessionID]])
         
         if !initialResult.text.isEmpty {
+            conversationHistory.append(["role": "assistant", "content": initialResult.text])
             onEvent?(["type": "session.output_transcript.delta", "delta": initialResult.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
             synthesizer.speak(text: initialResult.text, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
         }
@@ -230,10 +270,18 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 let startMS = Int(Date().timeIntervalSince1970 * 1000) % 1000000
                 onEvent?(["type": "session.input_transcript.delta", "delta": userText, "start_ms": startMS, "end_ms": startMS + 500, "event_id": UUID().uuidString])
                 
-                let result = try await api.respond(instructions: instructions, input: userText)
-                if !result.text.isEmpty && !synthesizer.isSpeaking {
-                    onEvent?(["type": "session.output_transcript.delta", "delta": result.text, "start_ms": startMS + 501, "end_ms": startMS + 1500, "event_id": UUID().uuidString])
-                    synthesizer.speak(text: result.text, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
+                conversationHistory.append(["role": "user", "content": userText])
+                let result = try await api.respondHistory(instructions: instructions, history: conversationHistory)
+                if !result.text.isEmpty {
+                    conversationHistory.append(["role": "assistant", "content": result.text])
+                    let sentences = result.text.components(separatedBy: CharacterSet(charactersIn: ".!?\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+                    for (index, sentence) in sentences.enumerated() {
+                        guard !closing else { break }
+                        let cStartMS = Int(Date().timeIntervalSince1970 * 1000) % 1000000
+                        let chunk = index == 0 ? sentence : " " + sentence
+                        onEvent?(["type": "session.output_transcript.delta", "delta": chunk, "start_ms": cStartMS, "end_ms": cStartMS + 500, "event_id": UUID().uuidString])
+                        await synthesizer.speakAsync(text: sentence, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
+                    }
                 }
             }
         } catch {
