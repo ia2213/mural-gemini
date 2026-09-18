@@ -1,7 +1,6 @@
 import Foundation
 import AVFoundation
 import MuralCore
-@preconcurrency import WebRTC
 
 enum ConnectionState: Equatable { case idle, connecting, active, closing, ended, failed }
 
@@ -44,178 +43,194 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     var onEvent: (([String: Any]) -> Void)?
     var onLevels: ((Double, Double) -> Void)?
     var onFailure: ((String) -> Void)?
+    
     private let synthesizer = NativeSynthesizer()
-    private var factory: RTCPeerConnectionFactory?
-    private var peer: RTCPeerConnection?
-    private var channel: RTCDataChannel?
-    private var localTrack: RTCAudioTrack?
+    private var recorder: AVAudioRecorder?
+    private var audioURL: URL?
     private var meterTask: Task<Void, Never>?
     private var attempt = UUID()
+    
     private(set) var started = false
     private(set) var isMuted = false
     private var closing = false
     private var ownsAudioActivation = false
-    private var lastInput = 0.0, lastOutput = 0.0
-    private lazy var networkRecovery = makeNetworkRecovery()
-    private func makeNetworkRecovery(timeout: Duration = .seconds(8)) -> VoiceConnectionRecovery {
-        VoiceConnectionRecovery(timeout: timeout) { [weak self] in
-            guard let self, self.peer != nil, !self.closing else { return }
-            self.onFailure?("The network connection was lost. Tap to start a new conversation.")
-        }
-    }
-
+    private var isProcessingSpeech = false
+    
+    private var api: APIClient?
+    private var instructions: String = ""
+    private var languageCode: String = "de-DE"
+    
     func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE") async throws {
         disconnect()
         closing = false
+        self.api = api
+        self.instructions = instructions
+        self.languageCode = languageCode
         let token = UUID(); attempt = token
+        
         let granted = await AVAudioApplication.requestRecordPermission()
         guard granted else { throw TransportError.microphone }
         try Task.checkCancellation()
         guard attempt == token else { throw CancellationError() }
-        let audioConfiguration = RTCAudioSessionConfiguration()
-        audioConfiguration.category = AVAudioSession.Category.playAndRecord.rawValue
-        audioConfiguration.mode = AVAudioSession.Mode.voiceChat.rawValue
-        audioConfiguration.categoryOptions = [.defaultToSpeaker, .allowBluetooth]
-        RTCAudioSessionConfiguration.setWebRTC(audioConfiguration)
-        let audio = RTCAudioSession.sharedInstance()
-        audio.lockForConfiguration()
-        do {
-            try audio.setCategory(.playAndRecord, mode: .voiceChat, options: audioConfiguration.categoryOptions)
-            try audio.setActive(true)
-            ownsAudioActivation = true
-            audio.unlockForConfiguration()
-        } catch { audio.unlockForConfiguration(); throw error }
-        RTCInitializeSSL()
-        let factory = RTCPeerConnectionFactory(encoderFactory: RTCDefaultVideoEncoderFactory(), decoderFactory: RTCDefaultVideoDecoderFactory())
-        self.factory = factory
-        let config = RTCConfiguration(); config.sdpSemantics = .unifiedPlan
-        config.continualGatheringPolicy = .gatherOnce
-        let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: ["DtlsSrtpKeyAgreement": "true"])
-        guard let peer = factory.peerConnection(with: config, constraints: constraints, delegate: self) else { throw TransportError.connection }
-        self.peer = peer
-        let source = factory.audioSource(with: RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: ["googEchoCancellation": "true", "googNoiseSuppression": "true", "googAutoGainControl": "true"]))
-        let track = factory.audioTrack(with: source, trackId: "mural-microphone")
-        localTrack = track; isMuted = false
-        peer.add(track, streamIds: ["mural-audio"])
-        let dataConfig = RTCDataChannelConfiguration(); dataConfig.isOrdered = true
-        guard let channel = peer.dataChannel(forLabel: "events", configuration: dataConfig) else { throw TransportError.connection }
-        self.channel = channel; channel.delegate = self
-
+        
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+        try? session.setActive(true)
+        ownsAudioActivation = true
+        
         let initialResult = try await api.respond(instructions: instructions, input: "Start conversation")
         guard attempt == token else { throw CancellationError() }
         let sessionID = UUID().uuidString
         onEvent?(["type": "mural.session.created", "session": ["id": sessionID]])
         started = true
         onEvent?(["type": "session.started", "session": ["id": sessionID]])
+        
         if !initialResult.text.isEmpty {
             onEvent?(["type": "session.output_transcript.delta", "delta": initialResult.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
             synthesizer.speak(text: initialResult.text, languageCode: languageCode)
         }
-        startMetering()
+        
+        startRecording()
+        startAudioLoop()
     }
-
-    func speak(_ text: String, languageCode: String = "de-DE") {
-        synthesizer.speak(text: text, languageCode: languageCode)
-    }
-
-    @discardableResult func send(_ event: [String: Any]) -> Bool {
-        return true
-    }
-    func mute(_ muted: Bool) {
-        isMuted = muted; localTrack?.isEnabled = !muted
-        _ = send(["type": muted ? "session.input_audio.mute" : "session.input_audio.unmute", "event_id": UUID().uuidString])
-    }
-    func close() {
-        networkRecovery.connected()
-        closing = true; localTrack?.isEnabled = false; isMuted = true
-        _ = send(["type": "session.close", "event_id": UUID().uuidString])
-    }
-    func disconnect() {
-        synthesizer.stop()
-        networkRecovery.connected()
-        attempt = UUID(); meterTask?.cancel(); meterTask = nil
-        started = false; closing = true
-        localTrack?.isEnabled = false; localTrack = nil
-        channel?.delegate = nil; channel?.close(); channel = nil
-        peer?.delegate = nil; peer?.close(); peer = nil; factory = nil
-        if ownsAudioActivation {
-            let audio = RTCAudioSession.sharedInstance(); audio.lockForConfiguration()
-            try? audio.setActive(false); audio.unlockForConfiguration()
-            ownsAudioActivation = false
+    
+    private func startRecording() {
+        guard !closing else { return }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("mural_mic_\(UUID().uuidString).m4a")
+        audioURL = url
+        
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: 16000,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+        ]
+        
+        do {
+            recorder = try AVAudioRecorder(url: url, settings: settings)
+            recorder?.isMeteringEnabled = true
+            recorder?.record()
+        } catch {
+            print("Recorder error:", error)
         }
-        lastInput = 0; lastOutput = 0; onLevels?(0, 0)
     }
-    private func startMetering() {
+    
+    private func startAudioLoop() {
         meterTask?.cancel()
         meterTask = Task { [weak self] in
+            var speechDetected = false
+            var silenceStart: Date? = nil
+            
             while !Task.isCancelled {
-                guard let self, let peer = self.peer else { return }
-                peer.statistics { [weak self] report in
-                    var input = 0.0, output = 0.0
-                    for stat in report.statistics.values {
-                        let level = (stat.values["audioLevel"] as? NSNumber)?.doubleValue ?? 0
-                        if stat.type == "inbound-rtp" { output = max(output, level) }
-                        if stat.type == "media-source" { input = max(input, level) }
-                    }
-                    Task { @MainActor [weak self] in
-                        guard let self, self.started else { return }
-                        self.lastInput = self.lastInput * 0.35 + min(1, input * 4) * 0.65
-                        self.lastOutput = self.lastOutput * 0.35 + min(1, output * 4) * 0.65
-                        self.onLevels?(self.isMuted ? 0 : self.lastInput, self.lastOutput)
+                try? await Task.sleep(for: .milliseconds(100))
+                guard let self, self.started, !self.isMuted, !self.isProcessingSpeech else { continue }
+                guard let rec = self.recorder, rec.isRecording else { continue }
+                
+                rec.updateMeters()
+                let power = rec.averagePower(forChannel: 0)
+                let level = max(0.0, min(1.0, Double(power + 50) / 50.0))
+                self.onLevels?(level, 0)
+                
+                if power > -38 {
+                    speechDetected = true
+                    silenceStart = nil
+                } else if speechDetected {
+                    if silenceStart == nil { silenceStart = Date() }
+                    if let start = silenceStart, Date().timeIntervalSince(start) >= 1.2 {
+                        speechDetected = false
+                        silenceStart = nil
+                        Task { @MainActor [weak self] in
+                            await self?.processSpokenAudio()
+                        }
                     }
                 }
-                try? await Task.sleep(for: .milliseconds(100))
             }
         }
     }
-    #if DEBUG && targetEnvironment(simulator)
-    // Offline lifecycle fixture drives the real WebRTC delegate and both teardown paths.
-    // No microphone, network handshake or learner data is used.
-    static func verifyRecoveryLifecycle() async -> Bool {
-        let transport = LiveTransport()
-        transport.networkRecovery = transport.makeNetworkRecovery(timeout: .milliseconds(80))
-        var failures = 0
-        transport.onFailure = { _ in failures += 1 }
-        func installPeer() -> RTCPeerConnection? {
-            let factory = RTCPeerConnectionFactory()
-            transport.factory = factory
-            let peer = factory.peerConnection(with: RTCConfiguration(), constraints: RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil), delegate: transport)
-            transport.peer = peer; transport.closing = false
-            return peer
+    
+    private func processSpokenAudio() async {
+        guard !isProcessingSpeech, let rec = recorder, let url = audioURL, let api else { return }
+        isProcessingSpeech = true
+        rec.stop()
+        self.recorder = nil
+        
+        guard let data = try? Data(contentsOf: url), data.count > 2000 else {
+            try? FileManager.default.removeItem(at: url)
+            isProcessingSpeech = false
+            startRecording()
+            return
         }
-        func deliver(_ peer: RTCPeerConnection, _ state: RTCIceConnectionState) async {
-            transport.peerConnection(peer, didChange: state)
-            try? await Task.sleep(for: .milliseconds(15))
+        
+        onLevels?(0, 0.5)
+        
+        do {
+            let lang = String(languageCode.prefix(2))
+            let userText = try await api.transcribe(audioData: data, language: lang)
+            try? FileManager.default.removeItem(at: url)
+            
+            if !userText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                onEvent?(["type": "session.input_transcript.delta", "delta": userText, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
+                
+                let result = try await api.respond(instructions: instructions, input: userText)
+                if !result.text.isEmpty {
+                    onEvent?(["type": "session.output_transcript.delta", "delta": result.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
+                    synthesizer.speak(text: result.text, languageCode: languageCode)
+                }
+            }
+        } catch {
+            print("Speech processing error:", error)
+            try? FileManager.default.removeItem(at: url)
         }
-        defer { transport.disconnect() }
-        for closeFirst in [true, false] {
-            guard let old = installPeer() else { return false }
-            await deliver(old, .disconnected)
-            if closeFirst { transport.close() } else { transport.disconnect() }
-            // Observe cancellation before the next connection's normal reset could mask it.
-            try? await Task.sleep(for: .milliseconds(110))
-            guard failures == 0 else { return false }
-            transport.disconnect()
-            guard let current = installPeer() else { return false }
-            await deliver(old, .disconnected)
-            await deliver(old, .failed)
-            await deliver(current, .disconnected)
-            await deliver(current, .connected)
-            try? await Task.sleep(for: .milliseconds(110))
-            guard failures == 0 else { return false }
-            transport.disconnect()
-        }
-        guard let peer = installPeer() else { return false }
-        await deliver(peer, .disconnected)
-        await deliver(peer, .disconnected)
-        try? await Task.sleep(for: .milliseconds(110))
-        guard failures == 1 else { return false }
-        await deliver(peer, .completed)
-        await deliver(peer, .disconnected)
-        try? await Task.sleep(for: .milliseconds(110))
-        return failures == 2
+        
+        isProcessingSpeech = false
+        startRecording()
     }
-    #endif
+    
+    func speak(_ text: String, languageCode: String = "de-DE") {
+        synthesizer.speak(text: text, languageCode: languageCode)
+    }
+    
+    @discardableResult func send(_ event: [String: Any]) -> Bool {
+        return true
+    }
+    
+    func mute(_ muted: Bool) {
+        isMuted = muted
+        if muted {
+            synthesizer.stop()
+            recorder?.pause()
+            onLevels?(0, 0)
+        } else {
+            recorder?.record()
+        }
+    }
+    
+    func close() {
+        closing = true
+        synthesizer.stop()
+        recorder?.stop()
+    }
+    
+    func disconnect() {
+        attempt = UUID()
+        meterTask?.cancel()
+        meterTask = nil
+        started = false
+        closing = true
+        synthesizer.stop()
+        recorder?.stop()
+        if let url = audioURL {
+            try? FileManager.default.removeItem(at: url)
+            audioURL = nil
+        }
+        recorder = nil
+        if ownsAudioActivation {
+            let session = AVAudioSession.sharedInstance()
+            try? session.setActive(false)
+            ownsAudioActivation = false
+        }
+        onLevels?(0, 0)
+    }
 
     enum TransportError: LocalizedError {
         case microphone, connection, timeout
@@ -227,44 +242,4 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
             }
         }
     }
-}
-
-extension LiveTransport: RTCDataChannelDelegate, RTCPeerConnectionDelegate {
-    nonisolated func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
-        let closed = dataChannel.readyState == .closed
-        Task { @MainActor [weak self] in
-            guard let self, dataChannel === self.channel, closed, !self.closing else { return }
-            self.onFailure?("The voice connection ended unexpectedly. Your conversation has been saved.")
-        }
-    }
-    nonisolated func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
-        let data = buffer.data
-        Task { @MainActor [weak self] in
-            guard let self, dataChannel === self.channel,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
-            if json["type"] as? String == "session.started" { self.started = true }
-            self.onEvent?(json)
-        }
-    }
-    nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didChange stateChanged: RTCSignalingState) {}
-    nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didAdd stream: RTCMediaStream) {}
-    nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didRemove stream: RTCMediaStream) {}
-    nonisolated func peerConnectionShouldNegotiate(_ peerConnection: RTCPeerConnection) {}
-    nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceConnectionState) {
-        Task { @MainActor [weak self] in
-            guard let self, peerConnection === self.peer, !self.closing else { return }
-            switch newState {
-            case .disconnected: self.networkRecovery.disconnected()
-            case .connected, .completed: self.networkRecovery.connected()
-            case .failed:
-                self.networkRecovery.connected()
-                self.onFailure?("The network connection was lost. Tap to start a new conversation.")
-            default: break
-            }
-        }
-    }
-    nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {}
-    nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didGenerate candidate: RTCIceCandidate) {}
-    nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didRemove candidates: [RTCIceCandidate]) {}
-    nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {}
 }
