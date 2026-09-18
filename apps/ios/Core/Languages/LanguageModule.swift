@@ -26,8 +26,11 @@ public struct LanguageModule: Identifiable, Sendable {
 }
 
 public enum LanguageRegistry {
-    public static let defaultID = "nb"
-    public static let all: [LanguageModule] = [.norwegian, .spanish, .english, .french, .german, .italian, .portuguese, .mandarin]
+    public static let defaultID = "de"
+    public static let all: [LanguageModule] = [
+        .german, .french, .americanEnglish, .britishEnglish, .spanish, .italian,
+        .arabic, .hebrew, .japanese, .russian, .portuguese, .mandarin, .norwegian
+    ]
     public static func module(for id: String) -> LanguageModule? { all.first { $0.id == id } }
 }
 
