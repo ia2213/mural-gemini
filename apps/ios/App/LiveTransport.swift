@@ -68,6 +68,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         switch clean.lowercased() {
         case "de", "german": return "de-DE"
         case "fr", "french": return "fr-FR"
+        case "ro", "romanian": return "ro-RO"
         case "es", "spanish": return "es-ES"
         case "it", "italian": return "it-IT"
         case "pt", "portuguese": return "pt-PT"
