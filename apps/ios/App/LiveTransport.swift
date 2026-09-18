@@ -141,15 +141,17 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 let level = max(0.0, min(1.0, Double(power + 50) / 50.0))
                 self.onLevels?(level, 0)
                 
-                if power > -28 {
+                // VAD Threshold: -42 dB ensures normal spoken voice is reliably caught
+                if power > -42 {
                     speechDurationCount += 1
-                    if speechDurationCount >= 3 {
+                    if speechDurationCount >= 2 {
                         speechDetected = true
                         silenceStart = nil
                     }
                 } else if speechDetected {
                     if silenceStart == nil { silenceStart = Date() }
-                    if let start = silenceStart, Date().timeIntervalSince(start) >= 1.5 {
+                    // 0.9s silence after speech triggers transcription
+                    if let start = silenceStart, Date().timeIntervalSince(start) >= 0.9 {
                         speechDetected = false
                         speechDurationCount = 0
                         silenceStart = nil
@@ -172,17 +174,17 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         rec.stop()
         self.recorder = nil
         
-        guard let data = try? Data(contentsOf: url), data.count > 5000 else {
+        guard let data = try? Data(contentsOf: url), data.count > 3000 else {
             try? FileManager.default.removeItem(at: url)
             isProcessingSpeech = false
             startRecording()
             return
         }
         
-        onLevels?(0, 0.5)
+        onLevels?(0.5, 0.5)
         
         do {
-            let lang = String(languageCode.prefix(2))
+            let lang = String(languageCode.prefix(2)).lowercased()
             let userText = try await api.transcribe(audioData: data, language: lang).trimmingCharacters(in: .whitespacesAndNewlines)
             try? FileManager.default.removeItem(at: url)
             
@@ -190,11 +192,12 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
             let isHallucination = lower.contains("untertitel") || lower.contains("amara.org") || lower.contains("vielen dank") || lower.contains("subtitles") || lower.contains("thank you for watching")
             
             if !userText.isEmpty && userText.count >= 2 && !isHallucination && !synthesizer.isSpeaking {
-                onEvent?(["type": "session.input_transcript.delta", "delta": userText, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
+                let startMS = Int(Date().timeIntervalSince1970 * 1000) % 1000000
+                onEvent?(["type": "session.input_transcript.delta", "delta": userText, "start_ms": startMS, "end_ms": startMS + 500, "event_id": UUID().uuidString])
                 
                 let result = try await api.respond(instructions: instructions, input: userText)
                 if !result.text.isEmpty && !synthesizer.isSpeaking {
-                    onEvent?(["type": "session.output_transcript.delta", "delta": result.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
+                    onEvent?(["type": "session.output_transcript.delta", "delta": result.text, "start_ms": startMS + 501, "end_ms": startMS + 1500, "event_id": UUID().uuidString])
                     synthesizer.speak(text: result.text, languageCode: languageCode)
                 }
             }
