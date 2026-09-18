@@ -19,8 +19,9 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
     }
     private static func bcp47Code(for id: String) -> String {
-        let clean = id.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        switch clean {
+        let clean = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.contains("-") { return clean }
+        switch clean.lowercased() {
         case "de", "german": return "de-DE"
         case "fr", "french": return "fr-FR"
         case "es", "spanish": return "es-ES"
@@ -41,17 +42,25 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         case "he", "hebrew": return "he-IL"
         case "hi", "hindi": return "hi-IN"
         case "ko", "korean": return "ko-KR"
-        default:
-            if clean.contains("-") { return id }
-            return "\(clean)-\(clean.uppercased())"
+        default: return "\(clean)-\(clean.uppercased())"
         }
     }
     private static func bestVoice(for bcp47: String) -> AVSpeechSynthesisVoice? {
-        let prefix = String(bcp47.prefix(2)).lowercased()
-        let voices = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.lowercased().hasPrefix(prefix) }
-        if let premium = voices.first(where: { $0.quality == .premium }) { return premium }
-        if let enhanced = voices.first(where: { $0.quality == .enhanced }) { return enhanced }
-        return AVSpeechSynthesisVoice(language: bcp47) ?? AVSpeechSynthesisVoice.speechVoices().first { $0.language.lowercased().hasPrefix(prefix) } ?? AVSpeechSynthesisVoice(language: "de-DE")
+        let exactLocale = bcp47.lowercased()
+        let langPrefix = String(bcp47.prefix(2)).lowercased()
+        let allVoices = AVSpeechSynthesisVoice.speechVoices()
+        
+        let exactVoices = allVoices.filter { $0.language.lowercased() == exactLocale }
+        if let premium = exactVoices.first(where: { $0.quality == .premium }) { return premium }
+        if let enhanced = exactVoices.first(where: { $0.quality == .enhanced }) { return enhanced }
+        if let first = exactVoices.first { return first }
+        
+        let prefixVoices = allVoices.filter { $0.language.lowercased().hasPrefix(langPrefix) }
+        if let premium = prefixVoices.first(where: { $0.quality == .premium }) { return premium }
+        if let enhanced = prefixVoices.first(where: { $0.quality == .enhanced }) { return enhanced }
+        if let first = prefixVoices.first { return first }
+        
+        return AVSpeechSynthesisVoice(language: bcp47)
     }
 }
 
