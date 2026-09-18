@@ -245,8 +245,7 @@ public struct Preferences: Codable, Sendable {
     public var customModel: String = ""
     public var groqModel: String = "openai/gpt-oss-120b"
     public var speechRate: Float = 0.50
-    public var ttsEngine: String = "native"
-    public var fishApiKey: String = ""
+    public var selectedVoiceIdentifier: String = ""
     public init() {}
 }
 

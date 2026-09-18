@@ -4,47 +4,26 @@ import MuralCore
 
 enum ConnectionState: Equatable { case idle, connecting, active, closing, ended, failed }
 
-final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate, Sendable {
+final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     @MainActor private let synth = AVSpeechSynthesizer()
-    @MainActor private var player: AVAudioPlayer?
+    @MainActor var isSpeaking: Bool { return synth.isSpeaking }
     
-    @MainActor var isSpeaking: Bool { return synth.isSpeaking || (player?.isPlaying ?? false) }
-    
-    @MainActor func speak(text: String, languageCode: String = "de-DE", rate: Float = 0.50, fishKey: String = "") {
+    @MainActor func speak(text: String, languageCode: String = "de-DE", rate: Float = 0.50, voiceIdentifier: String = "") {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
-        player?.stop()
-        
-        let apiKey = fishKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !apiKey.isEmpty {
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                do {
-                    let client = APIClient()
-                    let data = try await client.ttsFishAudio(text: text, apiKey: apiKey)
-                    self.player = try AVAudioPlayer(data: data)
-                    self.player?.play()
-                    return
-                } catch {
-                    print("Fish Audio TTS fallback to native:", error)
-                }
-                self.speakNative(text: text, languageCode: languageCode, rate: rate)
-            }
-        } else {
-            speakNative(text: text, languageCode: languageCode, rate: rate)
-        }
-    }
-    
-    @MainActor private func speakNative(text: String, languageCode: String, rate: Float) {
         let bcp = Self.bcp47Code(for: languageCode)
         let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = Self.bestVoice(for: bcp)
+        
+        if !voiceIdentifier.isEmpty, let customVoice = AVSpeechSynthesisVoice(identifier: voiceIdentifier) {
+            utterance.voice = customVoice
+        } else {
+            utterance.voice = Self.bestVoice(for: bcp)
+        }
         utterance.rate = min(max(rate, 0.25), 0.75)
         synth.speak(utterance)
     }
     
     @MainActor func stop() {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
-        player?.stop()
     }
     private static func bcp47Code(for id: String) -> String {
         let clean = id.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -113,16 +92,16 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, AVAudioPla
     private var instructions: String = ""
     private var languageCode: String = "de-DE"
     private var speechRate: Float = 0.50
-    private var fishKey: String = ""
+    private var voiceIdentifier: String = ""
     
-    func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE", speechRate: Float = 0.50, fishKey: String = "") async throws {
+    func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE", speechRate: Float = 0.50, voiceIdentifier: String = "") async throws {
         disconnect()
         closing = false
         self.api = api
         self.instructions = instructions
         self.languageCode = languageCode
         self.speechRate = speechRate
-        self.fishKey = fishKey
+        self.voiceIdentifier = voiceIdentifier
         let token = UUID(); attempt = token
         
         let granted = await AVAudioApplication.requestRecordPermission()
@@ -144,7 +123,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, AVAudioPla
         
         if !initialResult.text.isEmpty {
             onEvent?(["type": "session.output_transcript.delta", "delta": initialResult.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
-            synthesizer.speak(text: initialResult.text, languageCode: languageCode, rate: speechRate, fishKey: fishKey)
+            synthesizer.speak(text: initialResult.text, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
         }
         
         startRecording()
@@ -254,7 +233,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, AVAudioPla
                 let result = try await api.respond(instructions: instructions, input: userText)
                 if !result.text.isEmpty && !synthesizer.isSpeaking {
                     onEvent?(["type": "session.output_transcript.delta", "delta": result.text, "start_ms": startMS + 501, "end_ms": startMS + 1500, "event_id": UUID().uuidString])
-                    synthesizer.speak(text: result.text, languageCode: languageCode, rate: speechRate, fishKey: fishKey)
+                    synthesizer.speak(text: result.text, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
                 }
             }
         } catch {
@@ -266,8 +245,8 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, AVAudioPla
         startRecording()
     }
     
-    func speak(_ text: String, languageCode: String = "de-DE", rate: Float? = nil, fishKey: String = "") {
-        synthesizer.speak(text: text, languageCode: languageCode, rate: rate ?? speechRate, fishKey: fishKey.isEmpty ? self.fishKey : fishKey)
+    func speak(_ text: String, languageCode: String = "de-DE", rate: Float? = nil, voiceIdentifier: String = "") {
+        synthesizer.speak(text: text, languageCode: languageCode, rate: rate ?? speechRate, voiceIdentifier: voiceIdentifier.isEmpty ? self.voiceIdentifier : voiceIdentifier)
     }
     
     @discardableResult func send(_ event: [String: Any]) -> Bool {

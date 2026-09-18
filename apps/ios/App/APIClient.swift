@@ -71,25 +71,6 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return APIResult(text: text, sources: [], usage: usage)
     }
 
-    func ttsFishAudio(text: String, apiKey: String) async throws -> Data {
-        let endpoint = URL(string: "https://api.fish.audio/v1/tts")!
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.setValue("Bearer " + apiKey, forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = [
-            "text": text,
-            "format": "mp3",
-            "latency": "normal"
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200, !data.isEmpty else {
-            throw APIError.invalidResponse
-        }
-        return data
-    }
-
     func transcribe(audioData: Data, language: String = "en") async throws -> String {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!

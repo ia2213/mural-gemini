@@ -356,10 +356,30 @@ struct SettingsView: View {
                     Text("Select your preferred model on Groq. STT uses Groq Whisper Turbo and TTS uses your iPhone's native iOS voice.")
                 }
                 Section {
-                    SecureField("Fish Audio API Key (Optional)", text: Binding(get: { store.preferences.fishApiKey }, set: { val in store.updatePreferences { $0.fishApiKey = val } }))
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                } header: { Text("Fish Audio TTS (Optional)") } footer: {
-                    Text("Enter a free Fish Audio API key to stream Fish Speech TTS. If left blank, Mural uses your iPhone's native voice.")
+                    let availableVoices = AVSpeechSynthesisVoice.speechVoices().filter {
+                        $0.language.lowercased().hasPrefix(String(store.language.locale.prefix(2)).lowercased())
+                    }
+                    Picker("Voice Accent / Voix", selection: Binding(get: { store.preferences.selectedVoiceIdentifier }, set: { val in store.updatePreferences { $0.selectedVoiceIdentifier = val } })) {
+                        Text("Automatic (Best Premium Voice)").tag("")
+                        ForEach(availableVoices, id: \.identifier) { v in
+                            let qualityStr = v.quality == .premium ? " (Premium)" : (v.quality == .enhanced ? " (Enhanced)" : "")
+                            Text("\(v.name) · \(v.language)\(qualityStr)").tag(v.identifier)
+                        }
+                    }
+                    Button("Play Voice Sample / Écouter l'extrait") {
+                        let text = store.language.greeting
+                        let synth = AVSpeechSynthesizer()
+                        let utterance = AVSpeechUtterance(string: text)
+                        if !store.preferences.selectedVoiceIdentifier.isEmpty, let v = AVSpeechSynthesisVoice(identifier: store.preferences.selectedVoiceIdentifier) {
+                            utterance.voice = v
+                        } else {
+                            utterance.voice = AVSpeechSynthesisVoice(language: store.language.locale)
+                        }
+                        utterance.rate = store.preferences.speechRate
+                        synth.speak(utterance)
+                    }
+                } header: { Text("Voice & Accent Selection") } footer: {
+                    Text("Select a specific voice accent for \(store.language.name). Tap Play Voice Sample to preview.")
                 }
                 Section {
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {

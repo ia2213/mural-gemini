@@ -132,7 +132,7 @@ import MuralCore
         let instructions = TeachingPolicy.voice(language: language, learner: learner, theme: selectedTheme, interests: store.preferences.interests, meaningLanguage: store.preferences.meaningLanguage)
         connectionTask = Task { [weak self] in
             guard let self else { return }
-            do { try await self.transport.connect(api: self.api, instructions: instructions, history: history, languageCode: self.language.id, speechRate: self.store.preferences.speechRate, fishKey: self.store.preferences.fishApiKey) }
+            do { try await self.transport.connect(api: self.api, instructions: instructions, history: history, languageCode: self.language.id, speechRate: self.store.preferences.speechRate, voiceIdentifier: self.store.preferences.selectedVoiceIdentifier) }
             catch is CancellationError { return }
             catch {
                 guard self.session?.id == generation, self.state == .connecting || self.state == .active else { return }
@@ -516,7 +516,7 @@ import MuralCore
             session?.append(fragment)
             let assistantFragment = Fragment(speaker: .assistant, text: result.text, startMS: offset + 2, endMS: offset + 1000, meaningVisible: store.preferences.meaningVisible)
             session?.append(assistantFragment)
-            transport.speak(result.text, languageCode: language.id, rate: store.preferences.speechRate, fishKey: store.preferences.fishApiKey)
+            transport.speak(result.text, languageCode: language.id, rate: store.preferences.speechRate, voiceIdentifier: store.preferences.selectedVoiceIdentifier)
             activity.learnerEngaged(now: activityNow); inactivitySeconds = nil
             #if DEBUG && targetEnvironment(simulator)
             if !typedReplyPreview { scheduleAssessment() }
