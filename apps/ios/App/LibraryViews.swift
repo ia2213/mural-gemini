@@ -322,17 +322,21 @@ struct SettingsView: View {
                 }
                 Section {
                     Picker("Groq Model", selection: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } })) {
+                        Text("Llama 3.3 70B Versatile").tag("llama-3.3-70b-versatile")
+                        Text("Llama 3.1 8B Instant").tag("llama-3.1-8b-instant")
+                        Text("DeepSeek R1 Distill Llama 70B").tag("deepseek-r1-distill-llama-70b")
+                        Text("DeepSeek R1 Distill Qwen 32B").tag("deepseek-r1-distill-qwen-32b")
+                        Text("Qwen 2.5 Coder 32B").tag("qwen-2.5-coder-32b")
+                        Text("Qwen 2.5 32B").tag("qwen-2.5-32b")
+                        Text("Mixtral 8x7B Instruct").tag("mixtral-8x7b-32768")
+                        Text("Gemma 2 9B IT").tag("gemma2-9b-it")
                         Text("OpenAI GPT-OSS 120B").tag("openai/gpt-oss-120b")
                         Text("OpenAI GPT-OSS 20B").tag("openai/gpt-oss-20b")
-                        Text("OpenAI GPT-OSS Safeguard 20B").tag("openai/gpt-oss-safeguard-20b")
                         Text("Groq Compound").tag("groq/compound")
                         Text("Groq Compound Mini").tag("groq/compound-mini")
-                        Text("Qwen 3.8 27B").tag("qwen/qwen3.8-27b")
-                        Text("Llama 3.1 8B Instant").tag("llama-3.1-8b-instant")
-                        Text("Llama 3.3 70B Versatile").tag("llama-3.3-70b-versatile")
-                        Text("Canopy Orpheus English").tag("canopylabs/orpheus-v1-english")
-                        Text("Canopy Orpheus Arabic").tag("canopylabs/orpheus-arabic-saudi")
                     }
+                    TextField("Or enter custom Groq model ID", text: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } }))
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
                     
                     DisclosureGroup(isExpanded: $showingAPIKey) {
                         if hasKey { Label("Your Groq API key is saved on this iPhone", systemImage: "checkmark.shield") }
