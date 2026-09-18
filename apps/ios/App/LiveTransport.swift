@@ -7,15 +7,36 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
 
 final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     @MainActor private let synth = AVSpeechSynthesizer()
-    @MainActor func speak(text: String, languageCode: String = "en-US") {
+    @MainActor func speak(text: String, languageCode: String = "de-DE") {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+        let bcp = Self.bcp47Code(for: languageCode)
         let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: languageCode) ?? AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        utterance.voice = Self.bestVoice(for: bcp)
+        utterance.rate = 0.50
         synth.speak(utterance)
     }
     @MainActor func stop() {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+    }
+    private static func bcp47Code(for id: String) -> String {
+        switch id.lowercased() {
+        case "de", "german": return "de-DE"
+        case "fr", "french": return "fr-FR"
+        case "es", "spanish": return "es-ES"
+        case "it", "italian": return "it-IT"
+        case "nb", "no", "norwegian": return "nb-NO"
+        case "zh", "mandarin", "chinese": return "zh-CN"
+        case "ja", "japanese": return "ja-JP"
+        case "ar", "arabic": return "ar-SA"
+        default: return id.contains("-") ? id : "\(id)-\(id.uppercased())"
+        }
+    }
+    private static func bestVoice(for bcp47: String) -> AVSpeechSynthesisVoice? {
+        let prefix = String(bcp47.prefix(2)).lowercased()
+        let voices = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.lowercased().hasPrefix(prefix) }
+        if let premium = voices.first(where: { $0.quality == .premium }) { return premium }
+        if let enhanced = voices.first(where: { $0.quality == .enhanced }) { return enhanced }
+        return AVSpeechSynthesisVoice(language: bcp47) ?? AVSpeechSynthesisVoice(language: "de-DE")
     }
 }
 
@@ -43,7 +64,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         }
     }
 
-    func connect(api: APIClient, instructions: String, history: [[String: Any]], provider: AIProvider = .hermes, customEndpoint: String = "", customModel: String = "") async throws {
+    func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE") async throws {
         disconnect()
         closing = false
         let token = UUID(); attempt = token
@@ -88,12 +109,12 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         onEvent?(["type": "session.started", "session": ["id": sessionID]])
         if !initialResult.text.isEmpty {
             onEvent?(["type": "session.output_transcript.delta", "delta": initialResult.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
-            synthesizer.speak(text: initialResult.text)
+            synthesizer.speak(text: initialResult.text, languageCode: languageCode)
         }
         startMetering()
     }
 
-    func speak(_ text: String, languageCode: String = "en-US") {
+    func speak(_ text: String, languageCode: String = "de-DE") {
         synthesizer.speak(text: text, languageCode: languageCode)
     }
 
