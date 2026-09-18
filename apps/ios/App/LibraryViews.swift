@@ -320,6 +320,19 @@ struct SettingsView: View {
                     }
                 }
                 Section {
+                    Picker("Groq Model", selection: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } })) {
+                        Text("OpenAI GPT-OSS 120B").tag("openai/gpt-oss-120b")
+                        Text("OpenAI GPT-OSS 20B").tag("openai/gpt-oss-20b")
+                        Text("OpenAI GPT-OSS Safeguard 20B").tag("openai/gpt-oss-safeguard-20b")
+                        Text("Groq Compound").tag("groq/compound")
+                        Text("Groq Compound Mini").tag("groq/compound-mini")
+                        Text("Qwen 3.8 27B").tag("qwen/qwen3.8-27b")
+                        Text("Llama 3.1 8B Instant").tag("llama-3.1-8b-instant")
+                        Text("Llama 3.3 70B Versatile").tag("llama-3.3-70b-versatile")
+                        Text("Canopy Orpheus English").tag("canopylabs/orpheus-v1-english")
+                        Text("Canopy Orpheus Arabic").tag("canopylabs/orpheus-arabic-saudi")
+                    }
+                    
                     DisclosureGroup(isExpanded: $showingAPIKey) {
                         if hasKey { Label("Your Groq API key is saved on this iPhone", systemImage: "checkmark.shield") }
                         SecureField(hasKey ? "Replace Groq API key (gsk_...)" : "Groq API key (gsk_...)", text: $key)
@@ -340,7 +353,7 @@ struct SettingsView: View {
                     } label: { Label("Groq API Key", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
                     if let message { Text(message).font(.footnote).foregroundStyle(MuralColor.secondary) }
                 } header: { Text("Groq Engine") } footer: {
-                    Text("Mural uses Groq Llama 3.1 8B for intelligence, Groq Whisper Turbo for Speech-to-Text, and your iPhone's native iOS voice for Text-to-Speech.")
+                    Text("Select your preferred model on Groq. STT uses Groq Whisper Turbo and TTS uses your iPhone's native iOS voice.")
                 }
                 Section {
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {

@@ -44,15 +44,16 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return try await postURL(endpoint, body: body, apiKey: key)
     }
 
-    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false) async throws -> APIResult {
+    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, model: String = "") async throws -> APIResult {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
+        let selectedModel = !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? model.trimmingCharacters(in: .whitespacesAndNewlines) : "openai/gpt-oss-120b"
         let messages: [[String: Any]] = [
             ["role": "system", "content": instructions],
             ["role": "user", "content": input]
         ]
         let body: [String: Any] = [
-            "model": "llama-3.1-8b-instant",
+            "model": selectedModel,
             "messages": messages,
             "max_tokens": schema == nil ? 1400 : 2200
         ]

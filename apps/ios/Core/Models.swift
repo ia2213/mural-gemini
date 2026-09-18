@@ -240,9 +240,10 @@ public struct Preferences: Codable, Sendable {
     public var interests = ""
     public var hasOnboarded = false
     public var aiConsentVersion: Int?
-    public var providerID: String = "hermes"
+    public var providerID: String = "groq"
     public var customEndpoint: String = ""
     public var customModel: String = ""
+    public var groqModel: String = "openai/gpt-oss-120b"
     public init() {}
 }
 

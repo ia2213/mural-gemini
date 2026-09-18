@@ -58,7 +58,7 @@ import MuralCore
         meanings = MeaningController { request in
             guard store.preferences.aiConsentVersion == AIProcessingConsent.version || AudioVerification.requested else { throw AIProcessingConsent.ConsentError.required }
             guard let language = LanguageRegistry.module(for: request.learningLanguageID) else { throw ArchiveError.unsupportedLanguage }
-            let result = try await api.respond(instructions: TeachingPolicy.translation(language: language, meaningLanguage: request.meaningLanguage), input: request.translationInput)
+            let result = try await api.respond(instructions: TeachingPolicy.translation(language: language, meaningLanguage: request.meaningLanguage), input: request.translationInput, model: store.preferences.groqModel)
             return MeaningResult(text: result.text, inputTokens: result.usage.input, outputTokens: result.usage.output)
         }
         meanings.onResult = { [weak self] request, result in
@@ -415,9 +415,9 @@ import MuralCore
     }
     #endif
     private struct AssessmentResult: Decodable { var outcome: Outcome; var suggestedLevel: Int; var nextGoal: String; var capability: String; var words: [WordProposal] }
-    private static func assess(api: APIClient, snapshot: SessionRecord, passage: Passage) async throws -> FinalAssessmentResult {
+    private static func assess(api: APIClient, snapshot: SessionRecord, passage: Passage, model: String = "") async throws -> FinalAssessmentResult {
         guard let language = LanguageRegistry.module(for: snapshot.languageID) else { throw ArchiveError.unsupportedLanguage }
-        let result = try await api.respond(instructions: TeachingPolicy.assessment(language: language), input: TeachingPolicy.context(snapshot, passage: passage), schema: APIClient.assessmentSchema(language: language))
+        let result = try await api.respond(instructions: TeachingPolicy.assessment(language: language), input: TeachingPolicy.context(snapshot, passage: passage), schema: APIClient.assessmentSchema(language: language), model: model)
         let decoded = try JSONDecoder().decode(AssessmentResult.self, from: Data(result.text.utf8))
         let proposed = Assessment(passageID: passage.id, revisionKey: passage.revisionKey, outcome: decoded.outcome, suggestedLevel: decoded.suggestedLevel,
                                   nextGoal: decoded.nextGoal, capability: decoded.capability, words: decoded.words, context: snapshot.themeID ?? "free")
@@ -432,7 +432,7 @@ import MuralCore
                 guard let self, let snapshot = self.session, let p = snapshot.passages.last(where: { $0.speaker == .user }), p.text.count >= 3,
                       p.revisionKey != self.lastAssessmentKey, self.state == .active else { return }
                 guard let targetLanguage = LanguageRegistry.module(for: snapshot.languageID) else { return }
-                let result = try await Self.assess(api: self.api, snapshot: snapshot, passage: p)
+                let result = try await Self.assess(api: self.api, snapshot: snapshot, passage: p, model: self.store.preferences.groqModel)
                 guard !Task.isCancelled, self.state == .active, self.session?.id == snapshot.id, self.userPassage?.revisionKey == p.revisionKey,
                       let current = self.session else { return }
                 guard let validated = LearningEngine.validate(result.assessment, session: current) else { return }
@@ -540,12 +540,12 @@ import MuralCore
             return APIResult(text: "Gracias.", sources: [], usage: APIUsage())
         }
         #endif
-        return try await api.respond(instructions: instructions, input: input)
+        return try await api.respond(instructions: instructions, input: input, model: store.preferences.groqModel)
     }
     func lookup(word: String, sentence: String) async throws -> String {
         guard hasAIConsent else { throw AIProcessingConsent.ConsentError.required }
         let generation = languageGeneration, sessionID = session?.id
-        let result = try await api.respond(instructions: TeachingPolicy.lookup(language: language, meaningLanguage: store.preferences.meaningLanguage), input: "Selected: \(word)\nSentence: \(sentence)")
+        let result = try await api.respond(instructions: TeachingPolicy.lookup(language: language, meaningLanguage: store.preferences.meaningLanguage), input: "Selected: \(word)\nSentence: \(sentence)", model: store.preferences.groqModel)
         guard generation == languageGeneration else { throw CancellationError() }
         if session?.id == sessionID { addUsage(result.usage); scheduleSave() }
         return result.text
@@ -554,7 +554,7 @@ import MuralCore
         let targetLanguage = language, generation = languageGeneration
         if let cached = store.learningSessions.flatMap(\.topics).first(where: { $0.languageID == targetLanguage.id && $0.query.lowercased() == query.lowercased() && $0.isFresh }) { return cached }
         guard hasAIConsent else { throw AIProcessingConsent.ConsentError.required }
-        let result = try await api.respond(instructions: TeachingPolicy.currentTopic(language: targetLanguage), input: String(query.prefix(500)), search: true)
+        let result = try await api.respond(instructions: TeachingPolicy.currentTopic(language: targetLanguage), input: String(query.prefix(500)), search: true, model: store.preferences.groqModel)
         guard generation == languageGeneration else { throw CancellationError() }
         guard !result.sources.isEmpty else { throw TopicError.unsourced }
         let brief = TopicBrief(languageID: targetLanguage.id, query: query, text: result.text, sources: result.sources)
