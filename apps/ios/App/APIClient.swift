@@ -85,7 +85,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200, !data.isEmpty else {
-            throw APIError.server
+            throw APIError.invalidResponse
         }
         return data
     }
