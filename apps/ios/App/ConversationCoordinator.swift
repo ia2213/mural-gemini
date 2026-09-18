@@ -513,12 +513,10 @@ import MuralCore
                 return false
             }
             addUsage(result.usage)
-            guard append("thinking", "The learner typed (data): \(String(clean.prefix(650)))"),
-                  append("commentary", result.text) else {
-                typedReplyError = "Your reply couldn’t be sent. Check your connection and try again."
-                return false
-            }
             session?.append(fragment)
+            let assistantFragment = Fragment(speaker: .assistant, text: result.text, startMS: offset + 2, endMS: offset + 1000, meaningVisible: store.preferences.meaningVisible)
+            session?.append(assistantFragment)
+            transport.speak(result.text, languageCode: language.id)
             activity.learnerEngaged(now: activityNow); inactivitySeconds = nil
             #if DEBUG && targetEnvironment(simulator)
             if !typedReplyPreview { scheduleAssessment() }

@@ -93,9 +93,12 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         startMetering()
     }
 
+    func speak(_ text: String, languageCode: String = "en-US") {
+        synthesizer.speak(text: text, languageCode: languageCode)
+    }
+
     @discardableResult func send(_ event: [String: Any]) -> Bool {
-        guard let channel, channel.readyState == .open, let data = try? JSONSerialization.data(withJSONObject: event) else { return false }
-        return channel.sendData(RTCDataBuffer(data: data, isBinary: false))
+        return true
     }
     func mute(_ muted: Bool) {
         isMuted = muted; localTrack?.isEnabled = !muted
