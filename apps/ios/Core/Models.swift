@@ -244,6 +244,7 @@ public struct Preferences: Codable, Sendable {
     public var customEndpoint: String = ""
     public var customModel: String = ""
     public var groqModel: String = "openai/gpt-oss-120b"
+    public var speechRate: Float = 0.50
     public init() {}
 }
 

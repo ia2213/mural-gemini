@@ -7,28 +7,43 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
 final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     @MainActor private let synth = AVSpeechSynthesizer()
     @MainActor var isSpeaking: Bool { return synth.isSpeaking }
-    @MainActor func speak(text: String, languageCode: String = "de-DE") {
+    @MainActor func speak(text: String, languageCode: String = "de-DE", rate: Float = 0.50) {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
         let bcp = Self.bcp47Code(for: languageCode)
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = Self.bestVoice(for: bcp)
-        utterance.rate = 0.50
+        utterance.rate = min(max(rate, 0.25), 0.75)
         synth.speak(utterance)
     }
     @MainActor func stop() {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
     }
     private static func bcp47Code(for id: String) -> String {
-        switch id.lowercased() {
+        let clean = id.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        switch clean {
         case "de", "german": return "de-DE"
         case "fr", "french": return "fr-FR"
         case "es", "spanish": return "es-ES"
         case "it", "italian": return "it-IT"
+        case "pt", "portuguese": return "pt-PT"
         case "nb", "no", "norwegian": return "nb-NO"
         case "zh", "mandarin", "chinese": return "zh-CN"
         case "ja", "japanese": return "ja-JP"
         case "ar", "arabic": return "ar-SA"
-        default: return id.contains("-") ? id : "\(id)-\(id.uppercased())"
+        case "en", "english": return "en-US"
+        case "nl", "dutch": return "nl-NL"
+        case "sv", "swedish": return "sv-SE"
+        case "ru", "russian": return "ru-RU"
+        case "tr", "turkish": return "tr-TR"
+        case "pl", "polish": return "pl-PL"
+        case "uk", "ukrainian": return "uk-UA"
+        case "el", "greek": return "el-GR"
+        case "he", "hebrew": return "he-IL"
+        case "hi", "hindi": return "hi-IN"
+        case "ko", "korean": return "ko-KR"
+        default:
+            if clean.contains("-") { return id }
+            return "\(clean)-\(clean.uppercased())"
         }
     }
     private static func bestVoice(for bcp47: String) -> AVSpeechSynthesisVoice? {
@@ -36,7 +51,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         let voices = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.lowercased().hasPrefix(prefix) }
         if let premium = voices.first(where: { $0.quality == .premium }) { return premium }
         if let enhanced = voices.first(where: { $0.quality == .enhanced }) { return enhanced }
-        return AVSpeechSynthesisVoice(language: bcp47) ?? AVSpeechSynthesisVoice(language: "de-DE")
+        return AVSpeechSynthesisVoice(language: bcp47) ?? AVSpeechSynthesisVoice.speechVoices().first { $0.language.lowercased().hasPrefix(prefix) } ?? AVSpeechSynthesisVoice(language: "de-DE")
     }
 }
 
@@ -60,13 +75,15 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     private var api: APIClient?
     private var instructions: String = ""
     private var languageCode: String = "de-DE"
+    private var speechRate: Float = 0.50
     
-    func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE") async throws {
+    func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE", speechRate: Float = 0.50) async throws {
         disconnect()
         closing = false
         self.api = api
         self.instructions = instructions
         self.languageCode = languageCode
+        self.speechRate = speechRate
         let token = UUID(); attempt = token
         
         let granted = await AVAudioApplication.requestRecordPermission()
@@ -88,7 +105,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         
         if !initialResult.text.isEmpty {
             onEvent?(["type": "session.output_transcript.delta", "delta": initialResult.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
-            synthesizer.speak(text: initialResult.text, languageCode: languageCode)
+            synthesizer.speak(text: initialResult.text, languageCode: languageCode, rate: speechRate)
         }
         
         startRecording()
@@ -198,7 +215,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 let result = try await api.respond(instructions: instructions, input: userText)
                 if !result.text.isEmpty && !synthesizer.isSpeaking {
                     onEvent?(["type": "session.output_transcript.delta", "delta": result.text, "start_ms": startMS + 501, "end_ms": startMS + 1500, "event_id": UUID().uuidString])
-                    synthesizer.speak(text: result.text, languageCode: languageCode)
+                    synthesizer.speak(text: result.text, languageCode: languageCode, rate: speechRate)
                 }
             }
         } catch {
@@ -210,8 +227,8 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         startRecording()
     }
     
-    func speak(_ text: String, languageCode: String = "de-DE") {
-        synthesizer.speak(text: text, languageCode: languageCode)
+    func speak(_ text: String, languageCode: String = "de-DE", rate: Float? = nil) {
+        synthesizer.speak(text: text, languageCode: languageCode, rate: rate ?? speechRate)
     }
     
     @discardableResult func send(_ event: [String: Any]) -> Bool {

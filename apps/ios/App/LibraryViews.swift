@@ -357,7 +357,12 @@ struct SettingsView: View {
                 }
                 Section {
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {
-                        ForEach([5, 10, 15, 20, 30, 60], id: \.self) { Text("\($0) minutes").tag($0) }
+                        Text("15 minutes").tag(15); Text("30 minutes").tag(30); Text("60 minutes").tag(60)
+                    }
+                    Picker("Speech Speed / Vitesse", selection: Binding(get: { store.preferences.speechRate }, set: { val in store.updatePreferences { $0.speechRate = val } })) {
+                        Text("Slow / Lente (0.8x)").tag(Float(0.40))
+                        Text("Normal / Normale (1.0x)").tag(Float(0.50))
+                        Text("Fast / Rapide (1.2x)").tag(Float(0.60))
                     }
                     LabeledContent("Recorded voice time", value: "\(Int(totalVoiceSeconds / 60)) min \(Int(totalVoiceSeconds) % 60) sec")
                     LabeledContent("Voice estimate", value: String(format: "$%.2f USD", totalVoiceSeconds / 60 * 0.05))
