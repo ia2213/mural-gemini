@@ -349,9 +349,9 @@ struct SettingsView: View {
                     LabeledContent("Recorded voice time", value: "\(Int(totalVoiceSeconds / 60)) min \(Int(totalVoiceSeconds) % 60) sec")
                     LabeledContent("Voice estimate", value: String(format: "$%.2f USD", totalVoiceSeconds / 60 * 0.05))
                     LabeledContent("Search calls recorded", value: "\(store.sessions.reduce(0) { $0 + $1.searchCalls })")
-                    Link("Google AI Studio usage", destination: URL(string: "https://aistudio.google.com/")!)
+                    Link("Groq Console usage", destination: URL(string: "https://console.groq.com/")!)
                 } header: { Text("Keep it comfortable") } footer: {
-                    Text("Voice estimate uses $0.05/min as of 11 September 2026. Translation, teaching and search cost extra. Interrupted requests can be billed without a usage record here. Your Google AI dashboard is authoritative. The time limit is local, not a billing cap.")
+                    Text("Translation, teaching and search cost extra. Your Groq dashboard is authoritative. The time limit is local, not a billing cap.")
                 }
                 Section {
                     Button("Export learning backup", systemImage: "square.and.arrow.up") {
@@ -372,9 +372,9 @@ struct SettingsView: View {
                 } header: { Text("Help and privacy") }
                 Section {
                     Text("Mural 0.1 · Personal build").font(.footnote)
-                    Text("Voice & Teacher: Gemini 2.5 Flash").font(.footnote)
-                    Link("Gemini data controls", destination: URL(string: "https://ai.google.dev/terms")!)
-                    Text("Audio and selected text go to Gemini while you practise. Requests disable provider storage where supported; abuse-monitoring retention may still apply. Raw audio is not saved by Mural.").font(.footnote)
+                    Text("Teacher: Groq Llama 3.1 8B · STT: Groq Whisper Turbo").font(.footnote)
+                    Link("Groq data controls", destination: URL(string: "https://groq.com/privacy/")!)
+                    Text("Audio and selected text go to Groq while you practise. Raw audio is not saved by Mural.").font(.footnote)
                     Button("Open-source notices") { notices = true }
                 }
             }.scrollContentBackground(.hidden).background(MuralColor.cream).tint(MuralColor.secondary)
