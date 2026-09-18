@@ -356,6 +356,12 @@ struct SettingsView: View {
                     Text("Select your preferred model on Groq. STT uses Groq Whisper Turbo and TTS uses your iPhone's native iOS voice.")
                 }
                 Section {
+                    SecureField("Fish Audio API Key (Optional)", text: Binding(get: { store.preferences.fishApiKey }, set: { val in store.updatePreferences { $0.fishApiKey = val } }))
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                } header: { Text("Fish Audio TTS (Optional)") } footer: {
+                    Text("Enter a free Fish Audio API key to stream Fish Speech TTS. If left blank, Mural uses your iPhone's native voice.")
+                }
+                Section {
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {
                         Text("15 minutes").tag(15); Text("30 minutes").tag(30); Text("60 minutes").tag(60)
                     }
