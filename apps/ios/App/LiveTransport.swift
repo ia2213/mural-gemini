@@ -6,6 +6,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
 
 final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     @MainActor private let synth = AVSpeechSynthesizer()
+    @MainActor var isSpeaking: Bool { return synth.isSpeaking }
     @MainActor func speak(text: String, languageCode: String = "de-DE") {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
         let bcp = Self.bcp47Code(for: languageCode)
@@ -119,11 +120,20 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         meterTask?.cancel()
         meterTask = Task { [weak self] in
             var speechDetected = false
+            var speechDurationCount = 0
             var silenceStart: Date? = nil
             
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
                 guard let self, self.started, !self.isMuted, !self.isProcessingSpeech else { continue }
+                
+                // Do not process audio while the phone speaker is playing TTS
+                if self.synthesizer.isSpeaking {
+                    speechDetected = false
+                    speechDurationCount = 0
+                    silenceStart = nil
+                    continue
+                }
                 guard let rec = self.recorder, rec.isRecording else { continue }
                 
                 rec.updateMeters()
@@ -131,18 +141,24 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 let level = max(0.0, min(1.0, Double(power + 50) / 50.0))
                 self.onLevels?(level, 0)
                 
-                if power > -38 {
-                    speechDetected = true
-                    silenceStart = nil
+                if power > -28 {
+                    speechDurationCount += 1
+                    if speechDurationCount >= 3 {
+                        speechDetected = true
+                        silenceStart = nil
+                    }
                 } else if speechDetected {
                     if silenceStart == nil { silenceStart = Date() }
-                    if let start = silenceStart, Date().timeIntervalSince(start) >= 1.2 {
+                    if let start = silenceStart, Date().timeIntervalSince(start) >= 1.5 {
                         speechDetected = false
+                        speechDurationCount = 0
                         silenceStart = nil
                         Task { @MainActor [weak self] in
                             await self?.processSpokenAudio()
                         }
                     }
+                } else {
+                    speechDurationCount = 0
                 }
             }
         }
@@ -150,11 +166,13 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     
     private func processSpokenAudio() async {
         guard !isProcessingSpeech, let rec = recorder, let url = audioURL, let api else { return }
+        guard !synthesizer.isSpeaking else { startRecording(); return }
+        
         isProcessingSpeech = true
         rec.stop()
         self.recorder = nil
         
-        guard let data = try? Data(contentsOf: url), data.count > 2000 else {
+        guard let data = try? Data(contentsOf: url), data.count > 5000 else {
             try? FileManager.default.removeItem(at: url)
             isProcessingSpeech = false
             startRecording()
@@ -165,14 +183,17 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         
         do {
             let lang = String(languageCode.prefix(2))
-            let userText = try await api.transcribe(audioData: data, language: lang)
+            let userText = try await api.transcribe(audioData: data, language: lang).trimmingCharacters(in: .whitespacesAndNewlines)
             try? FileManager.default.removeItem(at: url)
             
-            if !userText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let lower = userText.lowercased()
+            let isHallucination = lower.contains("untertitel") || lower.contains("amara.org") || lower.contains("vielen dank") || lower.contains("subtitles") || lower.contains("thank you for watching")
+            
+            if !userText.isEmpty && userText.count >= 2 && !isHallucination && !synthesizer.isSpeaking {
                 onEvent?(["type": "session.input_transcript.delta", "delta": userText, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
                 
                 let result = try await api.respond(instructions: instructions, input: userText)
-                if !result.text.isEmpty {
+                if !result.text.isEmpty && !synthesizer.isSpeaking {
                     onEvent?(["type": "session.output_transcript.delta", "delta": result.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
                     synthesizer.speak(text: result.text, languageCode: languageCode)
                 }
