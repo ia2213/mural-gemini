@@ -44,10 +44,19 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return try await postURL(endpoint, body: body, apiKey: key)
     }
 
+    private func sanitizeModel(_ model: String) -> String {
+        let clean = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.isEmpty { return "llama-3.3-70b-versatile" }
+        if clean.lowercased().hasPrefix("ilama") {
+            return "llama" + clean.dropFirst(5)
+        }
+        return clean
+    }
+
     func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, model: String = "") async throws -> APIResult {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
-        let selectedModel = !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? model.trimmingCharacters(in: .whitespacesAndNewlines) : "openai/gpt-oss-120b"
+        let selectedModel = sanitizeModel(model)
         let messages: [[String: Any]] = [
             ["role": "system", "content": instructions],
             ["role": "user", "content": input]
@@ -74,7 +83,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
     func respondHistory(instructions: String, history: [[String: String]], model: String = "") async throws -> APIResult {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
-        let selectedModel = !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? model.trimmingCharacters(in: .whitespacesAndNewlines) : "openai/gpt-oss-120b"
+        let selectedModel = sanitizeModel(model)
         
         var messages: [[String: Any]] = [
             ["role": "system", "content": instructions]
