@@ -342,14 +342,22 @@
       ];
 
       const attempts = [];
-      if (provider === "groq" || provider === "auto") {
+      if (provider === "groq") {
         attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: model.includes("gemini") ? "qwen/qwen3.8-27b" : model });
-      }
-      if (provider === "google" || provider === "auto") {
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
-      }
-      if ((provider === "hermes_vps" || provider === "auto") && vps) {
+        if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
+      } else if (provider === "google") {
+        attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
+        if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
+      } else if (provider === "hermes_vps" && vps) {
         attempts.push({ url: vps, key: key, model: "auto/best-coding" });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
+        attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
+      } else {
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
+        attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
+        if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
       }
 
       let reply = null;

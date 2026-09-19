@@ -82,7 +82,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         let json: [String: Any]
         do {
             json = try await postURL(endpoint, body: body, apiKey: key)
-        } catch let failure as ProviderFailure where [400, 403, 404].contains(failure.status) {
+        } catch let failure as ProviderFailure where [400, 403, 404, 429, 500, 502, 503].contains(failure.status) {
             let available = (try? await fetchAvailableModels()) ?? []
             if let fallbackModel = available.first(where: { $0 != selectedModel }) {
                 body["model"] = fallbackModel
@@ -127,7 +127,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         let json: [String: Any]
         do {
             json = try await postURL(endpoint, body: body, apiKey: key)
-        } catch let failure as ProviderFailure where [400, 403, 404].contains(failure.status) {
+        } catch let failure as ProviderFailure where [400, 403, 404, 429, 500, 502, 503].contains(failure.status) {
             let available = (try? await fetchAvailableModels()) ?? []
             if let fallbackModel = available.first(where: { $0 != selectedModel }) {
                 body["model"] = fallbackModel
@@ -190,9 +190,9 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
     func respondHistory(instructions: String, history: [[String: String]], model: String = "", preferences: Preferences = Preferences()) async throws -> APIResult {
         let mode = preferences.providerID.lowercased()
         let providersToTry: [String] = {
-            if mode == "groq" { return ["groq"] }
-            if mode == "google" { return ["google"] }
-            if mode == "hermes_vps" { return ["hermes_vps"] }
+            if mode == "groq" { return ["groq", "google", "hermes_vps"] }
+            if mode == "google" { return ["google", "groq", "hermes_vps"] }
+            if mode == "hermes_vps" { return ["hermes_vps", "groq", "google"] }
             return ["groq", "google", "hermes_vps"]
         }()
         
@@ -208,7 +208,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
                 }
             } catch {
                 lastError = error
-                print("Provider \(provider) execution failed: \(error). Trying next provider...")
+                print("Provider \(provider) failed with error: \(error). Failing over to next available AI provider...")
             }
         }
         throw lastError ?? APIError.incomplete
