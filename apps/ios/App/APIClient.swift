@@ -46,7 +46,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     private func sanitizeModel(_ model: String) -> String {
         let clean = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        if clean.isEmpty { return "llama-3.3-70b-versatile" }
+        if clean.isEmpty { return "llama-3.1-8b-instant" }
         if clean.lowercased().hasPrefix("ilama") {
             return "llama" + clean.dropFirst(5)
         }
@@ -82,10 +82,13 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         let json: [String: Any]
         do {
             json = try await postURL(endpoint, body: body, apiKey: key)
-        } catch let failure as ProviderFailure where failure.status == 404 {
+        } catch let failure as ProviderFailure where [400, 403, 404].contains(failure.status) {
             let available = (try? await fetchAvailableModels()) ?? []
             if let fallbackModel = available.first(where: { $0 != selectedModel }) {
                 body["model"] = fallbackModel
+                json = try await postURL(endpoint, body: body, apiKey: key)
+            } else if selectedModel != "llama-3.1-8b-instant" {
+                body["model"] = "llama-3.1-8b-instant"
                 json = try await postURL(endpoint, body: body, apiKey: key)
             } else {
                 throw failure
@@ -124,10 +127,13 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         let json: [String: Any]
         do {
             json = try await postURL(endpoint, body: body, apiKey: key)
-        } catch let failure as ProviderFailure where failure.status == 404 {
+        } catch let failure as ProviderFailure where [400, 403, 404].contains(failure.status) {
             let available = (try? await fetchAvailableModels()) ?? []
             if let fallbackModel = available.first(where: { $0 != selectedModel }) {
                 body["model"] = fallbackModel
+                json = try await postURL(endpoint, body: body, apiKey: key)
+            } else if selectedModel != "llama-3.1-8b-instant" {
+                body["model"] = "llama-3.1-8b-instant"
                 json = try await postURL(endpoint, body: body, apiKey: key)
             } else {
                 throw failure
