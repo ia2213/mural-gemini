@@ -53,6 +53,19 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return clean
     }
 
+    func fetchAvailableModels() async throws -> [String] {
+        guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+        let endpoint = URL(string: "https://api.groq.com/openai/v1/models")!
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let list = json["data"] as? [[String: Any]] else { return [] }
+        return list.compactMap { $0["id"] as? String }.filter { !$0.contains("whisper") && !$0.contains("guard") && !$0.contains("prompt") }
+    }
+
     func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, model: String = "") async throws -> APIResult {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
@@ -61,12 +74,23 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             ["role": "system", "content": instructions],
             ["role": "user", "content": input]
         ]
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": selectedModel,
             "messages": messages,
             "max_tokens": schema == nil ? 1400 : 2200
         ]
-        let json = try await postURL(endpoint, body: body, apiKey: key)
+        let json: [String: Any]
+        do {
+            json = try await postURL(endpoint, body: body, apiKey: key)
+        } catch let failure as ProviderFailure where failure.status == 404 {
+            let available = (try? await fetchAvailableModels()) ?? []
+            if let fallbackModel = available.first(where: { $0 != selectedModel }) {
+                body["model"] = fallbackModel
+                json = try await postURL(endpoint, body: body, apiKey: key)
+            } else {
+                throw failure
+            }
+        }
         guard let choices = json["choices"] as? [[String: Any]],
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
@@ -92,12 +116,23 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             messages.append(["role": msg["role"] ?? "user", "content": msg["content"] ?? ""])
         }
         
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": selectedModel,
             "messages": messages,
             "max_tokens": 1400
         ]
-        let json = try await postURL(endpoint, body: body, apiKey: key)
+        let json: [String: Any]
+        do {
+            json = try await postURL(endpoint, body: body, apiKey: key)
+        } catch let failure as ProviderFailure where failure.status == 404 {
+            let available = (try? await fetchAvailableModels()) ?? []
+            if let fallbackModel = available.first(where: { $0 != selectedModel }) {
+                body["model"] = fallbackModel
+                json = try await postURL(endpoint, body: body, apiKey: key)
+            } else {
+                throw failure
+            }
+        }
         guard let choices = json["choices"] as? [[String: Any]],
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
