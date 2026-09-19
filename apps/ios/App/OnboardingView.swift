@@ -8,6 +8,7 @@ struct OnboardingView: View {
     @State private var targetID: String
     @State private var meaningLanguage: String
     @State private var hasChosenMeaning: Bool
+    @State private var apiKeyInput: String = ""
     @State private var greetingIndex = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -19,6 +20,7 @@ struct OnboardingView: View {
         _targetID = State(initialValue: coordinator.language.id)
         _meaningLanguage = State(initialValue: coordinator.store.preferences.meaningLanguage)
         _hasChosenMeaning = State(initialValue: coordinator.store.preferences.meaningLanguage != Preferences().meaningLanguage)
+        _apiKeyInput = State(initialValue: CredentialStore.read() ?? "")
     }
 
     private var target: LanguageModule { LanguageRegistry.module(for: targetID) ?? .norwegian }
@@ -27,19 +29,19 @@ struct OnboardingView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                if step == 1 {
-                    Button { move(to: 0) } label: {
+                if step > 0 {
+                    Button { move(to: step - 1) } label: {
                         Image(systemName: "chevron.left").font(.system(size: 20, weight: .medium)).frame(width: 44, height: 44)
                             .modifier(SoftGlass())
-                    }.accessibilityLabel("Back to learning language").accessibilityIdentifier("onboarding-back")
+                    }.accessibilityLabel("Back").accessibilityIdentifier("onboarding-back")
                 } else { Brand() }
                 Spacer()
                 HStack(spacing: 6) {
-                    ForEach(0..<2) { index in
+                    ForEach(0..<3) { index in
                         Capsule().fill(index == step ? MuralColor.orange : MuralColor.peach)
                             .frame(width: index == step ? 24 : 8, height: 6)
                     }
-                }.accessibilityElement(children: .ignore).accessibilityLabel("Step \(step + 1) of 2")
+                }.accessibilityElement(children: .ignore).accessibilityLabel("Step \(step + 1) of 3")
             }.padding(.horizontal, 26).padding(.top, 8).frame(height: 54)
 
             ScrollView {
@@ -56,7 +58,8 @@ struct OnboardingView: View {
 
                     Group {
                         if step == 0 { languageStep }
-                        else { meaningStep }
+                        else if step == 1 { meaningStep }
+                        else { keyStep }
                     }.id(step).transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 14)))
                     if step == 1 && typeSize.isAccessibilitySize { consentDetails }
                 }.padding(.horizontal, 26).padding(.bottom, 22)
@@ -65,13 +68,13 @@ struct OnboardingView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 12) {
                 if step == 1 && !typeSize.isAccessibilitySize { consentDetails }
-                Button(step == 0 ? "Continue" : "Agree and continue") { advance() }
+                Button(step < 2 ? "Continue" : "Start Conversation") { advance() }
                     .font(.system(.headline, design: .rounded)).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity).padding(.vertical, 19)
                     .background(MuralColor.orange, in: Capsule())
                     .accessibilityIdentifier("onboarding-continue")
                 if !typeSize.isAccessibilitySize {
-                    Text(step == 0 ? "We’ll find your pace through conversation." : "You can change both languages in Settings.")
+                    Text(step == 0 ? "We’ll find your pace through conversation." : (step == 1 ? "You can change both languages in Settings." : "Your key stays encrypted on this iPhone."))
                         .font(.caption).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
                 }
             }.padding(.horizontal, 26).padding(.top, 16).padding(.bottom, 16)
@@ -158,6 +161,28 @@ struct OnboardingView: View {
         }
     }
 
+    private var keyStep: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 10) {
+                Image(systemName: "key.fill").font(.system(size: 36, weight: .light)).foregroundStyle(MuralColor.orange)
+                Text("Groq API Key")
+                    .font(.system(.title2, design: .rounded, weight: .semibold)).tracking(-0.5)
+                Text("Enter your free Groq API key (gsk_...). It is saved securely on your iPhone's Keychain.")
+                    .font(.subheadline).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
+            }
+            VStack(spacing: 12) {
+                SecureField("Groq API key (gsk_...)", text: $apiKeyInput)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .padding(16)
+                    .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 16))
+                
+                Link("Get a free API key at console.groq.com", destination: URL(string: "https://console.groq.com/keys")!)
+                    .font(.caption).underline()
+            }
+            .padding(.top, 10)
+        }
+    }
+
     private func advance() {
         if step == 0 {
             if !hasChosenMeaning && meaningLanguage == target.name {
@@ -170,7 +195,13 @@ struct OnboardingView: View {
                     ?? MeaningLanguages.all.first { $0 != target.name } ?? "English"
             }
             move(to: 1)
+        } else if step == 1 {
+            move(to: 2)
         } else {
+            let cleanKey = apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !cleanKey.isEmpty {
+                try? CredentialStore.save(cleanKey)
+            }
             coordinator.selectLanguage(targetID)
             coordinator.selectMeaningLanguage(meaningLanguage)
             coordinator.store.updatePreferences { $0.meaningVisible = true; $0.aiConsentVersion = AIProcessingConsent.version }
