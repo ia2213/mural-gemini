@@ -243,7 +243,7 @@ public struct Preferences: Codable, Sendable {
     public var providerID: String = "groq"
     public var customEndpoint: String = ""
     public var customModel: String = ""
-    public var groqModel: String = "openai/gpt-oss-120b"
+    public var groqModel: String = "qwen/qwen3.8-27b"
     public var speechRate: Float = 0.50
     public var selectedVoiceIdentifier: String = ""
     public init() {}

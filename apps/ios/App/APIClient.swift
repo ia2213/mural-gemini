@@ -46,9 +46,9 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     private func sanitizeModel(_ model: String) -> String {
         let clean = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        if clean.isEmpty { return "openai/gpt-oss-120b" }
+        if clean.isEmpty || clean.contains("llama") { return "qwen/qwen3.8-27b" }
         if clean.lowercased().hasPrefix("ilama") {
-            return "llama" + clean.dropFirst(5)
+            return "qwen/qwen3.8-27b"
         }
         return clean
     }
@@ -87,8 +87,8 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             if let fallbackModel = available.first(where: { $0 != selectedModel }) {
                 body["model"] = fallbackModel
                 json = try await postURL(endpoint, body: body, apiKey: key)
-            } else if selectedModel != "openai/gpt-oss-120b" {
-                body["model"] = "openai/gpt-oss-120b"
+            } else if selectedModel != "qwen/qwen3.8-27b" {
+                body["model"] = "qwen/qwen3.8-27b"
                 json = try await postURL(endpoint, body: body, apiKey: key)
             } else {
                 throw failure
@@ -132,8 +132,8 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             if let fallbackModel = available.first(where: { $0 != selectedModel }) {
                 body["model"] = fallbackModel
                 json = try await postURL(endpoint, body: body, apiKey: key)
-            } else if selectedModel != "openai/gpt-oss-120b" {
-                body["model"] = "openai/gpt-oss-120b"
+            } else if selectedModel != "qwen/qwen3.8-27b" {
+                body["model"] = "qwen/qwen3.8-27b"
                 json = try await postURL(endpoint, body: body, apiKey: key)
             } else {
                 throw failure
