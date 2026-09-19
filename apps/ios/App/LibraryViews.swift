@@ -321,6 +321,39 @@ struct SettingsView: View {
                     }
                 }
                 Section {
+                    Picker("AI Provider Mode", selection: Binding(get: { store.preferences.providerID }, set: { val in store.updatePreferences { $0.providerID = val } })) {
+                        Text("Auto (Groq → Gemini → VPS)").tag("auto")
+                        Text("Groq API").tag("groq")
+                        Text("Google Gemini API").tag("google")
+                        Text("Personal Hermes VPS Agent").tag("hermes_vps")
+                    }
+                } header: { Text("AI Engine Provider") } footer: {
+                    Text("Auto mode automatically falls back between Groq, Google Gemini, and your personal Hermes VPS if any provider fails.")
+                }
+
+                if store.preferences.providerID == "google" || store.preferences.providerID == "auto" {
+                    Section {
+                        TextField("Google API Key (AIzaSy...)", text: Binding(get: { store.preferences.googleAPIKey }, set: { val in store.updatePreferences { $0.googleAPIKey = val } }))
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        Picker("Gemini Model", selection: Binding(get: { store.preferences.geminiModel }, set: { val in store.updatePreferences { $0.geminiModel = val } })) {
+                            Text("Gemini 2.5 Flash").tag("gemini-2.5-flash")
+                            Text("Gemini 1.5 Flash").tag("gemini-1.5-flash")
+                        }
+                    } header: { Text("Google Gemini Engine") }
+                }
+
+                if store.preferences.providerID == "hermes_vps" || store.preferences.providerID == "auto" {
+                    Section {
+                        TextField("VPS Endpoint (http://vps:20128/v1/chat/completions)", text: Binding(get: { store.preferences.vpsEndpoint }, set: { val in store.updatePreferences { $0.vpsEndpoint = val } }))
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        SecureField("VPS Auth Token (Optional)", text: Binding(get: { store.preferences.vpsAPIKey }, set: { val in store.updatePreferences { $0.vpsAPIKey = val } }))
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        TextField("Model Name", text: Binding(get: { store.preferences.vpsModel }, set: { val in store.updatePreferences { $0.vpsModel = val } }))
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    } header: { Text("Personal Hermes VPS Agent") }
+                }
+
+                Section {
                     Picker("Groq Model", selection: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } })) {
                         Text("Qwen 3.8 27B (Recommended)").tag("qwen/qwen3.8-27b")
                         Text("OpenAI GPT-OSS 120B").tag("openai/gpt-oss-120b")

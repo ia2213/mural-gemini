@@ -107,7 +107,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return APIResult(text: text, sources: [], usage: usage)
     }
 
-    func respondHistory(instructions: String, history: [[String: String]], model: String = "") async throws -> APIResult {
+    func executeGroq(instructions: String, history: [[String: String]], model: String = "") async throws -> APIResult {
         guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
         let selectedModel = sanitizeModel(model)
@@ -150,6 +150,68 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         }
         guard !text.isEmpty else { throw APIError.incomplete }
         return APIResult(text: text, sources: [], usage: usage)
+    }
+
+    func executeGemini(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
+        let key = prefs.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        let model = prefs.geminiModel.isEmpty ? "gemini-2.5-flash" : prefs.geminiModel
+        var messages: [[String: Any]] = [["role": "system", "content": instructions]]
+        for msg in history {
+            messages.append(["role": msg["role"] ?? "user", "content": msg["content"] ?? ""])
+        }
+        let body: [String: Any] = ["model": model, "messages": messages, "max_tokens": 1400]
+        let json = try await postURL(endpoint, body: body, apiKey: key)
+        guard let choices = json["choices"] as? [[String: Any]],
+              let firstChoice = choices.first,
+              let message = firstChoice["message"] as? [String: Any],
+              let text = message["content"] as? String else { throw APIError.incomplete }
+        return APIResult(text: text, sources: [], usage: APIUsage())
+    }
+
+    func executeHermesVPS(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
+        let endpoint = prefs.vpsEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !endpoint.isEmpty else { throw APIError.missingKey }
+        let key = prefs.vpsAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let model = prefs.vpsModel.isEmpty ? "auto/best-coding" : prefs.vpsModel
+        var messages: [[String: Any]] = [["role": "system", "content": instructions]]
+        for msg in history {
+            messages.append(["role": msg["role"] ?? "user", "content": msg["content"] ?? ""])
+        }
+        let body: [String: Any] = ["model": model, "messages": messages, "max_tokens": 1400]
+        let json = try await postURL(endpoint, body: body, apiKey: key)
+        guard let choices = json["choices"] as? [[String: Any]],
+              let firstChoice = choices.first,
+              let message = firstChoice["message"] as? [String: Any],
+              let text = message["content"] as? String else { throw APIError.incomplete }
+        return APIResult(text: text, sources: [], usage: APIUsage())
+    }
+
+    func respondHistory(instructions: String, history: [[String: String]], model: String = "", preferences: Preferences = Preferences()) async throws -> APIResult {
+        let mode = preferences.providerID.lowercased()
+        let providersToTry: [String] = {
+            if mode == "groq" { return ["groq"] }
+            if mode == "google" { return ["google"] }
+            if mode == "hermes_vps" { return ["hermes_vps"] }
+            return ["groq", "google", "hermes_vps"]
+        }()
+        
+        var lastError: Error? = nil
+        for provider in providersToTry {
+            do {
+                if provider == "groq" {
+                    return try await executeGroq(instructions: instructions, history: history, model: model)
+                } else if provider == "google" {
+                    return try await executeGemini(instructions: instructions, history: history, prefs: preferences)
+                } else if provider == "hermes_vps" {
+                    return try await executeHermesVPS(instructions: instructions, history: history, prefs: preferences)
+                }
+            } catch {
+                lastError = error
+                print("Provider \(provider) execution failed: \(error). Trying next provider...")
+            }
+        }
+        throw lastError ?? APIError.incomplete
     }
 
     func transcribe(audioData: Data, language: String = "en") async throws -> String {

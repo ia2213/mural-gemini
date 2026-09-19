@@ -132,11 +132,13 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     private var speechRate: Float = 0.50
     private var voiceIdentifier: String = ""
     private var conversationHistory: [[String: String]] = []
+    private var preferences = Preferences()
     
-    func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE", speechRate: Float = 0.50, voiceIdentifier: String = "") async throws {
+    func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE", speechRate: Float = 0.50, voiceIdentifier: String = "", preferences: Preferences = Preferences()) async throws {
         disconnect()
         closing = false
         self.api = api
+        self.preferences = preferences
         self.instructions = instructions
         self.languageCode = languageCode
         self.speechRate = speechRate
@@ -272,7 +274,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 onEvent?(["type": "session.input_transcript.delta", "delta": userText, "start_ms": startMS, "end_ms": startMS + 500, "event_id": UUID().uuidString])
                 
                 conversationHistory.append(["role": "user", "content": userText])
-                let result = try await api.respondHistory(instructions: instructions, history: conversationHistory)
+                let result = try await api.respondHistory(instructions: instructions, history: conversationHistory, preferences: preferences)
                 if !result.text.isEmpty {
                     conversationHistory.append(["role": "assistant", "content": result.text])
                     let sentences = result.text.components(separatedBy: CharacterSet(charactersIn: ".!?\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }

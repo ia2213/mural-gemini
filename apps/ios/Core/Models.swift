@@ -240,10 +240,15 @@ public struct Preferences: Codable, Sendable {
     public var interests = ""
     public var hasOnboarded = false
     public var aiConsentVersion: Int?
-    public var providerID: String = "groq"
+    public var providerID: String = "auto"
     public var customEndpoint: String = ""
     public var customModel: String = ""
     public var groqModel: String = "qwen/qwen3.8-27b"
+    public var googleAPIKey: String = ""
+    public var geminiModel: String = "gemini-2.5-flash"
+    public var vpsEndpoint: String = ""
+    public var vpsAPIKey: String = ""
+    public var vpsModel: String = "auto/best-coding"
     public var speechRate: Float = 0.50
     public var selectedVoiceIdentifier: String = ""
     public init() {}
