@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mural AI Language Teacher</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #FDFBF7;
+      --card-bg: #FFFFFF;
+      --text: #1A1A1A;
+      --subtext: #666666;
+      --accent: #FF6B35;
+      --accent-light: #FFE8E0;
+      --border: #E8E5DF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .orb {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FF6B35, #FFAA00);
+      margin: 0 auto 12px;
+      box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
+      animation: pulse 3s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    p.subtitle { font-size: 14px; color: var(--subtext); }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--subtext);
+      margin-bottom: 12px;
+    }
+
+    .lang-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .lang-btn {
+      background: #F5F3EE;
+      border: 1.5px solid transparent;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .lang-btn.selected {
+      background: var(--accent-light);
+      border-color: var(--accent);
+    }
+
+    .lang-name { font-size: 14px; font-weight: 600; }
+    .lang-native { font-size: 12px; color: var(--subtext); }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #F9F8F5;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+
+    .bubble {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .bubble.assistant {
+      align-self: flex-start;
+      background: #EFECE6;
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-main {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+      text-align: center;
+    }
+
+    .btn-mic {
+      background: #EFECE6;
+      border: none;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    .btn-mic.recording {
+      background: #FF3B30;
+      color: white;
+      animation: pulse 1s infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="orb"></div>
+    <h1>Mural AI Teacher</h1>
+    <p class="subtitle">Pratique ta langue en direct avec Groq</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Langue d'apprentissage</div>
+    <div class="lang-grid" id="langGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Réglages API & Modèle</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="password" id="apiKey" placeholder="Entrez votre clé API Groq">
+      <select id="modelSelect">
+        <option value="qwen/qwen3.8-27b">Qwen 3.8 27B (Recommandé)</option>
+        <option value="openai/gpt-oss-120b">OpenAI GPT-OSS 120B</option>
+        <option value="openai/gpt-oss-20b">OpenAI GPT-OSS 20B</option>
+        <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="chat-container" id="chatContainer">
+    <div class="bubble assistant" id="greetingBubble">Hallo! Wie geht es dir heute?</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-mic" id="micBtn">🎙️</button>
+    <input type="text" id="userInput" placeholder="Écris ou parle..." style="flex:1;">
+    <button class="btn-main" id="sendBtn" style="flex:initial; padding:12px 18px;">Envoyer</button>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) { tg.expand(); }
+
+    const LANGUAGES = [
+      { id: "de", name: "Allemand 🇩🇪", native: "Deutsch", locale: "de-DE", greeting: "Hallo! Wie geht es dir heute?" },
+      { id: "fr", name: "Français 🇫🇷", native: "Français", locale: "fr-FR", greeting: "Bonjour ! Comment vas-tu ?" },
+      { id: "en-US", name: "Anglais US 🇺🇸", native: "American English", locale: "en-US", greeting: "Hey there! How are you?" },
+      { id: "en-GB", name: "Anglais UK 🇬🇧", native: "British English", locale: "en-GB", greeting: "Hello! How are you today?" },
+      { id: "es", name: "Espagnol 🇪🇸", native: "Español", locale: "es-ES", greeting: "¡Hola! ¿Cómo estás?" },
+      { id: "it", name: "Italien 🇮🇹", native: "Italiano", locale: "it-IT", greeting: "Ciao! Come stai?" },
+      { id: "ro", name: "Roumain 🇷🇴", native: "Română", locale: "ro-RO", greeting: "Salut! Ce mai faci?" },
+      { id: "ar", name: "Arabe 🇸🇦", native: "العربية", locale: "ar-SA", greeting: "مرحبًا! كيف حالك اليوم؟" },
+      { id: "he", name: "Hébreu 🇮🇱", native: "עברית", locale: "he-IL", greeting: "שלום! מה שלומך?" },
+      { id: "ja", name: "Japonais 🇯🇵", native: "日本語", locale: "ja-JP", greeting: "こんにちは！お元気ですか？" },
+      { id: "ru", name: "Russe 🇷🇺", native: "Русский", locale: "ru-RU", greeting: "Привет! Как дела?" }
+    ];
+
+    let currentLang = localStorage.getItem("mural_lang") || "de";
+    let apiKey = localStorage.getItem("mural_groq_key") || "";
+
+    const langGrid = document.getElementById("langGrid");
+    const apiKeyInput = document.getElementById("apiKey");
+    const modelSelect = document.getElementById("modelSelect");
+    const chatContainer = document.getElementById("chatContainer");
+    const greetingBubble = document.getElementById("greetingBubble");
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const micBtn = document.getElementById("micBtn");
+
+    apiKeyInput.value = apiKey;
+
+    function renderLangs() {
+      langGrid.innerHTML = "";
+      LANGUAGES.forEach(l => {
+        const btn = document.createElement("div");
+        btn.className = `lang-btn ${l.id === currentLang ? "selected" : ""}`;
+        btn.innerHTML = `<div><div class="lang-name">${l.name}</div><div class="lang-native">${l.native}</div></div>`;
+        btn.onclick = () => {
+          currentLang = l.id;
+          localStorage.setItem("mural_lang", l.id);
+          renderLangs();
+          greetingBubble.textContent = l.greeting;
+          speakText(l.greeting, l.locale);
+        };
+        langGrid.appendChild(btn);
+      });
+    }
+
+    renderLangs();
+
+    apiKeyInput.onchange = () => {
+      apiKey = apiKeyInput.value.trim();
+      localStorage.setItem("mural_groq_key", apiKey);
+    };
+
+    function speakText(text, locale) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = locale;
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    async function sendPrompt(text) {
+      if (!text.trim()) return;
+      
+      const userBubble = document.createElement("div");
+      userBubble.className = "bubble user";
+      userBubble.textContent = text;
+      chatContainer.appendChild(userBubble);
+      userInput.value = "";
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      const langInfo = LANGUAGES.find(l => l.id === currentLang) || LANGUAGES[0];
+      const model = modelSelect.value;
+      const key = apiKey;
+      if (!key) {
+        assistantBubble.textContent = "Entre ta clé API Groq (gsk_...) dans les réglages ci-dessus.";
+        return;
+      }
+
+      const assistantBubble = document.createElement("div");
+      assistantBubble.className = "bubble assistant";
+      assistantBubble.textContent = "...";
+      chatContainer.appendChild(assistantBubble);
+
+      try {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${key}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: `You are an encouraging teacher helping practice ${langInfo.name}. Reply in ${langInfo.name} in 1-3 natural sentences.` },
+              { role: "user", content: text }
+            ],
+            max_tokens: 200
+          })
+        });
+
+        const data = await res.json();
+        if (data.choices && data.choices[0]) {
+          const reply = data.choices[0].message.content;
+          assistantBubble.textContent = reply;
+          speakText(reply, langInfo.locale);
+        } else {
+          assistantBubble.textContent = "Erreur Groq. Vérifie ta clé API dans les réglages.";
+        }
+      } catch (e) {
+        assistantBubble.textContent = "Erreur de connexion. Vérifie ton réseau.";
+      }
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    sendBtn.onclick = () => sendPrompt(userInput.value);
+    userInput.onkeydown = (e) => { if (e.key === "Enter") sendPrompt(userInput.value); };
+
+    // Speech Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+
+      micBtn.onclick = () => {
+        const langInfo = LANGUAGES.find(l => l.id === currentLang) || LANGUAGES[0];
+        rec.lang = langInfo.locale;
+        rec.start();
+        micBtn.classList.add("recording");
+      };
+
+      rec.onresult = (e) => {
+        micBtn.classList.remove("recording");
+        const transcript = e.results[0][0].transcript;
+        sendPrompt(transcript);
+      };
+
+      rec.onerror = () => micBtn.classList.remove("recording");
+      rec.onend = () => micBtn.classList.remove("recording");
+    }
+  </script>
+</body>
+</html>
