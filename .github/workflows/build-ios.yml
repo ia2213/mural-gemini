@@ -43,7 +43,7 @@ jobs:
           fi
 
           # Find widget extension
-          WIDGET_PATH=$(find build -name "*.appex" -type d 2>/dev/null | head -n 1)
+          WIDGET_PATH=$(find build /Users/runner/Library/Developer/Xcode/DerivedData -name "*.appex" -type d 2>/dev/null | head -n 1)
           if [ -z "$WIDGET_PATH" ]; then
             echo "Building Widget Extension target directly..."
             xcodebuild -project apps/ios/Mural.xcodeproj \
@@ -51,13 +51,12 @@ jobs:
               -sdk iphoneos \
               -destination 'generic/platform=iOS' \
               -configuration Release \
-              -derivedDataPath build_widget \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
               VALIDATE_WORKSPACE=NO \
               build || true
-            WIDGET_PATH=$(find build_widget -name "*.appex" -type d 2>/dev/null | head -n 1)
+            WIDGET_PATH=$(find /Users/runner/Library/Developer/Xcode/DerivedData build -name "*.appex" -type d 2>/dev/null | head -n 1)
           fi
 
           echo "WIDGET_PATH=$WIDGET_PATH"
