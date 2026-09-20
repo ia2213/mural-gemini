@@ -26,21 +26,8 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_WORKSPACE=NO \
+            ONLY_ACTIVE_ARCH=NO \
             clean build
-
-      - name: Build Widget Extension
-        run: |
-          xcodebuild -project apps/ios/Mural.xcodeproj \
-            -scheme Mural \
-            -target MuralWidgetExtension \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -configuration Release \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            build
 
       - name: Package Unsigned IPA
         run: |
