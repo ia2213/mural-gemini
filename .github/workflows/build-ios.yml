@@ -25,6 +25,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
+            VALIDATE_WORKSPACE=NO \
             clean build
 
       - name: Package Unsigned IPA
@@ -32,7 +33,13 @@ jobs:
           mkdir -p Payload
           APP_PATH=$(find build -name "Mural.app" -type d | head -n 1)
           echo "Found APP_PATH: $APP_PATH"
-          cp -r "$APP_PATH" Payload/
+          cp -R "$APP_PATH" "Payload/Mural.app"
+          WIDGET_PATH=$(find build -name "MuralWidgetExtension.appex" -type d | head -n 1)
+          if [ -n "$WIDGET_PATH" ]; then
+            mkdir -p "Payload/Mural.app/PlugIns"
+            cp -R "$WIDGET_PATH" "Payload/Mural.app/PlugIns/"
+            echo "Added widget extension to IPA"
+          fi
           zip -r -y Mural-Gemini.ipa Payload
           rm -rf Payload
 
