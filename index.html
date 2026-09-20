@@ -200,8 +200,8 @@
       <input type="password" id="apiKey" placeholder="Clé API Groq / Gemini">
       <input type="text" id="vpsEndpoint" placeholder="Endpoint VPS (ex: http://vps:20128/v1/chat/completions)">
       <select id="modelSelect">
-        <option value="qwen/qwen3.8-27b">Qwen 3.8 27B (Groq)</option>
-        <option value="openai/gpt-oss-120b">OpenAI GPT-OSS 120B (Groq)</option>
+        <option value="llama-3.1-8b-instant" selected>Llama 3.1 8B Instant (Ultra-Rapide Groq)</option>
+        <option value="qwen-2.5-32b">Qwen 2.5 32B (Groq)</option>
         <option value="gemini-2.5-flash">Gemini 2.5 Flash (Google)</option>
         <option value="auto/best-coding">Hermes Agent (VPS)</option>
       </select>
@@ -212,11 +212,20 @@
     <div class="bubble assistant" id="greetingBubble">Hallo! Wie geht es dir heute?</div>
   </div>
 
+  <div style="margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; background:#F5F3EE; padding:8px 12px; border-radius:10px;">
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--text);">
+      <input type="checkbox" id="autoMicToggle" style="width:auto; cursor:pointer;">
+      ⚡ Mode Conversation Continue (Appel Mains-Libres)
+    </label>
+    <span style="font-size:11px; color:var(--subtext);">Maintiens le micro ou parle</span>
+  </div>
+
   <div class="controls">
     <button class="btn-mic" id="micBtn">🎙️</button>
     <input type="text" id="userInput" placeholder="Écris ou parle..." style="flex:1;">
     <button class="btn-main" id="sendBtn" style="flex:initial; padding:12px 18px;">Envoyer</button>
   </div>
+  <div id="sttLangBadge" style="font-size:12px; color:var(--subtext); text-align:center; margin-top:8px; font-weight:500;">🎙️ Reconnaissance vocale : Deutsch (de-DE)</div>
 
   <script>
     const tg = window.Telegram?.WebApp;
@@ -266,6 +275,15 @@
       localStorage.setItem("mural_vps_endpoint", vpsEndpoint);
     };
 
+    const sttLangBadge = document.getElementById("sttLangBadge");
+
+    function updateSttLangBadge() {
+      const langInfo = LANGUAGES.find(l => l.id === currentLang) || LANGUAGES[0];
+      if (sttLangBadge) {
+        sttLangBadge.textContent = `🎙️ Reconnaissance vocale activée en : ${langInfo.name} (${langInfo.locale})`;
+      }
+    }
+
     function renderLangs() {
       langGrid.innerHTML = "";
       LANGUAGES.forEach(l => {
@@ -281,6 +299,7 @@
         };
         langGrid.appendChild(btn);
       });
+      updateSttLangBadge();
     }
 
     renderLangs();
@@ -290,33 +309,117 @@
       localStorage.setItem("mural_groq_key", apiKey);
     };
 
-    function speakText(text, locale) {
-      if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = locale;
-      utterance.rate = 0.9;
-      window.speechSynthesis.speak(utterance);
+    const autoMicToggle = document.getElementById("autoMicToggle");
+
+    let audioQueue = [];
+    let isSpeaking = false;
+
+    function resetAudioQueue() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      audioQueue = [];
+      isSpeaking = false;
     }
 
-    async function executeCall(endpoint, key, modelName, messages) {
+    function warmupSpeech() {
+      if ('speechSynthesis' in window && !window.speechSynthesis.speaking) {
+        const silent = new SpeechSynthesisUtterance(" ");
+        silent.volume = 0.01;
+        window.speechSynthesis.speak(silent);
+      }
+    }
+
+    function queueSentenceSpeech(text, locale) {
+      if (!('speechSynthesis' in window) || !text.trim()) return;
+      const utterance = new SpeechSynthesisUtterance(text.trim());
+      utterance.lang = locale;
+      utterance.rate = 1.05; // ligeramente plus rapide pour fluidité
+      audioQueue.push(utterance);
+      processAudioQueue();
+    }
+
+    function processAudioQueue() {
+      if (isSpeaking || audioQueue.length === 0) return;
+      isSpeaking = true;
+      const nextUtterance = audioQueue.shift();
+
+      nextUtterance.onend = () => {
+        isSpeaking = false;
+        if (audioQueue.length > 0) {
+          processAudioQueue();
+        } else if (autoMicToggle && autoMicToggle.checked && typeof startMicRecording === "function") {
+          setTimeout(() => { startMicRecording(); }, 250);
+        }
+      };
+      nextUtterance.onerror = () => {
+        isSpeaking = false;
+        if (audioQueue.length > 0) processAudioQueue();
+      };
+
+      window.speechSynthesis.speak(nextUtterance);
+    }
+
+    function speakText(text, locale) {
+      resetAudioQueue();
+      queueSentenceSpeech(text, locale);
+    }
+
+    async function executeCallStream(endpoint, key, modelName, messages, onChunk) {
       const headers = { "Content-Type": "application/json" };
       if (key) { headers["Authorization"] = `Bearer ${key}`; }
+      
       const res = await fetch(endpoint, {
         method: "POST",
         headers: headers,
-        body: JSON.stringify({ model: modelName, messages: messages, max_tokens: 200 })
+        body: JSON.stringify({
+          model: modelName,
+          messages: messages,
+          max_tokens: 100,
+          temperature: 0.5,
+          stream: true
+        })
       });
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.choices && data.choices[0]) {
-        return data.choices[0].message.content;
+      if (!res.body) throw new Error("No response body for streaming");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === "data: [DONE]") continue;
+          if (trimmed.startsWith("data: ")) {
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              const delta = json.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullText += delta;
+                onChunk(delta, fullText);
+              }
+            } catch (e) {
+              // ignore incomplete JSON chunk
+            }
+          }
+        }
       }
-      throw new Error("Invalid response format");
+      return fullText;
     }
 
     async function sendPrompt(text) {
       if (!text.trim()) return;
+      resetAudioQueue();
       
       const userBubble = document.createElement("div");
       userBubble.className = "bubble user";
@@ -333,47 +436,76 @@
 
       const assistantBubble = document.createElement("div");
       assistantBubble.className = "bubble assistant";
-      assistantBubble.textContent = "...";
+      assistantBubble.textContent = "";
       chatContainer.appendChild(assistantBubble);
 
       const messages = [
-        { role: "system", content: `You are an encouraging teacher helping practice ${langInfo.name}. Reply in ${langInfo.name} in 1-3 natural sentences.` },
+        { role: "system", content: `You are a friendly language teacher helping practice ${langInfo.name}. Reply in ${langInfo.name} in 1 short conversational sentence (under 12 words max).` },
         { role: "user", content: text }
       ];
 
       const attempts = [];
       if (provider === "groq") {
-        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: model.includes("gemini") ? "qwen/qwen3.8-27b" : model });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: model.includes("gemini") ? "llama-3.1-8b-instant" : model });
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
         if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
       } else if (provider === "google") {
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
-        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "llama-3.1-8b-instant" });
         if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
       } else if (provider === "hermes_vps" && vps) {
         attempts.push({ url: vps, key: key, model: "auto/best-coding" });
-        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "llama-3.1-8b-instant" });
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
       } else {
-        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "llama-3.1-8b-instant" });
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
         if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
       }
 
-      let reply = null;
+      let sentenceBuffer = "";
+      let fullResponseText = "";
+      let success = false;
+
       for (const attempt of attempts) {
         try {
-          reply = await executeCall(attempt.url, attempt.key, attempt.model, messages);
-          if (reply) break;
+          sentenceBuffer = "";
+          fullResponseText = "";
+          assistantBubble.textContent = "";
+
+          fullResponseText = await executeCallStream(attempt.url, attempt.key, attempt.model, messages, (delta, currentFull) => {
+            assistantBubble.textContent = currentFull;
+            sentenceBuffer += delta;
+            
+            // Trigger audio on punctuation OR after 4 words for instant speech
+            const match = sentenceBuffer.match(/([^.!?,\n]+[.!?,\n]+)/);
+            if (match) {
+              const sentenceToSpeak = match[1];
+              sentenceBuffer = sentenceBuffer.slice(sentenceToSpeak.length);
+              queueSentenceSpeech(sentenceToSpeak, langInfo.locale);
+            } else if (sentenceBuffer.split(" ").length >= 5) {
+              const words = sentenceBuffer.split(" ");
+              const chunkToSpeak = words.slice(0, 4).join(" ");
+              sentenceBuffer = words.slice(4).join(" ");
+              queueSentenceSpeech(chunkToSpeak, langInfo.locale);
+            }
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          });
+
+          if (sentenceBuffer.trim()) {
+            queueSentenceSpeech(sentenceBuffer, langInfo.locale);
+          }
+
+          if (fullResponseText) {
+            success = true;
+            break;
+          }
         } catch (e) {
-          console.warn("Provider attempt failed:", attempt.url, e);
+          console.warn("Streaming provider attempt failed:", attempt.url, e);
         }
       }
 
-      if (reply) {
-        assistantBubble.textContent = reply;
-        speakText(reply, langInfo.locale);
-      } else {
+      if (!success) {
         assistantBubble.textContent = "Erreur de connexion aux IA. Vérifie ta clé API ou ton endpoint VPS.";
       }
       chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -382,28 +514,94 @@
     sendBtn.onclick = () => sendPrompt(userInput.value);
     userInput.onkeydown = (e) => { if (e.key === "Enter") sendPrompt(userInput.value); };
 
-    // Speech Recognition
+    // Speech Recognition with Push-To-Talk, Ultra-Fast VAD & Strict Language Binding
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let startMicRecording = null;
+    let stopMicRecording = null;
+
     if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = false;
+      let activeRec = null;
+      let silenceTimer = null;
+      let isRecording = false;
 
-      micBtn.onclick = () => {
+      startMicRecording = () => {
+        if (isRecording) return;
+        warmupSpeech();
         const langInfo = LANGUAGES.find(l => l.id === currentLang) || LANGUAGES[0];
-        rec.lang = langInfo.locale;
-        rec.start();
-        micBtn.classList.add("recording");
+        userInput.value = "";
+
+        if (activeRec) {
+          try { activeRec.stop(); } catch(e) {}
+          activeRec = null;
+        }
+
+        activeRec = new SpeechRecognition();
+        activeRec.continuous = true;
+        activeRec.interimResults = true;
+        activeRec.lang = langInfo.locale; // Direct BCP-47 locale (ex: "de-DE", "fr-FR", "es-ES")
+
+        activeRec.onresult = (e) => {
+          let transcript = "";
+          for (let i = 0; i < e.results.length; i++) {
+            transcript += e.results[i][0].transcript;
+          }
+          userInput.value = transcript;
+
+          clearTimeout(silenceTimer);
+          silenceTimer = setTimeout(() => {
+            if (isRecording && activeRec) {
+              try { activeRec.stop(); } catch(err) {}
+            }
+          }, 350);
+        };
+
+        activeRec.onerror = (e) => {
+          console.warn("Speech recognition error:", e);
+          isRecording = false;
+          micBtn.classList.remove("recording");
+          clearTimeout(silenceTimer);
+        };
+
+        activeRec.onend = () => {
+          isRecording = false;
+          micBtn.classList.remove("recording");
+          clearTimeout(silenceTimer);
+          const textToSend = userInput.value.trim();
+          if (textToSend) {
+            sendPrompt(textToSend);
+          }
+        };
+
+        try {
+          activeRec.start();
+          isRecording = true;
+          micBtn.classList.add("recording");
+        } catch(e) {
+          console.warn("Recognition start error:", e);
+        }
       };
 
-      rec.onresult = (e) => {
-        micBtn.classList.remove("recording");
-        const transcript = e.results[0][0].transcript;
-        sendPrompt(transcript);
+      stopMicRecording = () => {
+        if (isRecording && activeRec) {
+          clearTimeout(silenceTimer);
+          try { activeRec.stop(); } catch(e) {}
+        }
       };
 
-      rec.onerror = () => micBtn.classList.remove("recording");
-      rec.onend = () => micBtn.classList.remove("recording");
+      // Push to Talk: Hold to speak, release to send immediately!
+      micBtn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        startMicRecording();
+      });
+
+      micBtn.addEventListener("pointerup", (e) => {
+        e.preventDefault();
+        stopMicRecording();
+      });
+
+      micBtn.addEventListener("mouseleave", () => {
+        if (isRecording) stopMicRecording();
+      });
     }
   </script>
 </body>
