@@ -42,7 +42,7 @@ WDG000000000000000000009 = {
         CODE_SIGN_STYLE = "Automatic";
         MARKETING_VERSION = "1.0.0";
         CURRENT_PROJECT_VERSION = "1";
-        SKIP_INSTALL = "YES";
+        SKIP_INSTALL = "NO";
         LD_RUNPATH_SEARCH_PATHS = (
             "$(inherited)",
             "@executable_path/Frameworks",
@@ -63,7 +63,7 @@ WDG000000000000000000010 = {
         CODE_SIGN_STYLE = "Automatic";
         MARKETING_VERSION = "1.0.0";
         CURRENT_PROJECT_VERSION = "1";
-        SKIP_INSTALL = "YES";
+        SKIP_INSTALL = "NO";
         LD_RUNPATH_SEARCH_PATHS = (
             "$(inherited)",
             "@executable_path/Frameworks",
