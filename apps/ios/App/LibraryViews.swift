@@ -322,72 +322,66 @@ struct SettingsView: View {
                 }
                 Section {
                     Picker("AI Provider Mode", selection: Binding(get: { store.preferences.providerID }, set: { val in store.updatePreferences { $0.providerID = val } })) {
-                        Text("Auto (Groq → Gemini → VPS)").tag("auto")
-                        Text("Groq API").tag("groq")
-                        Text("Google Gemini API").tag("google")
+                        Text("Auto-Switch (Groq → Gemini → VPS)").tag("auto")
                         Text("Personal Hermes VPS Agent").tag("hermes_vps")
+                        Text("Google Gemini API").tag("google")
+                        Text("Groq API Cloud").tag("groq")
                     }
-                } header: { Text("AI Engine Provider") } footer: {
-                    Text("Auto mode automatically falls back between Groq, Google Gemini, and your personal Hermes VPS if any provider fails.")
-                }
-
-                if store.preferences.providerID == "google" || store.preferences.providerID == "auto" {
-                    Section {
-                        TextField("Google API Key (AIzaSy...)", text: Binding(get: { store.preferences.googleAPIKey }, set: { val in store.updatePreferences { $0.googleAPIKey = val } }))
-                            .textInputAutocapitalization(.never).autocorrectionDisabled()
-                        Picker("Gemini Model", selection: Binding(get: { store.preferences.geminiModel }, set: { val in store.updatePreferences { $0.geminiModel = val } })) {
-                            Text("Gemini 2.5 Flash").tag("gemini-2.5-flash")
-                            Text("Gemini 1.5 Flash").tag("gemini-1.5-flash")
-                        }
-                    } header: { Text("Google Gemini Engine") }
-                }
-
-                if store.preferences.providerID == "hermes_vps" || store.preferences.providerID == "auto" {
-                    Section {
-                        TextField("VPS Endpoint (http://vps:20128/v1/chat/completions)", text: Binding(get: { store.preferences.vpsEndpoint }, set: { val in store.updatePreferences { $0.vpsEndpoint = val } }))
-                            .textInputAutocapitalization(.never).autocorrectionDisabled()
-                        SecureField("VPS Auth Token (Optional)", text: Binding(get: { store.preferences.vpsAPIKey }, set: { val in store.updatePreferences { $0.vpsAPIKey = val } }))
-                            .textInputAutocapitalization(.never).autocorrectionDisabled()
-                        TextField("Model Name", text: Binding(get: { store.preferences.vpsModel }, set: { val in store.updatePreferences { $0.vpsModel = val } }))
-                            .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    } header: { Text("Personal Hermes VPS Agent") }
+                } header: { Text("Moteur IA Principal") } footer: {
+                    Text("En mode Auto, l'application bascule automatiquement entre Groq, Google Gemini et votre VPS personnel si un service est indisponible.")
                 }
 
                 Section {
+                    TextField("VPS Endpoint URL", text: Binding(get: { store.preferences.vpsEndpoint }, set: { val in store.updatePreferences { $0.vpsEndpoint = val } }))
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    SecureField("VPS Auth Token (Facultatif)", text: Binding(get: { store.preferences.vpsAPIKey }, set: { val in store.updatePreferences { $0.vpsAPIKey = val } }))
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    Picker("VPS Model", selection: Binding(get: { store.preferences.vpsModel }, set: { val in store.updatePreferences { $0.vpsModel = val } })) {
+                        Text("Hermes Auto (OmniRoute)").tag("auto/best-coding")
+                        Text("Nous Hermes 3 (8B Local)").tag("NousResearch/Hermes-3-Llama-3.1-8B")
+                        Text("Hermes Vocal VPS").tag("hermes-agent-vps")
+                    }
+                } header: { Text("🏛️ Personal Hermes VPS Agent") } footer: {
+                    Text("Connecté à votre serveur Oracle VPS personnel.")
+                }
+
+                Section {
+                    SecureField("Google API Key (AIzaSy...)", text: Binding(get: { store.preferences.googleAPIKey }, set: { val in store.updatePreferences { $0.googleAPIKey = val } }))
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    Picker("Gemini Model", selection: Binding(get: { store.preferences.geminiModel }, set: { val in store.updatePreferences { $0.geminiModel = val } })) {
+                        Text("Gemini 2.0 Flash (Recommandé)").tag("gemini-2.0-flash")
+                        Text("Gemini 2.0 Flash Lite").tag("gemini-2.0-flash-lite")
+                        Text("Gemini 1.5 Flash").tag("gemini-1.5-flash")
+                        Text("Gemini 1.5 Pro").tag("gemini-1.5-pro")
+                    }
+                    Link("Obtenir une clé Gemini gratuite", destination: URL(string: "https://aistudio.google.com/app/apikey")!)
+                } header: { Text("🌐 Google Gemini Engine") }
+
+                Section {
                     Picker("Groq Model", selection: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } })) {
-                        Text("Qwen 3.8 27B (Recommended)").tag("qwen/qwen3.8-27b")
-                        Text("OpenAI GPT-OSS 120B").tag("openai/gpt-oss-120b")
-                        Text("OpenAI GPT-OSS 20B").tag("openai/gpt-oss-20b")
+                        Text("GPT-OSS 120B (Recommandé)").tag("openai/gpt-oss-120b")
+                        Text("GPT-OSS 20B").tag("openai/gpt-oss-20b")
+                        Text("Qwen 3.8 27B").tag("qwen/qwen3.8-27b")
                         Text("Llama 3.3 70B Versatile").tag("llama-3.3-70b-versatile")
                         Text("Llama 3.1 8B Instant").tag("llama-3.1-8b-instant")
-                        Text("DeepSeek R1 Distill Llama 70B").tag("deepseek-r1-distill-llama-70b")
-                        Text("DeepSeek R1 Distill Qwen 32B").tag("deepseek-r1-distill-qwen-32b")
-                        Text("Groq Compound").tag("groq/compound")
-                        Text("Groq Compound Mini").tag("groq/compound-mini")
                     }
-                    TextField("Or enter custom Groq model ID", text: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } }))
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    
                     DisclosureGroup(isExpanded: $showingAPIKey) {
-                        if hasKey { Label("Your Groq API key is saved on this iPhone", systemImage: "checkmark.shield") }
-                        SecureField(hasKey ? "Replace Groq API key (gsk_...)" : "Groq API key (gsk_...)", text: $key)
+                        if hasKey { Label("Clé Groq sauvegardée sur cet iPhone", systemImage: "checkmark.shield") }
+                        SecureField(hasKey ? "Remplacer la clé Groq (gsk_...)" : "Clé Groq API (gsk_...)", text: $key)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().privacySensitive().accessibilityIdentifier("api-key")
-                        Button(hasKey ? "Save replacement key" : "Save key") {
-                            do { try CredentialStore.save(key); key = ""; hasKey = true; message = "Saved securely." }
+                        Button(hasKey ? "Enregistrer la nouvelle clé" : "Enregistrer la clé") {
+                            do { try CredentialStore.save(key); key = ""; hasKey = true; message = "Enregistré avec succès." }
                             catch { message = error.localizedDescription }
                         }.disabled(key.isEmpty || coordinator.isRunning)
-                        Link("Get a free Groq API key", destination: URL(string: "https://console.groq.com/keys")!)
+                        Link("Obtenir une clé Groq gratuite", destination: URL(string: "https://console.groq.com/keys")!)
                         if hasKey {
-                            Button("Remove key", role: .destructive) {
-                                do { try CredentialStore.delete(); hasKey = false; message = "Your key has been removed." }
+                            Button("Supprimer la clé", role: .destructive) {
+                                do { try CredentialStore.delete(); hasKey = false; message = "Clé supprimée." }
                                 catch { message = error.localizedDescription }
                             }.disabled(coordinator.isRunning)
                         }
-                        Text("Your Groq account handles text & voice. The key stays in this iPhone’s Keychain.")
-                            .font(.footnote).foregroundStyle(MuralColor.secondary)
-                    } label: { Label("Groq API Key", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
-                    if let message { Text(message).font(.footnote).foregroundStyle(MuralColor.secondary) }
-                } header: { Text("Groq Engine") } footer: {
+                    } label: { Label("Clé API Groq", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
+                } header: { Text("⚡ Groq Engine Cloud") } footer: {
                     Text("Select your preferred model on Groq. STT uses Groq Whisper Turbo and TTS uses your iPhone's native iOS voice.")
                 }
                 Section {

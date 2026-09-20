@@ -8,6 +8,8 @@ on:
 jobs:
   build-ipa:
     runs-on: macos-15
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -41,3 +43,13 @@ jobs:
         with:
           name: Mural-Gemini-IPA
           path: Mural-Gemini.ipa
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.0-mural-release
+          name: "Mural Native iOS v2.0.0 (SideStore / AltStore)"
+          body: "Application iOS native Mural issue du code source officiel avec 3 zones indépendantes (Hermes VPS, Gemini, Groq)."
+          files: Mural-Gemini.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
