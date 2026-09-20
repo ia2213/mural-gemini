@@ -42,19 +42,35 @@ jobs:
             exit 1
           fi
 
-          # Widget from build directory or DerivedData
-          WIDGET_PATH=$(find build /Users/runner/Library/Developer/Xcode/DerivedData -name "*.appex" -type d 2>/dev/null | head -n 1)
+          # Find widget extension
+          WIDGET_PATH=$(find build -name "*.appex" -type d 2>/dev/null | head -n 1)
+          if [ -z "$WIDGET_PATH" ]; then
+            echo "Building Widget Extension target directly..."
+            xcodebuild -project apps/ios/Mural.xcodeproj \
+              -target MuralWidgetExtension \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -configuration Release \
+              -derivedDataPath build_widget \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              VALIDATE_WORKSPACE=NO \
+              build || true
+            WIDGET_PATH=$(find build_widget -name "*.appex" -type d 2>/dev/null | head -n 1)
+          fi
+
           echo "WIDGET_PATH=$WIDGET_PATH"
           if [ -n "$WIDGET_PATH" ]; then
             mkdir -p Payload/Mural.app/PlugIns
             cp -R "$WIDGET_PATH" Payload/Mural.app/PlugIns/
-            echo "Widget extension included in PlugIns"
+            echo "✅ Widget extension embedded in Payload/Mural.app/PlugIns/"
           else
-            echo "Notice: no separate .appex found (embedded automatically or missing)"
+            echo "Warning: Widget extension could not be built or found."
           fi
 
           zip -r -y Mural-Gemini.ipa Payload
-          rm -rf Payload
+          rm -rf Payload build_widget
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
