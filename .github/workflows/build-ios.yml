@@ -31,6 +31,7 @@ jobs:
       - name: Build Widget Extension
         run: |
           xcodebuild -project apps/ios/Mural.xcodeproj \
+            -scheme Mural \
             -target MuralWidgetExtension \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
