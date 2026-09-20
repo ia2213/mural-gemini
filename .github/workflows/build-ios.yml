@@ -17,50 +17,37 @@ jobs:
       - name: Build iOS App (Release, Unsigned)
         run: |
           xcodebuild -project apps/ios/Mural.xcodeproj \
-            -alltargets \
+            -scheme Mural \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -configuration Release \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_WORKSPACE=NO \
-            ONLY_ACTIVE_ARCH=NO \
             clean build
 
-      - name: Package Unsigned IPA
+      - name: Copy App and Widget to Payload
         run: |
           mkdir -p Payload
-          
-          # Find main app in default derived data location
-          APP_PATH=$(find /Users/runner/Library/Developer/Xcode/DerivedData -name "Mural.app" -type d 2>/dev/null | head -n 1)
-          if [ -z "$APP_PATH" ]; then
-            # Fallback: search entire filesystem
-            APP_PATH=$(find / -name "Mural.app" -type d 2>/dev/null | head -n 1)
-          fi
-          echo "Found APP_PATH: $APP_PATH"
-          
-          if [ -n "$APP_PATH" ]; then
-            cp -R "$APP_PATH" "Payload/Mural.app"
-          else
-            echo "Error: Mural.app not found"
-            exit 1
-          fi
-          
-          # Find widget extension
-          WIDGET_PATH=$(find /Users/runner/Library/Developer/Xcode/DerivedData -name "MuralWidgetExtension.appex" -type d 2>/dev/null | head -n 1)
-          if [ -z "$WIDGET_PATH" ]; then
-            WIDGET_PATH=$(find / -name "MuralWidgetExtension.appex" -type d 2>/dev/null | head -n 1)
-          fi
-          
+
+          # Main app
+          APP_PATH=$(find build -name "Mural.app" -type d | head -n 1)
+          echo "APP_PATH=$APP_PATH"
+          cp -R "$APP_PATH" Payload/Mural.app
+
+          # Widget extension (may or may not be present)
+          WIDGET_PATH=$(find build -name "MuralWidgetExtension.appex" -type d | head -n 1)
+          echo "WIDGET_PATH=$WIDGET_PATH"
           if [ -n "$WIDGET_PATH" ]; then
-            mkdir -p "Payload/Mural.app/PlugIns"
-            cp -R "$WIDGET_PATH" "Payload/Mural.app/PlugIns/"
-            echo "Added widget extension to IPA"
+            mkdir -p Payload/Mural.app/PlugIns
+            cp -R "$WIDGET_PATH" Payload/Mural.app/PlugIns/
+            echo "Widget extension included"
           else
-            echo "Warning: Widget extension not found in build output"
+            echo "Warning: widget extension not found"
           fi
-          
+
           zip -r -y Mural-Gemini.ipa Payload
           rm -rf Payload
 
