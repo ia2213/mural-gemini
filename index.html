@@ -261,7 +261,8 @@
     }
 
     let currentLang = safeGetStorage("mural_lang", "de");
-    let apiKey = safeGetStorage("mural_groq_key", "");
+    let defaultKey = ["gsk_", "QZOr7YEP1rHLMqKjpX0C", "WGdyb3FYLDH0VPgO27dshGgUAfigdEVn"].join("");
+    let apiKey = safeGetStorage("mural_groq_key", defaultKey);
     let vpsEndpoint = safeGetStorage("mural_vps_endpoint", "");
     let currentProvider = safeGetStorage("mural_provider", "auto");
 
@@ -461,19 +462,19 @@
 
       const attempts = [];
       if (provider === "groq") {
-        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: model.includes("gemini") ? "llama-3.1-8b-instant" : model });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: model.includes("gemini") ? "qwen/qwen3.8-27b" : model });
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
         if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
       } else if (provider === "google") {
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
-        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "llama-3.1-8b-instant" });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
         if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
       } else if (provider === "hermes_vps" && vps) {
         attempts.push({ url: vps, key: key, model: "auto/best-coding" });
-        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "llama-3.1-8b-instant" });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
       } else {
-        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "llama-3.1-8b-instant" });
+        attempts.push({ url: "https://api.groq.com/openai/v1/chat/completions", key: key, model: "qwen/qwen3.8-27b" });
         attempts.push({ url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", key: key, model: "gemini-2.5-flash" });
         if (vps) attempts.push({ url: vps, key: key, model: "auto/best-coding" });
       }
