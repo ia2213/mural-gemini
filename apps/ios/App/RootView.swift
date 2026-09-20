@@ -25,17 +25,11 @@ struct RootView: View {
         Group {
             if horizontalSizeClass == .regular {
                 NavigationSplitView {
-                    List(selection: $tab) {
-                        Section {
-                            Label("Talk", systemImage: "waveform").tag(0)
-                            Label("Themes", systemImage: "square.grid.2x2").tag(1)
-                            Label("Words", systemImage: "book").tag(2)
-                        }
-                        Section {
-                            Button { coordinator.showSettings = true } label: {
-                                Label("Settings", systemImage: "slider.horizontal.3")
-                            }
-                        }
+                    List {
+                        Button { tab = 0 } label: { Label("Talk", systemImage: "waveform") }
+                        Button { tab = 1 } label: { Label("Themes", systemImage: "square.grid.2x2") }
+                        Button { tab = 2 } label: { Label("Words", systemImage: "book") }
+                        Button { coordinator.showSettings = true } label: { Label("Settings", systemImage: "slider.horizontal.3") }
                     }
                     .navigationTitle("Mural")
                     .listStyle(.sidebar)
