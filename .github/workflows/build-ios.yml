@@ -14,24 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build main app
+      - name: Build all targets (main app + widget)
         run: |
           xcodebuild -project apps/ios/Mural.xcodeproj \
-            -scheme Mural \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -configuration Release \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            VALIDATE_WORKSPACE=NO \
-            clean build
-
-      - name: Build widget extension (default derivedDataPath)
-        run: |
-          xcodebuild -project apps/ios/Mural.xcodeproj \
-            -target MuralWidgetExtension \
+            -alltargets \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -configuration Release \
@@ -39,7 +25,6 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_WORKSPACE=NO \
-            ONLY_ACTIVE_ARCH=NO \
             clean build
 
       - name: Find and package app + widget
