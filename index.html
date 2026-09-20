@@ -229,7 +229,10 @@
 
   <script>
     const tg = window.Telegram?.WebApp;
-    if (tg) { tg.expand(); }
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
 
     const LANGUAGES = [
       { id: "de", name: "Allemand 🇩🇪", native: "Deutsch", locale: "de-DE", greeting: "Hallo! Wie geht es dir heute?" },
