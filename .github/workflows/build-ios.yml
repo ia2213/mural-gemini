@@ -28,6 +28,19 @@ jobs:
             VALIDATE_WORKSPACE=NO \
             clean build
 
+      - name: Build Widget Extension
+        run: |
+          xcodebuild -project apps/ios/Mural.xcodeproj \
+            -target MuralWidgetExtension \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
       - name: Package Unsigned IPA
         run: |
           mkdir -p Payload
