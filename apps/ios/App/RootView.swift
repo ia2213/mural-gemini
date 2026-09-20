@@ -26,16 +26,19 @@ struct RootView: View {
             if horizontalSizeClass == .regular {
                 NavigationSplitView {
                     List(selection: $tab) {
-                        Label("Talk", systemImage: "waveform").tag(0)
-                        Label("Themes", systemImage: "square.grid.2x2").tag(1)
-                        Label("Words", systemImage: "book").tag(2)
+                        Section {
+                            Label("Talk", systemImage: "waveform").tag(0)
+                            Label("Themes", systemImage: "square.grid.2x2").tag(1)
+                            Label("Words", systemImage: "book").tag(2)
+                        }
+                        Section {
+                            Button { coordinator.showSettings = true } label: {
+                                Label("Settings", systemImage: "slider.horizontal.3")
+                            }
+                        }
                     }
                     .navigationTitle("Mural")
                     .listStyle(.sidebar)
-                    .toolbar {
-                        Button { coordinator.showSettings = true } label: { Image(systemName: "slider.horizontal.3") }
-                            .accessibilityLabel("Settings")
-                    }
                 } detail: {
                     shell {
                         switch tab {
