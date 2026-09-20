@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build all targets (main app + widget)
+      - name: Build main app and widget
         run: |
           xcodebuild -project apps/ios/Mural.xcodeproj \
             -scheme Mural \
@@ -26,20 +26,6 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_WORKSPACE=NO \
-            clean build
-
-      - name: Build widget extension separately
-        run: |
-          xcodebuild -project apps/ios/Mural.xcodeproj \
-            -target MuralWidgetExtension \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            VALIDATE_WORKSPACE=NO \
-            ONLY_ACTIVE_ARCH=NO \
             clean build
 
       - name: Find and package app + widget
@@ -56,23 +42,15 @@ jobs:
             exit 1
           fi
 
-          # Widget from default derived data location
-          WIDGET_PATH=$(find /Users/runner/Library/Developer/Xcode/DerivedData -name "MuralWidgetExtension.appex" -type d 2>/dev/null | head -n 1)
+          # Widget from build directory or DerivedData
+          WIDGET_PATH=$(find build /Users/runner/Library/Developer/Xcode/DerivedData -name "*.appex" -type d 2>/dev/null | head -n 1)
           echo "WIDGET_PATH=$WIDGET_PATH"
           if [ -n "$WIDGET_PATH" ]; then
             mkdir -p Payload/Mural.app/PlugIns
             cp -R "$WIDGET_PATH" Payload/Mural.app/PlugIns/
-            echo "Widget extension included"
+            echo "Widget extension included in PlugIns"
           else
-            echo "Warning: widget extension not found in DerivedData"
-            # Try alternative locations
-            WIDGET_PATH2=$(find / -name "MuralWidgetExtension.appex" -type d 2>/dev/null | grep -v DerivedData | head -n 1)
-            echo "Alternative WIDGET_PATH=$WIDGET_PATH2"
-            if [ -n "$WIDGET_PATH2" ]; then
-              mkdir -p Payload/Mural.app/PlugIns
-              cp -R "$WIDGET_PATH2" Payload/Mural.app/PlugIns/
-              echo "Widget extension included from alternative location"
-            fi
+            echo "Notice: no separate .appex found (embedded automatically or missing)"
           fi
 
           zip -r -y Mural-Gemini.ipa Payload
