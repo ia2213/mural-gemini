@@ -12,14 +12,17 @@ import io
 import json
 import logging
 import requests
-from gtts import gTTS
+try:
+    from gtts import gTTS
+except ImportError:
+    gTTS = None
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger("mural_bot")
 
 BOT_TOKEN = "8817348445:AAEK2DaFFzB9IoTQcutlZTwx3cpWp4CM4J4"
 BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
-USER_DATA_FILE = "user_sessions.json"
+USER_DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_sessions.json")
 
 LANGUAGES = {
     "de": {"name": "Allemand 🇩🇪", "locale": "de", "greeting": "Hallo! Wie geht es dir heute?"},
@@ -143,18 +146,33 @@ def transcribe_whisper(user_id: str, audio_bytes: bytes) -> str:
         return ""
 
 def generate_tts_voice(text: str, lang: str) -> bytes:
-    code = lang.split("-")[0]
-    tts = gTTS(text=text, lang=code, slow=False)
-    fp = io.BytesIO()
-    tts.write_to_fp(fp)
-    fp.seek(0)
-    return fp.read()
+    if gTTS is not None:
+        code = lang.split("-")[0]
+        tts = gTTS(text=text, lang=code, slow=False)
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        return fp.read()
+    return b""
 
 def send_message(chat_id: int, text: str, reply_markup=None):
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
     if reply_markup:
         payload["reply_markup"] = reply_markup
     requests.post(f"{BASE_URL}/sendMessage", json=payload)
+
+def broadcast_announcement(announcement_text: str) -> int:
+    db = load_user_db()
+    sent_count = 0
+    formatted = f"🚀 *NOUVELLE MISE À JOUR MURAL v1.0.0*\n\n{announcement_text}\n\n📱 _Consultez la Mini App ou tapez /start pour voir les nouveautés !_"
+    for uid in list(db.keys()):
+        try:
+            cid = int(uid)
+            send_message(cid, formatted)
+            sent_count += 1
+        except Exception as e:
+            logger.error(f"Could not send announcement to user {uid}: {e}")
+    return sent_count
 
 def send_voice(chat_id: int, voice_bytes: bytes, caption=""):
     files = {"voice": ("voice.ogg", voice_bytes, "audio/ogg")}
@@ -236,6 +254,16 @@ def handle_update(update):
                 ]
             }
             send_message(chat_id, "🎙️ *Choisis ton moteur de synthèse vocale :*", reply_markup=kb)
+            return
+
+        if text.startswith("/announce") or text.startswith("/broadcast"):
+            parts = text.split(maxsplit=1)
+            if len(parts) > 1:
+                content = parts[1].strip()
+                count = broadcast_announcement(content)
+                send_message(chat_id, f"✅ *Annonce de mise à jour envoyée à {count} utilisateur(s) !*")
+            else:
+                send_message(chat_id, "📢 *Usage :* `/announce Les nouveautés de la mise à jour...`")
             return
             
         if "voice" in msg:
