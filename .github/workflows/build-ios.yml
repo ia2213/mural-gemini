@@ -16,12 +16,12 @@ jobs:
 
       - name: Build iOS App (Release, Unsigned)
         run: |
-          cd apps/ios
-          xcodebuild -project Mural.xcodeproj \
+          xcodebuild -project apps/ios/Mural.xcodeproj \
             -scheme Mural \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -configuration Release \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
@@ -30,13 +30,10 @@ jobs:
       - name: Package Unsigned IPA
         run: |
           mkdir -p Payload
-          APP_PATH=$(find apps/ios/build -name "Mural.app" -type d | head -n 1)
-          if [ -z "$APP_PATH" ]; then
-            APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Mural.app" -type d | head -n 1)
-          fi
+          APP_PATH=$(find build -name "Mural.app" -type d | head -n 1)
           echo "Found APP_PATH: $APP_PATH"
           cp -r "$APP_PATH" Payload/
-          zip -r Mural-Gemini.ipa Payload
+          zip -r -y Mural-Gemini.ipa Payload
           rm -rf Payload
 
       - name: Upload IPA Artifact
@@ -47,10 +44,12 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        if: always()
         with:
           tag_name: v2.0.0-mural-release
           name: "Mural Native iOS v2.0.0 (SideStore / AltStore)"
           body: "Application iOS native Mural issue du code source officiel avec 3 zones indépendantes (Hermes VPS, Gemini, Groq)."
           files: Mural-Gemini.ipa
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
