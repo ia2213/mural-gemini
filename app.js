@@ -85,6 +85,7 @@ function haptic(type = 'light') {
 // Lifecycle: DOM Ready
 document.addEventListener('DOMContentLoaded', async () => {
   loadSavedPreferences();
+  loadApiKeySettings();
   await loadUserData();
   await loadLanguages();
   await loadThemes();
@@ -97,6 +98,140 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
+
+// Load API Key Settings
+function loadApiKeySettings() {
+  try {
+    const key = localStorage.getItem('mural_groq_api_key') || currentUser.groq_api_key || '';
+    const model = localStorage.getItem('mural_groq_model') || currentUser.groq_model || 'llama-3.3-70b-versatile';
+    const provider = localStorage.getItem('mural_api_provider') || 'groq';
+
+    const keyInput = document.getElementById('apiKeyInput');
+    if (keyInput && key) keyInput.value = key;
+
+    const modelSelect = document.getElementById('aiModelSelect');
+    if (modelSelect && model) modelSelect.value = model;
+
+    const providerSelect = document.getElementById('apiProviderSelect');
+    if (providerSelect && provider) {
+      providerSelect.value = provider;
+      handleProviderChange();
+    }
+  } catch (e) {}
+}
+
+// Handle Provider Change
+function handleProviderChange() {
+  const provider = document.getElementById('apiProviderSelect')?.value || 'groq';
+  const keyContainer = document.getElementById('apiKeyInputContainer');
+  const keyHint = document.getElementById('apiKeyHint');
+  const docLink = document.getElementById('apiKeyDocLink');
+  const modelSelect = document.getElementById('aiModelSelect');
+
+  if (provider === 'local') {
+    if (keyContainer) keyContainer.classList.add('hidden');
+    if (modelSelect) {
+      modelSelect.innerHTML = `
+        <option value="auto/fast">Auto Fast (OmniRoute)</option>
+        <option value="auto/smart">Auto Smart (Haute précision)</option>
+        <option value="auto/best-chat">Auto Best Chat</option>
+      `;
+    }
+  } else if (provider === 'gemini') {
+    if (keyContainer) keyContainer.classList.remove('hidden');
+    if (keyHint) keyHint.textContent = 'AIzaSy...';
+    if (docLink) docLink.innerHTML = 'Obtenez une clé sur <a href="https://aistudio.google.com" target="_blank" class="text-sky-400 underline">aistudio.google.com</a>';
+    if (modelSelect) {
+      modelSelect.innerHTML = `
+        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+      `;
+    }
+  } else if (provider === 'openai') {
+    if (keyContainer) keyContainer.classList.remove('hidden');
+    if (keyHint) keyHint.textContent = 'sk-...';
+    if (docLink) docLink.innerHTML = 'Obtenez une clé sur <a href="https://platform.openai.com" target="_blank" class="text-sky-400 underline">platform.openai.com</a>';
+    if (modelSelect) {
+      modelSelect.innerHTML = `
+        <option value="gpt-4o">GPT-4o (OpenAI)</option>
+        <option value="gpt-4o-mini">GPT-4o Mini</option>
+      `;
+    }
+  } else {
+    // Groq default
+    if (keyContainer) keyContainer.classList.remove('hidden');
+    if (keyHint) keyHint.textContent = 'gsk_...';
+    if (docLink) docLink.innerHTML = 'Obtenez une clé gratuite sur <a href="https://console.groq.com/keys" target="_blank" class="text-sky-400 underline">console.groq.com</a>';
+    if (modelSelect) {
+      modelSelect.innerHTML = `
+        <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Recommandé - Pédagogie & Nuances)</option>
+        <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Ultra rapide)</option>
+        <option value="mixtral-8x7b-32768">Mixtral 8x7B (Polyglotte)</option>
+        <option value="gemma2-9b-it">Gemma 2 9B IT (Google)</option>
+      `;
+    }
+  }
+}
+
+// Toggle API Key Visibility
+function toggleApiKeyVisibility() {
+  const input = document.getElementById('apiKeyInput');
+  const icon = document.getElementById('apiKeyEyeIcon');
+  if (input) {
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (icon) icon.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      if (icon) icon.textContent = '👁️';
+    }
+  }
+}
+
+// Save API Key Settings
+async function saveApiKeySettings() {
+  haptic('medium');
+  const provider = document.getElementById('apiProviderSelect')?.value || 'groq';
+  const key = document.getElementById('apiKeyInput')?.value?.trim() || '';
+  const model = document.getElementById('aiModelSelect')?.value || 'llama-3.3-70b-versatile';
+
+  localStorage.setItem('mural_api_provider', provider);
+  localStorage.setItem('mural_groq_api_key', key);
+  localStorage.setItem('mural_groq_model', model);
+
+  currentUser.groq_api_key = key;
+  currentUser.groq_model = model;
+
+  // Sync with backend
+  try {
+    await fetch('/api/user/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentUser.user_id,
+        setting: 'groq_api_key',
+        value: key
+      })
+    });
+    await fetch('/api/user/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentUser.user_id,
+        setting: 'groq_model',
+        value: model
+      })
+    });
+  } catch (e) {}
+
+  const msg = document.getElementById('apiKeyStatusMsg');
+  if (msg) {
+    msg.textContent = '✅ Clé API et modèle enregistrés avec succès !';
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 4000);
+  }
+}
 
 // Load preferences from localStorage
 function loadSavedPreferences() {
