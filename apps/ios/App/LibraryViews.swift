@@ -10,6 +10,7 @@ struct ThemesView: View {
     @State private var category = "All"
     @State private var current = false
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private var themes: [ConversationTheme] {
         coordinator.language.themes.filter { (category == "All" || $0.category == category) && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) || $0.category.localizedCaseInsensitiveContains(search)) }
     }
@@ -31,7 +32,7 @@ struct ThemesView: View {
                         }
                     }
                 }.scrollIndicators(.hidden)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 260 : 150), spacing: 12)], spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 260 : (horizontalSizeClass == .regular ? 220 : 150)), spacing: 16)], spacing: 16) {
                     ForEach(themes) { theme in
                         Button { if theme.id == "today" { current = true } else { choose(theme) } } label: {
                             VStack(alignment: .leading, spacing: 28) {
@@ -46,7 +47,7 @@ struct ThemesView: View {
                     }
                 }
                 if themes.isEmpty { ContentUnavailableView.search(text: search) }
-            }.padding(24)
+            }.padding(24).frame(maxWidth: 1000).frame(maxWidth: .infinity, alignment: .topLeading)
         }.foregroundStyle(MuralColor.ink)
             .searchable(text: $search, prompt: "Find a conversation")
             .sheet(isPresented: $current) { CurrentTopicView(coordinator: coordinator) { choose(coordinator.selectedTheme) } }
@@ -133,7 +134,7 @@ struct WordsView: View {
                     }.padding(22).background(MuralColor.butter, in: RoundedRectangle(cornerRadius: 24))
                 }
                 Button("Past conversations", systemImage: "clock.arrow.circlepath") { sessions = true }.font(.subheadline).padding(.vertical, 8)
-            }.padding(26)
+            }.padding(26).frame(maxWidth: 1000).frame(maxWidth: .infinity, alignment: .topLeading)
         }.foregroundStyle(MuralColor.ink).searchable(text: $search, prompt: "Find a word")
             .sheet(item: $selected) { word in WordDetailView(word: word, store: coordinator.store) }
             .sheet(isPresented: $sessions) { SessionHistoryView(store: coordinator.store) }

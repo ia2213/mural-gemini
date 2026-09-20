@@ -6,6 +6,7 @@ struct RootView: View {
     @State private var tab = 0
     @State private var onboarding = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     init(store: LearningStore) {
         let coordinator = ConversationCoordinator(store: store)
         #if DEBUG && targetEnvironment(simulator)
@@ -21,12 +22,41 @@ struct RootView: View {
     }
     var body: some View {
         @Bindable var coordinator = coordinator
-        TabView(selection: $tab) {
-            Tab("Talk", systemImage: "waveform", value: 0) { shell { TalkView(coordinator: coordinator) } }
-            Tab("Themes", systemImage: "square.grid.2x2", value: 1) {
-                shell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
+        Group {
+            if horizontalSizeClass == .regular {
+                NavigationSplitView {
+                    List(selection: $tab) {
+                        Label("Talk", systemImage: "waveform").tag(0)
+                        Label("Themes", systemImage: "square.grid.2x2").tag(1)
+                        Label("Words", systemImage: "book").tag(2)
+                    }
+                    .navigationTitle("Mural")
+                    .listStyle(.sidebar)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button { coordinator.showSettings = true } label: { Image(systemName: "slider.horizontal.3") }
+                                .accessibilityLabel("Settings")
+                        }
+                    }
+                } detail: {
+                    shell {
+                        switch tab {
+                        case 0: TalkView(coordinator: coordinator)
+                        case 1: ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 }
+                        case 2: WordsView(coordinator: coordinator)
+                        default: TalkView(coordinator: coordinator)
+                        }
+                    }
+                }
+            } else {
+                TabView(selection: $tab) {
+                    Tab("Talk", systemImage: "waveform", value: 0) { shell { TalkView(coordinator: coordinator) } }
+                    Tab("Themes", systemImage: "square.grid.2x2", value: 1) {
+                        shell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
+                    }
+                    Tab("Words", systemImage: "book", value: 2) { shell { WordsView(coordinator: coordinator) } }
+                }
             }
-            Tab("Words", systemImage: "book", value: 2) { shell { WordsView(coordinator: coordinator) } }
         }
         .tint(MuralColor.ink)
         .sheet(isPresented: $coordinator.showSettings) { SettingsView(coordinator: coordinator) }
@@ -123,7 +153,7 @@ struct TalkView: View {
                     if let notice = coordinator.notice {
                         Text(notice).font(.footnote).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center).padding(.bottom, 12)
                     }
-                }.padding(.horizontal, 30).frame(maxWidth: .infinity).frame(minHeight: geometry.size.height)
+                }.padding(.horizontal, 30).frame(maxWidth: 760).frame(maxWidth: .infinity).frame(minHeight: geometry.size.height)
             }.scrollIndicators(.hidden)
         }
         .sheet(isPresented: $typing) { TypedReplyView(coordinator: coordinator) }

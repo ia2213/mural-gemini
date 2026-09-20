@@ -87,8 +87,24 @@ import MuralCore
         persist()
     }
     private func persist() {
-        do { document.payload = try archive.encoded(); try container.mainContext.save(); error = nil }
-        catch { self.error = "Mural couldn’t save your progress. Please export a backup and try again." }
+        do {
+            document.payload = try archive.encoded()
+            try container.mainContext.save()
+            error = nil
+            syncWidgetData()
+        } catch {
+            self.error = "Mural couldn’t save your progress. Please export a backup and try again."
+        }
+    }
+    func syncWidgetData() {
+        let defaults = UserDefaults(suiteName: "group.no.william.mural") ?? UserDefaults.standard
+        defaults.set(language.name, forKey: "widget_language")
+        defaults.set(learner.words.count, forKey: "widget_word_count")
+        defaults.set(learningSessions.count, forKey: "widget_streak")
+        let recentWords = learner.words.prefix(5).map { "\($0.lemma) - \($0.meaning)" }
+        defaults.set(Array(recentWords), forKey: "widget_recent_words")
+        defaults.set(learner.levelLabel, forKey: "widget_level_label")
+        defaults.set(learner.capabilities.first ?? "Building vocabulary", forKey: "widget_next_goal")
     }
 }
 
