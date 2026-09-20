@@ -244,10 +244,10 @@ public struct Preferences: Codable, Sendable {
     public var customEndpoint: String = ""
     public var customModel: String = ""
     public var groqModel: String = "openai/gpt-oss-120b"
-    public var googleAPIKey: *** = ""
+    public var googleAPIKey: String = ""
     public var geminiModel: String = "gemini-2.0-flash"
     public var vpsEndpoint: String = "https://miscellaneous-rays-detect-relationships.trycloudflare.com/v1/chat/completions"
-    public var vpsAPIKey: *** = ""
+    public var vpsAPIKey: String = ""
     public var vpsModel: String = "auto/best-coding"
     public var speechRate: Float = 0.50
     public var selectedVoiceIdentifier: String = ""
