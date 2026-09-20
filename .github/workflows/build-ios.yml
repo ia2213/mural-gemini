@@ -17,7 +17,7 @@ jobs:
       - name: Build iOS App (Release, Unsigned)
         run: |
           xcodebuild -project apps/ios/Mural.xcodeproj \
-            -scheme Mural \
+            -alltargets \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -configuration Release \
@@ -32,15 +32,21 @@ jobs:
       - name: Package Unsigned IPA
         run: |
           mkdir -p Payload
+          # Find and copy main app
           APP_PATH=$(find build -name "Mural.app" -type d | head -n 1)
           echo "Found APP_PATH: $APP_PATH"
           cp -R "$APP_PATH" "Payload/Mural.app"
+          
+          # Find and copy widget extension
           WIDGET_PATH=$(find build -name "MuralWidgetExtension.appex" -type d | head -n 1)
           if [ -n "$WIDGET_PATH" ]; then
             mkdir -p "Payload/Mural.app/PlugIns"
             cp -R "$WIDGET_PATH" "Payload/Mural.app/PlugIns/"
             echo "Added widget extension to IPA"
+          else
+            echo "Warning: Widget extension not found in build output"
           fi
+          
           zip -r -y Mural-Gemini.ipa Payload
           rm -rf Payload
 
