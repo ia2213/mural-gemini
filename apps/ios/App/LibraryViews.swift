@@ -390,6 +390,10 @@ struct SettingsView: View {
                     Text("Select your preferred model on Groq. STT uses Groq Whisper Turbo and TTS uses your iPhone's native iOS voice.")
                 }
                 Section {
+                    Picker("Moteur Vocal / Voice Engine", selection: Binding(get: { store.preferences.ttsEngine }, set: { val in store.updatePreferences { $0.ttsEngine = val } })) {
+                        Text("Voix iOS Native (AVSpeechSynthesizer)").tag("ios")
+                        Text("Voix Google Gemini (IA Audio API)").tag("gemini")
+                    }
                     let availableVoices = AVSpeechSynthesisVoice.speechVoices().filter {
                         $0.language.lowercased().hasPrefix(String(store.language.locale.prefix(2)).lowercased())
                     }
