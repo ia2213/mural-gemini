@@ -310,7 +310,11 @@ struct SettingsView: View {
                     Picker("Meaning language", selection: Binding(get: { store.preferences.meaningLanguage }, set: { coordinator.selectMeaningLanguage($0) })) {
                         ForEach(MeaningLanguages.all, id: \.self) { Text($0) }
                     }
-                    LabeledContent("Corrections", value: "Gently, as we talk")
+                    Picker("Correction Level / Niveau", selection: Binding(get: { store.preferences.correctionLevel }, set: { val in store.updatePreferences { $0.correctionLevel = val } })) {
+                        Text("Fort / Strict (Corrige tout)").tag("high")
+                        Text("Moyen / Équilibré (Naturel)").tag("medium")
+                        Text("Faible / Fluide (Erreurs clés)").tag("low")
+                    }
                     TextField("A few things you enjoy", text: Binding(get: { store.preferences.interests }, set: { value in store.updatePreferences { $0.interests = String(value.prefix(500)) } }), axis: .vertical)
                 } header: { Text("Just your pace") } footer: { Text(coordinator.isRunning ? "End this conversation to switch languages. Each language keeps its own words and progress." : "Each language keeps its own words and progress. Mural finds your pace through conversation.") }
                 if ManagedAccountConfiguration.load() != nil {

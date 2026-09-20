@@ -251,6 +251,7 @@ public struct Preferences: Codable, Sendable {
     public var vpsModel: String = "auto/best-coding"
     public var speechRate: Float = 0.50
     public var selectedVoiceIdentifier: String = ""
+    public var correctionLevel: String = "medium"
     public init() {}
 }
 
