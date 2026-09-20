@@ -17,7 +17,7 @@ jobs:
       - name: Build all targets (main app + widget)
         run: |
           xcodebuild -project apps/ios/Mural.xcodeproj \
-            -alltargets \
+            -scheme Mural \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -configuration Release \
@@ -26,6 +26,20 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_WORKSPACE=NO \
+            clean build
+
+      - name: Build widget extension separately
+        run: |
+          xcodebuild -project apps/ios/Mural.xcodeproj \
+            -target MuralWidgetExtension \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            VALIDATE_WORKSPACE=NO \
+            ONLY_ACTIVE_ARCH=NO \
             clean build
 
       - name: Find and package app + widget
