@@ -228,11 +228,16 @@
   <div id="sttLangBadge" style="font-size:12px; color:var(--subtext); text-align:center; margin-top:8px; font-weight:500;">🎙️ Reconnaissance vocale : Deutsch (de-DE)</div>
 
   <script>
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
+    document.addEventListener("DOMContentLoaded", function() {
+      try {
+        if (window.Telegram && window.Telegram.WebApp) {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
+        }
+      } catch (e) {
+        console.warn("Telegram WebApp init error:", e);
+      }
+    });
 
     const LANGUAGES = [
       { id: "de", name: "Allemand 🇩🇪", native: "Deutsch", locale: "de-DE", greeting: "Hallo! Wie geht es dir heute?" },
@@ -248,10 +253,17 @@
       { id: "ru", name: "Russe 🇷🇺", native: "Русский", locale: "ru-RU", greeting: "Привет! Как дела?" }
     ];
 
-    let currentLang = localStorage.getItem("mural_lang") || "de";
-    let apiKey = localStorage.getItem("mural_groq_key") || "";
-    let vpsEndpoint = localStorage.getItem("mural_vps_endpoint") || "";
-    let currentProvider = localStorage.getItem("mural_provider") || "auto";
+    function safeGetStorage(key, defaultVal) {
+      try { return localStorage.getItem(key) || defaultVal; } catch(e) { return defaultVal; }
+    }
+    function safeSetStorage(key, val) {
+      try { localStorage.setItem(key, val); } catch(e) {}
+    }
+
+    let currentLang = safeGetStorage("mural_lang", "de");
+    let apiKey = safeGetStorage("mural_groq_key", "");
+    let vpsEndpoint = safeGetStorage("mural_vps_endpoint", "");
+    let currentProvider = safeGetStorage("mural_provider", "auto");
 
     const langGrid = document.getElementById("langGrid");
     const providerSelect = document.getElementById("providerSelect");
