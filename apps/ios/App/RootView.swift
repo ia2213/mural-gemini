@@ -33,10 +33,8 @@ struct RootView: View {
                     .navigationTitle("Mural")
                     .listStyle(.sidebar)
                     .toolbar {
-                        ToolbarItem(placement: .primaryAction) {
-                            Button { coordinator.showSettings = true } label: { Image(systemName: "slider.horizontal.3") }
-                                .accessibilityLabel("Settings")
-                        }
+                        Button { coordinator.showSettings = true } label: { Image(systemName: "slider.horizontal.3") }
+                            .accessibilityLabel("Settings")
                     }
                 } detail: {
                     shell {
