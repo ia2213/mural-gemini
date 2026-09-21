@@ -38,7 +38,7 @@ html, body {
 
 /* Glassmorphism Card */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.75);
+  background: rgba(7, 14, 10, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -67,21 +67,21 @@ html, body {
 
 /* Chat bubble styling */
 .chat-bubble-teacher {
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top-left-radius: 4px;
+  background: rgba(20, 30, 24, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px 20px 20px 4px;
 }
 
 .chat-bubble-user {
-  background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%);
-  border-top-right-radius: 4px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 20px 20px 4px 20px;
 }
 
 /* Sound wave bars */
 .sound-bar {
   width: 3px;
   border-radius: 2px;
-  background: #38bdf8;
+  background: #34d399;
   animation: bounce 1s ease-in-out infinite;
 }
 
