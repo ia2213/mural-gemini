@@ -34,6 +34,8 @@
 	<string>Mural uses speech recognition to process your spoken practice in real-time.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Mural uses the camera to scan learning materials and visual prompts for interactive conversations.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Mural allows selecting photos and scans of textbook lessons.</string>
 	<key>UIUserInterfaceStyle</key>
 	<string>Light</string>
 	<key>UILaunchScreen</key>

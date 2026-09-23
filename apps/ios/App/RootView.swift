@@ -28,7 +28,8 @@ struct RootView: View {
                     List {
                         Button { tab = 0 } label: { Label("Talk", systemImage: "waveform") }
                         Button { tab = 1 } label: { Label("Themes", systemImage: "square.grid.2x2") }
-                        Button { tab = 2 } label: { Label("Words", systemImage: "book") }
+                        Button { tab = 2 } label: { Label("Study & OCR", systemImage: "graduationcap") }
+                        Button { tab = 3 } label: { Label("Words", systemImage: "book") }
                         Button { coordinator.showSettings = true } label: { Label("Settings", systemImage: "slider.horizontal.3") }
                     }
                     .navigationTitle("Mural")
@@ -38,7 +39,8 @@ struct RootView: View {
                         switch tab {
                         case 0: TalkView(coordinator: coordinator)
                         case 1: ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 }
-                        case 2: WordsView(coordinator: coordinator)
+                        case 2: StudyHubView(coordinator: coordinator)
+                        case 3: WordsView(coordinator: coordinator)
                         default: TalkView(coordinator: coordinator)
                         }
                     }
@@ -49,7 +51,10 @@ struct RootView: View {
                     Tab("Themes", systemImage: "square.grid.2x2", value: 1) {
                         shell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
                     }
-                    Tab("Words", systemImage: "book", value: 2) { shell { WordsView(coordinator: coordinator) } }
+                    Tab("Study & OCR", systemImage: "graduationcap", value: 2) {
+                        shell { StudyHubView(coordinator: coordinator) }
+                    }
+                    Tab("Words", systemImage: "book", value: 3) { shell { WordsView(coordinator: coordinator) } }
                 }
             }
         }

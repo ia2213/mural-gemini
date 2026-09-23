@@ -38,6 +38,17 @@
 ### D. Niveaux de correction
 - Réglable dans l'UI (Réglages / Preferences) : **Fort**, **Moyen**, **Faible** (`correctionLevel` dans `TeachingPolicy.swift`).
 
+### E. Mode Étude Assimil OCR & Documents Google Drive
+- **OCR Assimil (Livre de méthode)** :
+  - Capture caméra / Galerie photo via `CameraPickerView` et `PhotosPicker`.
+  - Double moteur OCR : Apple Vision (`VNRecognizeTextRequest`) hors-ligne + analyse multimodale Gemini 2.0 Flash.
+  - Structuration de leçon : dialogue bilingue numéroté, remarques de grammaire, exercices d'entraînement.
+  - Session Professeur interactive : lecture audio des répliques, répétition et analyse de la prononciation, explications grammaticales, correction en temps réel des exercices.
+- **Accès Google Drive & Documents de cours (PDF/TXT)** :
+  - Sélecteur de fichiers iOS (`.fileImporter`) accédant directement à Google Drive, iCloud et fichiers locaux.
+  - Extraction PDF textuelle (`PDFKit`).
+  - Synthèse pédagogique, extraction des concepts clés et quiz interactif avec le tuteur IA.
+
 ---
 
 ## 3. Configuration du Build & CI/CD (GitHub Actions)

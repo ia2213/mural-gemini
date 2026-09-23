@@ -22,6 +22,9 @@ const EMBEDDED_LANGUAGES = [
 
 const EMBEDDED_THEMES = [
   { id: 'free_talk', category: 'daily', icon: '💭', name: 'Conversation Libre', desc: 'Discutez librement de votre journée, de vos projets ou de vos passions.' },
+  { id: 'google_drive_teacher', category: 'study', icon: '📁', name: 'Google Drive Prof', desc: 'Analysez un document Google Drive. Je vous poserai des questions et vous expliquerai le contenu.' },
+  { id: 'ocr_assimil', category: 'study', icon: '📸', name: 'Professeur Assimil (OCR)', desc: 'Prenez en photo votre livre Assimil. Je vous ferai répéter et expliquerai la leçon.' },
+
   { id: 'cafe_restaurant', category: 'daily', icon: '☕', name: 'Au Café & Restaurant', desc: 'Commandez des plats, demandez l’addition et parlez de gastronomie.' },
   { id: 'supermarket', category: 'daily', icon: '🛒', name: 'Au Supermarché', desc: 'Faites vos courses, demandez le rayon et comparez les prix.' },
   { id: 'housing_visit', category: 'daily', icon: '🏠', name: 'Visite de Logement', desc: 'Visitez un appartement, posez des questions sur le bail et le loyer.' },
@@ -431,6 +434,31 @@ async function toggleVoiceRecord() {
     setOrbState('thinking');
     document.getElementById('micBtn')?.classList.remove('animate-pulse', 'ring-2', 'ring-sky-400');
   }
+}
+
+// Handle File Upload (Google Drive Document / Assimil OCR Image)
+async function handleFileUpload(event) {
+  const file = event.target?.files?.[0];
+  if (!file) return;
+
+  haptic('medium');
+  setOrbState('thinking');
+  
+  const isImage = file.type.startsWith('image/');
+  const isPDF = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+  
+  const promptMessage = isImage
+    ? `📸 [Livre Assimil Scanné : ${file.name}] J'ai scanné une page de ma méthode Assimil. Fais office de professeur : lis le dialogue avec la prononciation, explique les points de grammaire et fais-moi passer les exercices pas à pas.`
+    : `📁 [Document de cours / Google Drive : ${file.name}] J'ai importé ce cours. Fais office de professeur particulier : explique-moi les concepts clés, pose-moi des questions de compréhension et aide-moi à pratiquer.`;
+
+  appendUserMessage(promptMessage, false);
+  switchTab('chat');
+
+  // If there's an active backend or client handler
+  await processConversationTurn(promptMessage);
+  
+  // Reset input
+  event.target.value = '';
 }
 
 // Send Text Message

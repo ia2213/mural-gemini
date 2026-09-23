@@ -155,6 +155,13 @@
           <span class="text-base">🎭</span>
         </button>
 
+        
+        <!-- Attachment Button (File / Image) -->
+        <button onclick="document.getElementById('fileUpload').click()" title="Joindre un fichier (Image, PDF, Google Drive)" class="p-2.5 rounded-2xl bg-[#111a14]/80 hover:bg-[#1a241e] text-stone-300 border border-white/[0.08] transition flex items-center justify-center">
+          <span class="text-base">📎</span>
+        </button>
+        <input type="file" id="fileUpload" class="hidden" accept="image/*,application/pdf" onchange="handleFileUpload(event)">
+
         <!-- Text Input -->
         <div class="flex-1 relative">
           <input type="text" id="chatInput" placeholder="Écrivez en allemand ou français..." 
