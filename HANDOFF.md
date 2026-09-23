@@ -14,13 +14,48 @@
 
 ---
 
-## 2. Architecture & Fonctionnalités Clés
+## 2. Architecture & Pipeline Hybride Multi-IA
 
-### A. Moteur IA Multi-Fournisseurs (Auto-Failover)
-- **3 Fournisseurs configurés** dans `APIClient.swift` & `Models.swift` :
-  1. **Groq API** (Par défaut : `qwen/qwen3.8-27b` ou `llama-3.1-8b-instant`)
-  2. **Google Gemini API** (`gemini-1.5-flash` / `openai/chat/completions` endpoint)
-  3. **Agent Personal Hermes VPS** (`http://<IP-VPS>:20128/v1/chat/completions`)
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    APPLICATION MURAL                        │
+└──────┬─────────────────┬───────────────────┬────────────────┘
+       │                 │                   │
+       ▼ (Voix)          ▼ (Vision / Docs)   ▼ (Recherche RAG)
+   ┌────────┐    ┌───────────────┐    ┌────────────────────┐
+   │  GROQ  │    │ GEMINI FLASH  │    │ GEMINI EMBEDDINGS  │
+   │        │    │  (2.0 / 1.5)  │    │ (text-embedding)   │
+   │ Vitesse│    │ OCR Assimil   │    │ Indexation vectorielle│
+   │ <500ms │    │ & Fichiers    │    │ de vos cours Drive │
+   └────────┘    └───────────────┘    └────────────────────┘
+       ▲                 ▲                   ▲
+       └─────────────────┼───────────────────┘
+                         │
+                         ▼
+        ┌───────────────────────────────────┐
+        │       AGENT HERMES SUR VPS        │
+        │ • Mémoire FSRS adaptative         │
+        │ • Profil élève (progression B2)   │
+        │ • Orchestrateur iOS/Web/Telegram  │
+        │ • Déclencheur des notifications   │
+        └───────────────────────────────────┘
+```
+
+### A. Pratique Vocale par Groq
+- Moteur par défaut pour les conversations orales (`llama-3.3-70b-versatile` / `llama-3.1-8b-instant`).
+- Vitesse ultra-rapide (300-500 tokens/sec, latence < 500 ms) pour une interactivité vocale instantanée.
+
+### B. OCR & Analyse Pédagogique par Google Gemini 2.0 / 1.5 Flash
+- Vision multimodale pour l'extraction de pages de livres de langues (Assimil).
+- Analyse de cours et résumés structurés sur de longs documents sans troncature.
+
+### C. Indexation Vectorielle par Gemini Embeddings (`text-embedding-004`)
+- Module `GeminiEmbeddingManager.swift` : découpage en fragments textuels et calcul d'embeddings vectoriels.
+- Recherche sémantique par similarité cosinus pour retrouver instantanément la règle ou le vocabulaire pertinent dans les cours Google Drive.
+
+### D. Mémoire Adaptative & Orchestration par Hermes sur VPS
+- Module `HermesOrchestratorClient.swift` & API `/api/fsrs/sync` sur le serveur VPS.
+- Synchronisation bidirectionnelle du profil apprenant (Allemand B2 médical, points faibles, rétention FSRS).
 - **Auto-Failover** : Basculement automatique transparent sur erreurs HTTP 400, 403, 404, 429 (rate limit) et 500+.
 
 ### B. Audio & Vocal
