@@ -48,7 +48,7 @@ struct CameraPickerView: UIViewControllerRepresentable {
 }
 
 // MARK: - Main Study Hub View
-public struct StudyHubView: View {
+struct StudyHubView: View {
     @Bindable var coordinator: ConversationCoordinator
     @State private var lessons: [AssimilLesson] = []
     @State private var documents: [StudyDocument] = []
@@ -60,11 +60,11 @@ public struct StudyHubView: View {
     
     private let storeManager = StudyStoreManager.shared
 
-    public init(coordinator: ConversationCoordinator) {
+    init(coordinator: ConversationCoordinator) {
         self.coordinator = coordinator
     }
 
-    public var body: some View {
+    var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Header Card
@@ -361,7 +361,7 @@ public struct StudyHubView: View {
 }
 
 // MARK: - Assimil Scanner View
-public struct AssimilScannerView: View {
+struct AssimilScannerView: View {
     let coordinator: ConversationCoordinator
     let onSave: (AssimilLesson) -> Void
     
@@ -375,7 +375,7 @@ public struct AssimilScannerView: View {
     
     @State private var parsedLesson: AssimilLesson?
 
-    public var body: some View {
+    var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
@@ -627,7 +627,7 @@ public struct AssimilScannerView: View {
 }
 
 // MARK: - Document Import View (Google Drive & Local Files)
-public struct DocumentImportView: View {
+struct DocumentImportView: View {
     let coordinator: ConversationCoordinator
     let onSave: (StudyDocument) -> Void
     
@@ -640,7 +640,7 @@ public struct DocumentImportView: View {
     @State private var pastedContent = ""
     @State private var selectedDoc: StudyDocument?
 
-    public var body: some View {
+    var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
@@ -863,7 +863,7 @@ public struct DocumentImportView: View {
 }
 
 // MARK: - Assimil Teacher Session View (Interactive Tutor)
-public struct AssimilTeacherSessionView: View {
+struct AssimilTeacherSessionView: View {
     let lesson: AssimilLesson
     let coordinator: ConversationCoordinator
     
@@ -879,7 +879,7 @@ public struct AssimilTeacherSessionView: View {
     
     private let synthesizer = NativeSynthesizer()
 
-    public var body: some View {
+    var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Step Bar
@@ -1170,7 +1170,7 @@ public struct AssimilTeacherSessionView: View {
 }
 
 // MARK: - Document Teacher Session View
-public struct DocumentTeacherSessionView: View {
+struct DocumentTeacherSessionView: View {
     let document: StudyDocument
     let coordinator: ConversationCoordinator
     
@@ -1182,7 +1182,7 @@ public struct DocumentTeacherSessionView: View {
     
     private let synthesizer = NativeSynthesizer()
 
-    public var body: some View {
+    var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {

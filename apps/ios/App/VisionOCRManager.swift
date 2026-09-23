@@ -4,11 +4,11 @@ import Vision
 import MuralCore
 
 @MainActor
-public final class VisionOCRManager {
-    public static let shared = VisionOCRManager()
+final class VisionOCRManager {
+    static let shared = VisionOCRManager()
     
     // MARK: - Local Apple Vision OCR (Offline & Fast)
-    public func extractTextWithVision(from image: UIImage, targetLanguageCode: String = "de") async throws -> String {
+    func extractTextWithVision(from image: UIImage, targetLanguageCode: String = "de") async throws -> String {
         guard let cgImage = image.cgImage else {
             throw OCRError.invalidImage
         }
@@ -70,7 +70,7 @@ public final class VisionOCRManager {
     }
     
     // MARK: - Multimodal Gemini Vision (Direct Image Understanding)
-    public func extractAndParseWithGemini(
+    func extractAndParseWithGemini(
         image: UIImage,
         apiClient: APIClient,
         preferences: Preferences,
@@ -131,7 +131,7 @@ public final class VisionOCRManager {
     }
     
     // MARK: - Structure Raw OCR Text into Assimil Lesson
-    public func structureRawTextIntoLesson(
+    func structureRawTextIntoLesson(
         rawText: String,
         apiClient: APIClient,
         preferences: Preferences,

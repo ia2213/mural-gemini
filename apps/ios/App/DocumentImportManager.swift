@@ -4,11 +4,11 @@ import UniformTypeIdentifiers
 import MuralCore
 
 @MainActor
-public final class DocumentImportManager {
-    public static let shared = DocumentImportManager()
+final class DocumentImportManager {
+    static let shared = DocumentImportManager()
     
     // MARK: - Extract Content from Security-Scoped URL
-    public func importFile(from url: URL, targetLanguageID: String = "de") async throws -> StudyDocument {
+    func importFile(from url: URL, targetLanguageID: String = "de") async throws -> StudyDocument {
         let isSecurityScoped = url.startAccessingSecurityScopedResource()
         defer {
             if isSecurityScoped {
@@ -70,7 +70,7 @@ public final class DocumentImportManager {
     }
     
     // MARK: - Analyze Document with AI
-    public func analyzeDocument(
+    func analyzeDocument(
         document: inout StudyDocument,
         apiClient: APIClient,
         preferences: Preferences
