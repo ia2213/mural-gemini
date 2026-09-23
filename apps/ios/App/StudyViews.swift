@@ -1003,14 +1003,15 @@ struct FolderCourseSessionView: View {
     }
 }
 
-// MARK: - Assimil Scanner View
+// MARK: - Assimil Multi-Photo Scanner View
 struct AssimilScannerView: View {
     let coordinator: ConversationCoordinator
     let onSave: (AssimilLesson) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedImage: UIImage?
-    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var capturedImages: [UIImage] = []
+    @State private var newlyCapturedImage: UIImage?
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showCamera = false
     @State private var isProcessing = false
     @State private var processingStatus = ""
@@ -1024,8 +1025,8 @@ struct AssimilScannerView: View {
                 VStack(spacing: 20) {
                     if let parsedLesson = parsedLesson {
                         lessonPreviewSection(parsedLesson)
-                    } else if let image = selectedImage {
-                        imagePreviewSection(image)
+                    } else if !capturedImages.isEmpty {
+                        multiImagePreviewSection
                     } else {
                         captureOptionsSection
                     }
@@ -1033,7 +1034,7 @@ struct AssimilScannerView: View {
                 .padding(20)
             }
             .background(MuralColor.cream)
-            .navigationTitle("Scanner Assimil")
+            .navigationTitle("Scanner Assimil (Multi-Pages)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1050,16 +1051,27 @@ struct AssimilScannerView: View {
                 }
             }
             .sheet(isPresented: $showCamera) {
-                CameraPickerView(selectedImage: $selectedImage)
+                CameraPickerView(selectedImage: $newlyCapturedImage)
             }
-            .onChange(of: selectedPhotoItem) { _, newItem in
-                guard let newItem else { return }
+            .onChange(of: newlyCapturedImage) { _, newImg in
+                if let newImg {
+                    capturedImages.append(newImg)
+                    newlyCapturedImage = nil
+                }
+            }
+            .onChange(of: selectedPhotoItems) { _, newItems in
+                guard !newItems.isEmpty else { return }
                 Task {
-                    if let data = try? await newItem.loadTransferable(type: Data.self),
-                       let img = UIImage(data: data) {
-                        await MainActor.run {
-                            self.selectedImage = img
+                    for item in newItems {
+                        if let data = try? await item.loadTransferable(type: Data.self),
+                           let img = UIImage(data: data) {
+                            await MainActor.run {
+                                self.capturedImages.append(img)
+                            }
                         }
+                    }
+                    await MainActor.run {
+                        self.selectedPhotoItems = []
                     }
                 }
             }
@@ -1073,11 +1085,11 @@ struct AssimilScannerView: View {
                 .foregroundStyle(MuralColor.orange)
                 .padding(.top, 20)
             
-            Text("Photographiez votre page Assimil")
+            Text("Photographiez les pages Assimil")
                 .font(.system(.title3, design: .rounded, weight: .bold))
                 .foregroundStyle(MuralColor.ink)
             
-            Text("L'OCR extrait automatiquement le dialogue bilingue, les remarques de grammaire et les exercices.")
+            Text("Vous pouvez prendre **plusieurs photos** (ex: page gauche du dialogue et page droite de traduction/grammaire/exercices).")
                 .font(.subheadline)
                 .foregroundStyle(MuralColor.secondary)
                 .multilineTextAlignment(.center)
@@ -1095,8 +1107,8 @@ struct AssimilScannerView: View {
                         .background(MuralColor.orange, in: RoundedRectangle(cornerRadius: 14))
                 }
                 
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    Label("Choisir depuis la galerie", systemImage: "photo.on.rectangle")
+                PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images) {
+                    Label("Choisir plusieurs photos (Galerie)", systemImage: "photo.stack")
                         .font(.headline)
                         .foregroundStyle(MuralColor.ink)
                         .frame(maxWidth: .infinity)
@@ -1111,14 +1123,73 @@ struct AssimilScannerView: View {
         .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
     }
 
-    private func imagePreviewSection(_ image: UIImage) -> some View {
+    private var multiImagePreviewSection: some View {
         VStack(spacing: 18) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .frame(maxHeight: 280)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(radius: 4)
+            HStack {
+                Text("\(capturedImages.count) page(s) scannée(s)")
+                    .font(.system(.headline, design: .rounded, weight: .bold))
+                Spacer()
+                Button("Tout effacer") {
+                    capturedImages = []
+                }
+                .font(.caption)
+                .foregroundStyle(.red)
+            }
+
+            // Thumbnail Grid
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140))], spacing: 14) {
+                ForEach(Array(capturedImages.enumerated()), id: \.offset) { (idx, img) in
+                    ZStack(alignment: .topTrailing) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 160)
+                                .frame(maxWidth: .infinity)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            Text("Page \(idx + 1)")
+                                .font(.caption2.bold())
+                                .foregroundStyle(MuralColor.ink)
+                                .padding(.horizontal, 4)
+                        }
+                        
+                        Button {
+                            capturedImages.remove(at: idx)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(.white, Color.black.opacity(0.6))
+                        }
+                        .padding(6)
+                    }
+                    .padding(8)
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: Color.black.opacity(0.04), radius: 4, y: 2)
+                }
+            }
+
+            // Add more pages buttons
+            HStack(spacing: 12) {
+                Button {
+                    showCamera = true
+                } label: {
+                    Label("Ajouter page", systemImage: "camera.badge.plus")
+                        .font(.caption.bold())
+                        .foregroundStyle(MuralColor.orange)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(MuralColor.orange.opacity(0.12), in: Capsule())
+                }
+                
+                PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 5, matching: .images) {
+                    Label("Ajouter galerie", systemImage: "photo.badge.plus")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.blue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.blue.opacity(0.12), in: Capsule())
+                }
+            }
 
             if isProcessing {
                 VStack(spacing: 10) {
@@ -1130,24 +1201,21 @@ struct AssimilScannerView: View {
                 }
                 .padding(.vertical, 10)
             } else {
-                HStack(spacing: 14) {
-                    Button("Reprendre") {
-                        selectedImage = nil
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(MuralColor.secondary)
-                    
-                    Button {
-                        processImage(image)
-                    } label: {
-                        Text("Analyser la leçon (OCR)")
+                Button {
+                    processMultipleImages()
+                } label: {
+                    HStack {
+                        Image(systemName: "sparkles")
+                        Text("Analyser les \(capturedImages.count) page(s) (Gemini Vision)")
                             .font(.headline)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(MuralColor.orange, in: Capsule())
                     }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(MuralColor.orange, in: RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: MuralColor.orange.opacity(0.3), radius: 6, y: 3)
                 }
+                .buttonStyle(.plain)
             }
 
             if let error = errorMessage {
@@ -1156,7 +1224,7 @@ struct AssimilScannerView: View {
                     .foregroundStyle(.red)
             }
         }
-        .padding(20)
+        .padding(18)
         .frame(maxWidth: .infinity)
         .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
     }
@@ -1174,7 +1242,7 @@ struct AssimilScannerView: View {
                 Spacer()
                 Button("Re-scanner") {
                     parsedLesson = nil
-                    selectedImage = nil
+                    capturedImages = []
                 }
                 .font(.caption)
             }
@@ -1223,10 +1291,11 @@ struct AssimilScannerView: View {
         .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
     }
 
-    private func processImage(_ image: UIImage) {
+    private func processMultipleImages() {
+        guard !capturedImages.isEmpty else { return }
         isProcessing = true
         errorMessage = nil
-        processingStatus = "Extraction du texte par OCR..."
+        processingStatus = "Analyse multimodale de \(capturedImages.count) page(s)..."
 
         Task {
             do {
@@ -1235,19 +1304,17 @@ struct AssimilScannerView: View {
                 
                 let googleKey = coordinator.store.preferences.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !googleKey.isEmpty {
-                    await MainActor.run { processingStatus = "Analyse multimodale Gemini 2.0 Flash..." }
+                    await MainActor.run { processingStatus = "Analyse Gemini 2.0 Flash multimodale (\(capturedImages.count) pages)..." }
                     lesson = try await VisionOCRManager.shared.extractAndParseWithGemini(
-                        image: image,
+                        images: capturedImages,
                         apiClient: coordinator.apiClient,
                         preferences: coordinator.store.preferences,
                         targetLanguage: targetLang
                     )
                 } else {
-                    await MainActor.run { processingStatus = "OCR Apple Vision en cours..." }
-                    let rawText = try await VisionOCRManager.shared.extractTextWithVision(from: image, targetLanguageCode: coordinator.store.preferences.learningLanguageID)
-                    await MainActor.run { processingStatus = "Structuration de la leçon..." }
-                    lesson = try await VisionOCRManager.shared.structureRawTextIntoLesson(
-                        rawText: rawText,
+                    await MainActor.run { processingStatus = "OCR Apple Vision (\(capturedImages.count) pages)..." }
+                    lesson = try await VisionOCRManager.shared.extractAndParseWithGemini(
+                        images: capturedImages,
                         apiClient: coordinator.apiClient,
                         preferences: coordinator.store.preferences,
                         targetLanguage: targetLang

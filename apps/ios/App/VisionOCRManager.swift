@@ -69,29 +69,39 @@ final class VisionOCRManager {
         }
     }
     
-    // MARK: - Multimodal Gemini Vision (Direct Image Understanding)
+    // MARK: - Multimodal Gemini Vision (Single & Multi-Page Support)
     func extractAndParseWithGemini(
-        image: UIImage,
+        images: [UIImage],
         apiClient: APIClient,
         preferences: Preferences,
         targetLanguage: String = "German"
     ) async throws -> AssimilLesson {
+        guard !images.isEmpty else { throw OCRError.invalidImage }
+        
         let key = preferences.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else {
-            // Fallback to local OCR + LLM structure
-            let rawText = try await extractTextWithVision(from: image, targetLanguageCode: preferences.learningLanguageID)
-            return try await structureRawTextIntoLesson(rawText: rawText, apiClient: apiClient, preferences: preferences, targetLanguage: targetLanguage)
+            // Fallback to local OCR on all images + LLM structure
+            var combinedText = ""
+            for (idx, img) in images.enumerated() {
+                let text = try await extractTextWithVision(from: img, targetLanguageCode: preferences.learningLanguageID)
+                combinedText += "--- Page \(idx + 1) ---\n" + text + "\n\n"
+            }
+            return try await structureRawTextIntoLesson(rawText: combinedText, apiClient: apiClient, preferences: preferences, targetLanguage: targetLanguage)
         }
         
-        // Resize image to reasonable dimensions for speed (max 1500px)
-        let resized = image.resized(maxDimension: 1500)
-        guard let jpegData = resized.jpegData(compressionQuality: 0.8) else {
-            throw OCRError.invalidImage
-        }
-        let base64Image = jpegData.base64EncodedString()
-        let dataURI = "data:image/jpeg;base64,\(base64Image)"
+        // Multi-image base64 parts for Gemini
+        var contentParts: [[String: Any]] = [
+            ["type": "text", "text": AssimilTeacherPolicy.ocrStructuringPrompt(targetLanguage: targetLanguage) + "\n\nNote : Il y a \(images.count) photo(s) consécutives de la leçon Assimil (par exemple page gauche de dialogue/phonétique et page droite de traduction/grammaire/exercices). Assemble et fusionne toutes les pages en une seule leçon cohérente et structurée."]
+        ]
         
-        let prompt = AssimilTeacherPolicy.ocrStructuringPrompt(targetLanguage: targetLanguage)
+        for img in images {
+            let resized = img.resized(maxDimension: 1500)
+            if let jpegData = resized.jpegData(compressionQuality: 0.8) {
+                let base64Image = jpegData.base64EncodedString()
+                let dataURI = "data:image/jpeg;base64,\(base64Image)"
+                contentParts.append(["type": "image_url", "image_url": ["url": dataURI]])
+            }
+        }
         
         let endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
         let model = preferences.geminiModel.isEmpty ? "gemini-2.0-flash" : preferences.geminiModel
@@ -99,17 +109,14 @@ final class VisionOCRManager {
         let messages: [[String: Any]] = [
             [
                 "role": "user",
-                "content": [
-                    ["type": "text", "text": prompt],
-                    ["type": "image_url", "image_url": ["url": dataURI]]
-                ]
+                "content": contentParts
             ]
         ]
         
         let body: [String: Any] = [
             "model": model,
             "messages": messages,
-            "max_tokens": 3000,
+            "max_tokens": 4000,
             "response_format": ["type": "json_object"]
         ]
         
@@ -125,9 +132,23 @@ final class VisionOCRManager {
             return try decodeLessonJSON(content, rawTextFallback: "")
         } catch {
             // Fallback to Vision OCR + Text LLM
-            let rawText = try await extractTextWithVision(from: image, targetLanguageCode: preferences.learningLanguageID)
-            return try await structureRawTextIntoLesson(rawText: rawText, apiClient: apiClient, preferences: preferences, targetLanguage: targetLanguage)
+            var combinedText = ""
+            for (idx, img) in images.enumerated() {
+                let text = (try? await extractTextWithVision(from: img, targetLanguageCode: preferences.learningLanguageID)) ?? ""
+                combinedText += "--- Page \(idx + 1) ---\n" + text + "\n\n"
+            }
+            return try await structureRawTextIntoLesson(rawText: combinedText, apiClient: apiClient, preferences: preferences, targetLanguage: targetLanguage)
         }
+    }
+
+    // Convenience method for single image
+    func extractAndParseWithGemini(
+        image: UIImage,
+        apiClient: APIClient,
+        preferences: Preferences,
+        targetLanguage: String = "German"
+    ) async throws -> AssimilLesson {
+        return try await extractAndParseWithGemini(images: [image], apiClient: apiClient, preferences: preferences, targetLanguage: targetLanguage)
     }
     
     // MARK: - Structure Raw OCR Text into Assimil Lesson
