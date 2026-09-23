@@ -17,13 +17,13 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         session = URLSession(configuration: config, delegate: NoRedirect(), delegateQueue: nil)
     }
     
-    func postURL(_ urlString: String, body: [String: Any], apiKey: String = "") async throws -> [String: Any] {
+    func postURL(_ urlString: String, body: [String: Any], token: String = "") async throws -> [String: Any] {
         guard let url = URL(string: urlString) else { throw APIError.invalidResponse }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if !apiKey.isEmpty {
-            request.setValue("Bearer " + apiKey, forHTTPHeaderField: "Authorization")
+        if !token.isEmpty {
+            request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await session.data(for: request)
@@ -36,12 +36,12 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     func post(_ path: String, body: [String: Any], provider: AIProvider = .hermes, customEndpoint: String = "", customModel: String = "") async throws -> [String: Any] {
         let key = CredentialStore.read() ?? ""
-        if path.contains("http") { return try await postURL(path, body: body, apiKey: key) }
+        if path.contains("http") { return try await postURL(path, body: body, token: key) }
         let endpoint: String = {
             if (provider == .custom || provider == .hermes) && !customEndpoint.isEmpty { return customEndpoint }
             return provider.defaultEndpoint
         }()
-        return try await postURL(endpoint, body: body, apiKey: key)
+        return try await postURL(endpoint, body: body, token: key)
     }
 
     private func sanitizeModel(_ model: String) -> String {
@@ -81,15 +81,15 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         ]
         let json: [String: Any]
         do {
-            json = try await postURL(endpoint, body: body, apiKey: key)
+            json = try await postURL(endpoint, body: body, token: key)
         } catch let failure as ProviderFailure where [400, 403, 404, 429, 500, 502, 503].contains(failure.status) {
             let available = (try? await fetchAvailableModels()) ?? []
             if let fallbackModel = available.first(where: { $0 != selectedModel }) {
                 body["model"] = fallbackModel
-                json = try await postURL(endpoint, body: body, apiKey: key)
+                json = try await postURL(endpoint, body: body, token: key)
             } else if selectedModel != "qwen/qwen3.8-27b" {
                 body["model"] = "qwen/qwen3.8-27b"
-                json = try await postURL(endpoint, body: body, apiKey: key)
+                json = try await postURL(endpoint, body: body, token: key)
             } else {
                 throw failure
             }
@@ -126,15 +126,15 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         ]
         let json: [String: Any]
         do {
-            json = try await postURL(endpoint, body: body, apiKey: key)
+            json = try await postURL(endpoint, body: body, token: key)
         } catch let failure as ProviderFailure where [400, 403, 404, 429, 500, 502, 503].contains(failure.status) {
             let available = (try? await fetchAvailableModels()) ?? []
             if let fallbackModel = available.first(where: { $0 != selectedModel }) {
                 body["model"] = fallbackModel
-                json = try await postURL(endpoint, body: body, apiKey: key)
+                json = try await postURL(endpoint, body: body, token: key)
             } else if selectedModel != "qwen/qwen3.8-27b" {
                 body["model"] = "qwen/qwen3.8-27b"
-                json = try await postURL(endpoint, body: body, apiKey: key)
+                json = try await postURL(endpoint, body: body, token: key)
             } else {
                 throw failure
             }
@@ -161,7 +161,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             messages.append(["role": msg["role"] ?? "user", "content": msg["content"] ?? ""])
         }
         let body: [String: Any] = ["model": model, "messages": messages, "max_tokens": 1400]
-        let json = try await postURL(endpoint, body: body, apiKey: key)
+        let json = try await postURL(endpoint, body: body, token: key)
         guard let choices = json["choices"] as? [[String: Any]],
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],
@@ -179,7 +179,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             messages.append(["role": msg["role"] ?? "user", "content": msg["content"] ?? ""])
         }
         let body: [String: Any] = ["model": model, "messages": messages, "max_tokens": 1400]
-        let json = try await postURL(endpoint, body: body, apiKey: key)
+        let json = try await postURL(endpoint, body: body, token: key)
         guard let choices = json["choices"] as? [[String: Any]],
               let firstChoice = choices.first,
               let message = firstChoice["message"] as? [String: Any],

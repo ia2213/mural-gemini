@@ -114,7 +114,7 @@ final class VisionOCRManager {
         ]
         
         do {
-            let json = try await apiClient.postURL(endpoint, body: body, apiKey: ***
+            let json = try await apiClient.postURL(endpoint, body: body, token: key)
             guard let choices = json["choices"] as? [[String: Any]],
                   let first = choices.first,
                   let message = first["message"] as? [String: Any],
