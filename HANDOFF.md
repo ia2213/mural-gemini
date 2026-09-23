@@ -50,6 +50,18 @@
   - **Visualisation et lecture en ligne :** Possibilité de lire le document directement dans l'app pendant que l'IA y accède en continu.
   - **Mode « Cours en Questions » :** Pédagogie interactive où le professeur IA pose des questions progressives (vocabulaire, grammaire B2, cas, syntaxe), analyse les réponses orales/écrites, explique les erreurs en français et donne les formulations modèles en allemand.
 
+### F. Algorithme FSRS Auto-Adaptatif & Révision 100% Vocale
+- **Moteur FSRS (Free Spaced Repetition Scheduler)** :
+  - Calcul continu de la stabilité ($S$), difficulté ($D$) et rétention ($R$) selon la courbe d'oubli mathématique.
+  - Auto-ajustement dynamique des poids FSRS au fur et à mesure des révisions de l'utilisateur pour calibrer l'intervalle à sa mémoire personnelle.
+- **Expérience 100% Vocale (Sans Écrit)** :
+  - L'IA injecte naturellement les notions et expressions dues au fil de la discussion orale libre ou lors de la session dédiée FSRS.
+  - L'évaluation des réponses vocales met à jour instantanément la base FSRS (Again, Hard, Good, Easy) et déclenche des corrections/explications modèles orales en français et allemand.
+- **Notifications Journalières Intelligentes & Humaines** :
+  - Programmation locale via `UNUserNotificationCenter` (1 ou 2 notifications par jour, heures configurables).
+  - Messages dynamiques, motivants et presque humains qui interpellent l'utilisateur en citant un terme FSRS à réviser (*« Hé oh ! C'est l'heure de réviser 😉 Tu te rappelles comment on dit ... en allemand ? Viens me dire ça en vocal ! »*).
+  - Le tap sur la notification ouvre directement l'application en mode vocal actif.
+
 ---
 
 ## 3. Configuration du Build & CI/CD (GitHub Actions)
