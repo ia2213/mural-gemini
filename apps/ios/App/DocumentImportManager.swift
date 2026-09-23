@@ -209,6 +209,15 @@ final class DocumentImportManager {
                 }
                 document.quizQuestions = questions
             }
+            
+            // Index into Vector Store using Gemini text-embedding-004
+            let googleKey = preferences.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !googleKey.isEmpty {
+                let docToIndex = document
+                Task.detached {
+                    try? await GeminiEmbeddingManager.shared.indexDocument(docToIndex, apiKey: googleKey)
+                }
+            }
         }
     }
     
