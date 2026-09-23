@@ -47,16 +47,51 @@ struct CameraPickerView: UIViewControllerRepresentable {
     }
 }
 
+// MARK: - Folder Picker Representable (iOS UIDocumentPickerViewController for Folders)
+struct FolderPickerView: UIViewControllerRepresentable {
+    let onPick: (URL) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
+        picker.allowsMultipleSelection = false
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let parent: FolderPickerView
+        init(_ parent: FolderPickerView) { self.parent = parent }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            parent.onPick(url)
+            parent.dismiss()
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            parent.dismiss()
+        }
+    }
+}
+
 // MARK: - Main Study Hub View
 struct StudyHubView: View {
     @Bindable var coordinator: ConversationCoordinator
     @State private var lessons: [AssimilLesson] = []
     @State private var documents: [StudyDocument] = []
+    @State private var selectedLevelFilter: StudyLevel = .all
     
     @State private var showScanner = false
     @State private var showDocImporter = false
+    @State private var showFolderImporter = false
     @State private var activeAssimilLesson: AssimilLesson?
     @State private var activeDocument: StudyDocument?
+    @State private var activeFolderSession: FolderStudySession?
     
     private let storeManager = StudyStoreManager.shared
 
@@ -67,16 +102,19 @@ struct StudyHubView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // Header Card
                 headerSection
-                
-                // Quick Action Cards
                 quickActionsSection
                 
-                // Assimil Lessons Section
+                // Level filter pills
+                levelFilterBar
+                
+                // Folder groups (documents grouped by folder)
+                folderGroupsSection
+                
+                // Assimil Lessons
                 assimilSection
                 
-                // Documents Section
+                // Individual documents
                 documentsSection
                 
                 Spacer(minLength: 40)
@@ -98,10 +136,17 @@ struct StudyHubView: View {
             }
         }
         .sheet(isPresented: $showDocImporter, onDismiss: { reloadContent() }) {
-            DocumentImportView(coordinator: coordinator) { newDoc in
-                storeManager.saveDocument(newDoc)
+            DocumentImportView(coordinator: coordinator) { newDocs in
+                storeManager.saveDocuments(newDocs)
                 reloadContent()
-                activeDocument = newDoc
+                if newDocs.count == 1 {
+                    activeDocument = newDocs.first
+                }
+            }
+        }
+        .sheet(isPresented: $showFolderImporter) {
+            FolderPickerView { folderURL in
+                importFolder(folderURL)
             }
         }
         .fullScreenCover(item: $activeAssimilLesson, onDismiss: { reloadContent() }) { lesson in
@@ -110,11 +155,60 @@ struct StudyHubView: View {
         .fullScreenCover(item: $activeDocument, onDismiss: { reloadContent() }) { doc in
             DocumentTeacherSessionView(document: doc, coordinator: coordinator)
         }
+        .fullScreenCover(item: $activeFolderSession, onDismiss: { reloadContent() }) { session in
+            FolderCourseSessionView(session: session, coordinator: coordinator)
+        }
     }
     
     private func reloadContent() {
         lessons = storeManager.loadLessons()
         documents = storeManager.loadDocuments()
+    }
+    
+    private func importFolder(_ folderURL: URL) {
+        Task {
+            do {
+                let docs = try await DocumentImportManager.shared.importFolder(
+                    from: folderURL,
+                    targetLanguageID: coordinator.store.preferences.learningLanguageID
+                )
+                await MainActor.run {
+                    storeManager.saveDocuments(docs)
+                    reloadContent()
+                    
+                    // Auto-open folder course session
+                    let folderName = folderURL.lastPathComponent
+                    let folderDocs = docs.filter { $0.folderName == folderName }
+                    if !folderDocs.isEmpty {
+                        activeFolderSession = FolderStudySession(
+                            id: UUID(),
+                            folderName: folderName,
+                            documents: folderDocs,
+                            detectedLevel: StudyLevel.detect(from: folderName).rawValue
+                        )
+                    }
+                }
+            } catch {
+                print("Folder import error: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private var filteredDocuments: [StudyDocument] {
+        if selectedLevelFilter == .all {
+            return documents
+        }
+        return documents.filter { $0.level == selectedLevelFilter.rawValue }
+    }
+    
+    /// Group documents by folder name
+    private var folderGroups: [(String, [StudyDocument])] {
+        let grouped = Dictionary(grouping: filteredDocuments.filter { $0.folderName != nil }) { $0.folderName! }
+        return grouped.sorted { $0.key < $1.key }
+    }
+    
+    private var ungroupedDocuments: [StudyDocument] {
+        filteredDocuments.filter { $0.folderName == nil }
     }
 
     // MARK: - Sections
@@ -128,7 +222,7 @@ struct StudyHubView: View {
                     .font(.system(.title2, design: .rounded, weight: .bold))
                     .foregroundStyle(MuralColor.ink)
             }
-            Text("Étudiez vos cours Google Drive ou vos leçons du livre Assimil scannées. Mural vous guide pas à pas avec explications, répétition vocale et corrections interactives.")
+            Text("Importez un **dossier entier** de cours par niveau (A1→C1), ou des fichiers individuels (PDF, Word, images, texte…). L'IA lit le contenu en ligne et vous fait cours en questions interactives.")
                 .font(.subheadline)
                 .foregroundStyle(MuralColor.secondary)
                 .lineSpacing(3)
@@ -140,57 +234,63 @@ struct StudyHubView: View {
     }
 
     private var quickActionsSection: some View {
-        HStack(spacing: 14) {
-            // Scanner Assimil
-            Button {
-                showScanner = true
-            } label: {
-                VStack(alignment: .leading, spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(Color(red: 1.0, green: 0.92, blue: 0.82))
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "camera.viewfinder")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(MuralColor.orange)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Scanner Assimil")
-                            .font(.system(.subheadline, design: .rounded, weight: .bold))
-                            .foregroundStyle(MuralColor.ink)
-                        Text("Photo de livre & OCR")
-                            .font(.caption2)
-                            .foregroundStyle(MuralColor.secondary)
-                    }
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                // Scanner Assimil
+                Button {
+                    showScanner = true
+                } label: {
+                    quickActionCard(
+                        icon: "camera.viewfinder",
+                        iconColor: MuralColor.orange,
+                        bgColor: Color(red: 1.0, green: 0.92, blue: 0.82),
+                        title: "Scanner Assimil",
+                        subtitle: "Photo de livre & OCR"
+                    )
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
-                .shadow(color: Color.black.opacity(0.03), radius: 6, y: 2)
-            }
-            .buttonStyle(.plain)
+                .buttonStyle(.plain)
 
-            // Google Drive / Fichiers
+                // Single file
+                Button {
+                    showDocImporter = true
+                } label: {
+                    quickActionCard(
+                        icon: "doc.badge.plus",
+                        iconColor: Color.blue,
+                        bgColor: Color(red: 0.88, green: 0.94, blue: 1.0),
+                        title: "Fichier",
+                        subtitle: "PDF, Word, Image, Texte…"
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            
+            // Full folder import (primary CTA)
             Button {
-                showDocImporter = true
+                showFolderImporter = true
             } label: {
-                VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 14) {
                     ZStack {
                         Circle()
-                            .fill(Color(red: 0.88, green: 0.94, blue: 1.0))
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "folder.badge.gearshape")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(Color.blue)
+                            .fill(Color(red: 0.85, green: 0.95, blue: 0.85))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "folder.fill.badge.plus")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(Color.green)
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Google Drive")
+                        Text("Importer un dossier entier de cours")
                             .font(.system(.subheadline, design: .rounded, weight: .bold))
                             .foregroundStyle(MuralColor.ink)
-                        Text("PDF & Fichiers de cours")
+                        Text("Google Drive, iCloud, ou fichiers locaux — tous les niveaux (A1→C1)")
                             .font(.caption2)
                             .foregroundStyle(MuralColor.secondary)
+                            .lineLimit(2)
                     }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(MuralColor.secondary)
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -198,6 +298,126 @@ struct StudyHubView: View {
                 .shadow(color: Color.black.opacity(0.03), radius: 6, y: 2)
             }
             .buttonStyle(.plain)
+        }
+    }
+    
+    private func quickActionCard(icon: String, iconColor: Color, bgColor: Color, title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(bgColor)
+                    .frame(width: 44, height: 44)
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(iconColor)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .foregroundStyle(MuralColor.ink)
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(MuralColor.secondary)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+        .shadow(color: Color.black.opacity(0.03), radius: 6, y: 2)
+    }
+    
+    // MARK: - Level Filter Bar
+    private var levelFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(StudyLevel.allCases) { level in
+                    Button {
+                        selectedLevelFilter = level
+                    } label: {
+                        Text(level.shortLabel)
+                            .font(.caption.bold())
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(
+                                selectedLevelFilter == level ? MuralColor.orange : MuralColor.cream,
+                                in: Capsule()
+                            )
+                            .foregroundStyle(selectedLevelFilter == level ? .white : MuralColor.ink)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Folder Groups Section
+    private var folderGroupsSection: some View {
+        Group {
+            if !folderGroups.isEmpty {
+                VStack(alignment: .leading, spacing: 14) {
+                    Label("Dossiers de Cours", systemImage: "folder.fill")
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(MuralColor.ink)
+                    
+                    ForEach(folderGroups, id: \.0) { (folderName, docs) in
+                        Button {
+                            let level = StudyLevel.detect(from: folderName).rawValue
+                            activeFolderSession = FolderStudySession(
+                                id: UUID(),
+                                folderName: folderName,
+                                documents: docs,
+                                detectedLevel: level
+                            )
+                        } label: {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.green.opacity(0.12))
+                                        .frame(width: 50, height: 50)
+                                    Image(systemName: "folder.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(Color.green)
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(folderName)
+                                        .font(.system(.body, design: .rounded, weight: .semibold))
+                                        .foregroundStyle(MuralColor.ink)
+                                        .lineLimit(1)
+                                    HStack(spacing: 8) {
+                                        let level = StudyLevel.detect(from: folderName)
+                                        Text(level.displayName)
+                                            .font(.caption2.bold())
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.green.opacity(0.15), in: Capsule())
+                                        Text("\(docs.count) fichier(s)")
+                                            .font(.caption2)
+                                            .foregroundStyle(MuralColor.secondary)
+                                        let types = Set(docs.map(\.fileType))
+                                        Text(types.joined(separator: ", "))
+                                            .font(.caption2)
+                                            .foregroundStyle(MuralColor.secondary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                Spacer()
+                                VStack(spacing: 2) {
+                                    Image(systemName: "play.circle.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundStyle(Color.green)
+                                    Text("Cours")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(Color.green)
+                                }
+                            }
+                            .padding(14)
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                            .shadow(color: Color.black.opacity(0.02), radius: 4, y: 1)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
     }
 
@@ -274,58 +494,29 @@ struct StudyHubView: View {
     private var documentsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("Documents Google Drive & Cours", systemImage: "doc.text")
+                Label("Documents Individuels", systemImage: "doc.text")
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                     .foregroundStyle(MuralColor.ink)
                 Spacer()
-                Text("\(documents.count)")
+                Text("\(ungroupedDocuments.count)")
                     .font(.caption.bold())
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Color.blue.opacity(0.15), in: Capsule())
             }
 
-            if documents.isEmpty {
+            if ungroupedDocuments.isEmpty {
                 emptyPlaceholder(
                     icon: "doc.badge.plus",
-                    title: "Aucun document importé",
-                    subtitle: "Importez un fichier PDF ou texte depuis Google Drive ou vos fichiers locaux."
+                    title: "Aucun document individuel",
+                    subtitle: "Importez un fichier (PDF, Word, image, texte) depuis Google Drive ou vos fichiers."
                 )
             } else {
-                ForEach(documents) { doc in
+                ForEach(ungroupedDocuments) { doc in
                     Button {
                         activeDocument = doc
                     } label: {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.blue.opacity(0.12))
-                                    .frame(width: 46, height: 46)
-                                Image(systemName: "doc.richtext")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(Color.blue)
-                            }
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(doc.title)
-                                    .font(.system(.body, design: .rounded, weight: .medium))
-                                    .foregroundStyle(MuralColor.ink)
-                                    .lineLimit(1)
-                                HStack(spacing: 8) {
-                                    Text(doc.source)
-                                    Text("•")
-                                    Text("\(doc.pageCount) page(s)")
-                                }
-                                .font(.caption2)
-                                .foregroundStyle(MuralColor.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption.bold())
-                                .foregroundStyle(MuralColor.secondary)
-                        }
-                        .padding(14)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: Color.black.opacity(0.02), radius: 4, y: 1)
+                        documentRow(doc)
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
@@ -338,6 +529,63 @@ struct StudyHubView: View {
                     }
                 }
             }
+        }
+    }
+    
+    private func documentRow(_ doc: StudyDocument) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.blue.opacity(0.12))
+                    .frame(width: 46, height: 46)
+                Image(systemName: iconForFileType(doc.fileType))
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.blue)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(doc.title)
+                    .font(.system(.body, design: .rounded, weight: .medium))
+                    .foregroundStyle(MuralColor.ink)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(doc.fileType)
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.12), in: Capsule())
+                    Text(doc.level)
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.green.opacity(0.12), in: Capsule())
+                    Text(doc.source)
+                        .font(.caption2)
+                        .foregroundStyle(MuralColor.secondary)
+                    Text("• \(doc.pageCount) p.")
+                        .font(.caption2)
+                        .foregroundStyle(MuralColor.secondary)
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.bold())
+                .foregroundStyle(MuralColor.secondary)
+        }
+        .padding(14)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+        .shadow(color: Color.black.opacity(0.02), radius: 4, y: 1)
+    }
+    
+    private func iconForFileType(_ type: String) -> String {
+        switch type.lowercased() {
+        case "pdf": return "doc.richtext"
+        case "docx", "doc", "word": return "doc.text"
+        case "image (ocr)", "image / ocr": return "photo"
+        case "epub": return "book"
+        case "html", "htm": return "globe"
+        case "pptx", "powerpoint": return "rectangle.split.3x3"
+        case "xlsx", "csv": return "tablecells"
+        default: return "doc.plaintext"
         }
     }
 
@@ -357,6 +605,291 @@ struct StudyHubView: View {
         .padding(24)
         .frame(maxWidth: .infinity)
         .background(Color.white.opacity(0.6), in: RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+// MARK: - Folder Study Session Model
+struct FolderStudySession: Identifiable, Equatable {
+    let id: UUID
+    let folderName: String
+    let documents: [StudyDocument]
+    let detectedLevel: String
+    
+    static func == (lhs: FolderStudySession, rhs: FolderStudySession) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - Folder Course Session View (Interactive Q&A Teacher across all docs in a folder)
+struct FolderCourseSessionView: View {
+    let session: FolderStudySession
+    let coordinator: ConversationCoordinator
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedDocIndex: Int = 0
+    @State private var teacherMessage: String = ""
+    @State private var userReply: String = ""
+    @State private var isThinking = false
+    @State private var conversationHistory: [[String: String]] = []
+    @State private var showDocContent = false
+    
+    private let synthesizer = NativeSynthesizer()
+    
+    private var currentDoc: StudyDocument? {
+        guard selectedDocIndex >= 0 && selectedDocIndex < session.documents.count else { return nil }
+        return session.documents[selectedDocIndex]
+    }
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Top: folder info + doc selector
+                folderHeader
+                
+                // Main chat
+                ScrollView {
+                    VStack(spacing: 16) {
+                        MuralOrb(energy: isThinking ? 0.8 : 0.3, listening: false, active: true)
+                            .frame(width: 120, height: 120)
+                            .padding(.top, 6)
+                        
+                        // Teacher card
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("PROFESSEUR MURAL — \(session.detectedLevel)")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(Color.green)
+                                Spacer()
+                                Button {
+                                    speakTeacher()
+                                } label: {
+                                    Image(systemName: "speaker.wave.2.fill")
+                                        .foregroundStyle(Color.green)
+                                }
+                            }
+                            
+                            Text(teacherMessage.isEmpty ? "Bienvenue dans le dossier « \(session.folderName) » ! Je vais vous faire cours sur ces \(session.documents.count) fichier(s). Prêt ?" : teacherMessage)
+                                .font(.system(.body, design: .rounded))
+                                .foregroundStyle(MuralColor.ink)
+                                .lineSpacing(3)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
+                        
+                        // Show/hide document content (read inline)
+                        if let doc = currentDoc {
+                            DisclosureGroup(isExpanded: $showDocContent) {
+                                ScrollView {
+                                    Text(doc.rawContent)
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundStyle(MuralColor.secondary)
+                                        .textSelection(.enabled)
+                                        .padding(12)
+                                }
+                                .frame(maxHeight: 300)
+                                .background(MuralColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "doc.text.magnifyingglass")
+                                    Text("Lire le contenu : « \(doc.title) » (\(doc.fileType) • \(doc.pageCount) p.)")
+                                        .lineLimit(1)
+                                }
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.blue)
+                            }
+                            .padding(12)
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                    .padding(20)
+                }
+                
+                // Input bar
+                inputBar
+            }
+            .background(MuralColor.cream)
+            .navigationTitle("Cours : \(session.folderName)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Quitter") {
+                        synthesizer.stop()
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                startFolderCourse()
+            }
+        }
+    }
+    
+    private var folderHeader: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(session.documents.enumerated()), id: \.element.id) { (idx, doc) in
+                    Button {
+                        selectedDocIndex = idx
+                        switchToDocument(doc)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: selectedDocIndex == idx ? "doc.fill" : "doc")
+                                .font(.caption2)
+                            Text(doc.title)
+                                .font(.caption2.bold())
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            selectedDocIndex == idx ? Color.green : Color.white,
+                            in: Capsule()
+                        )
+                        .foregroundStyle(selectedDocIndex == idx ? .white : MuralColor.ink)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .background(Color.white)
+    }
+    
+    private var inputBar: some View {
+        HStack(spacing: 12) {
+            TextField("Répondre au professeur…", text: $userReply)
+                .padding(12)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+            
+            Button {
+                sendReply()
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 34))
+                    .foregroundStyle(Color.green)
+            }
+            .disabled(userReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
+        }
+        .padding(12)
+        .background(MuralColor.cream)
+    }
+    
+    private func startFolderCourse() {
+        guard let doc = currentDoc else { return }
+        isThinking = true
+        
+        let prompt = CourseQAPolicy.socraticCoursePrompt(
+            document: doc,
+            level: session.detectedLevel,
+            correctionLevel: coordinator.store.preferences.correctionLevel
+        )
+        
+        conversationHistory = [
+            ["role": "user", "content": "Commence le cours interactif en questions sur ce document. Présente brièvement le sujet et pose une première question à l'élève."]
+        ]
+        
+        Task {
+            do {
+                let result = try await coordinator.apiClient.respondHistory(
+                    instructions: prompt,
+                    history: conversationHistory,
+                    preferences: coordinator.store.preferences
+                )
+                await MainActor.run {
+                    teacherMessage = result.text
+                    conversationHistory.append(["role": "assistant", "content": result.text])
+                    isThinking = false
+                    speakTeacher()
+                }
+            } catch {
+                await MainActor.run {
+                    teacherMessage = "Prêt pour le cours ! Dites « Commence » pour démarrer."
+                    isThinking = false
+                }
+            }
+        }
+    }
+    
+    private func switchToDocument(_ doc: StudyDocument) {
+        isThinking = true
+        showDocContent = false
+        
+        let prompt = CourseQAPolicy.socraticCoursePrompt(
+            document: doc,
+            level: session.detectedLevel,
+            correctionLevel: coordinator.store.preferences.correctionLevel
+        )
+        
+        conversationHistory.append(["role": "user", "content": "L'élève passe maintenant au fichier « \(doc.title) ». Continue le cours avec ce nouveau contenu. Pose une question."])
+        
+        Task {
+            do {
+                let result = try await coordinator.apiClient.respondHistory(
+                    instructions: prompt,
+                    history: conversationHistory,
+                    preferences: coordinator.store.preferences
+                )
+                await MainActor.run {
+                    teacherMessage = result.text
+                    conversationHistory.append(["role": "assistant", "content": result.text])
+                    isThinking = false
+                    speakTeacher()
+                }
+            } catch {
+                await MainActor.run {
+                    teacherMessage = "Passons au document « \(doc.title) ». Que souhaitez-vous travailler ?"
+                    isThinking = false
+                }
+            }
+        }
+    }
+    
+    private func sendReply() {
+        guard !userReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, let doc = currentDoc else { return }
+        let text = userReply
+        userReply = ""
+        isThinking = true
+        
+        conversationHistory.append(["role": "user", "content": text])
+        
+        let prompt = CourseQAPolicy.socraticCoursePrompt(
+            document: doc,
+            level: session.detectedLevel,
+            correctionLevel: coordinator.store.preferences.correctionLevel
+        )
+        
+        Task {
+            do {
+                let result = try await coordinator.apiClient.respondHistory(
+                    instructions: prompt,
+                    history: conversationHistory,
+                    preferences: coordinator.store.preferences
+                )
+                await MainActor.run {
+                    teacherMessage = result.text
+                    conversationHistory.append(["role": "assistant", "content": result.text])
+                    isThinking = false
+                    speakTeacher()
+                }
+            } catch {
+                await MainActor.run {
+                    teacherMessage = "Bien reçu ! Continuons."
+                    isThinking = false
+                }
+            }
+        }
+    }
+    
+    private func speakTeacher() {
+        guard !teacherMessage.isEmpty else { return }
+        synthesizer.speak(
+            text: teacherMessage,
+            languageCode: "de-DE",
+            rate: coordinator.store.preferences.speechRate
+        )
     }
 }
 
@@ -434,7 +967,7 @@ struct AssimilScannerView: View {
                 .font(.system(.title3, design: .rounded, weight: .bold))
                 .foregroundStyle(MuralColor.ink)
             
-            Text("L'OCR extrait automatiquement le dialogue bilingue, les remarques de grammaire et les exercices pour votre cours.")
+            Text("L'OCR extrait automatiquement le dialogue bilingue, les remarques de grammaire et les exercices.")
                 .font(.subheadline)
                 .foregroundStyle(MuralColor.secondary)
                 .multilineTextAlignment(.center)
@@ -590,7 +1123,6 @@ struct AssimilScannerView: View {
                 let targetLang = coordinator.language.name
                 let lesson: AssimilLesson
                 
-                // Try Gemini Vision if API key exists, otherwise local Apple Vision + LLM
                 let googleKey = coordinator.store.preferences.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !googleKey.isEmpty {
                     await MainActor.run { processingStatus = "Analyse multimodale Gemini 2.0 Flash..." }
@@ -626,26 +1158,27 @@ struct AssimilScannerView: View {
     }
 }
 
-// MARK: - Document Import View (Google Drive & Local Files)
+// MARK: - Document Import View (Google Drive & Local Files — single file + paste)
 struct DocumentImportView: View {
     let coordinator: ConversationCoordinator
-    let onSave: (StudyDocument) -> Void
+    let onSave: ([StudyDocument]) -> Void
     
     @Environment(\.dismiss) private var dismiss
     @State private var showFilePicker = false
     @State private var isProcessing = false
+    @State private var processingStatus = ""
     @State private var errorMessage: String?
     
     @State private var pastedTitle = ""
     @State private var pastedContent = ""
-    @State private var selectedDoc: StudyDocument?
+    @State private var selectedDocs: [StudyDocument] = []
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    if let doc = selectedDoc {
-                        docPreviewSection(doc)
+                    if !selectedDocs.isEmpty {
+                        docsPreviewSection
                     } else {
                         importOptionsSection
                     }
@@ -653,16 +1186,16 @@ struct DocumentImportView: View {
                 .padding(20)
             }
             .background(MuralColor.cream)
-            .navigationTitle("Importer un Document")
+            .navigationTitle("Importer un Fichier")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fermer") { dismiss() }
                 }
-                if let doc = selectedDoc {
+                if !selectedDocs.isEmpty {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Enregistrer") {
-                            onSave(doc)
+                            onSave(selectedDocs)
                             dismiss()
                         }
                         .fontWeight(.bold)
@@ -671,8 +1204,17 @@ struct DocumentImportView: View {
             }
             .fileImporter(
                 isPresented: $showFilePicker,
-                allowedContentTypes: [.pdf, .plainText, .text, .data],
-                allowsMultipleSelection: false
+                allowedContentTypes: [
+                    .pdf, .plainText, .text, .data, .image,
+                    .init(filenameExtension: "docx") ?? .data,
+                    .init(filenameExtension: "doc") ?? .data,
+                    .init(filenameExtension: "rtf") ?? .data,
+                    .init(filenameExtension: "md") ?? .data,
+                    .init(filenameExtension: "epub") ?? .data,
+                    .init(filenameExtension: "csv") ?? .data,
+                    .html
+                ],
+                allowsMultipleSelection: true
             ) { result in
                 handleFileSelection(result)
             }
@@ -681,17 +1223,16 @@ struct DocumentImportView: View {
 
     private var importOptionsSection: some View {
         VStack(spacing: 20) {
-            // Google Drive / Files button
             VStack(spacing: 14) {
-                Image(systemName: "folder.badge.gearshape.fill")
+                Image(systemName: "doc.badge.gearshape.fill")
                     .font(.system(size: 54))
                     .foregroundStyle(Color.blue)
                 
-                Text("Google Drive & Fichiers iOS")
+                Text("Tous types de fichiers")
                     .font(.system(.title3, design: .rounded, weight: .bold))
                     .foregroundStyle(MuralColor.ink)
                 
-                Text("Sélectionnez vos fichiers de cours (PDF, Notes, Fichiers texte) depuis votre compte Google Drive ou vos dossiers locaux.")
+                Text("PDF, Word (.docx), images (OCR auto), texte, Markdown, ePub, CSV, HTML… Sélectionnez un ou plusieurs fichiers.")
                     .font(.subheadline)
                     .foregroundStyle(MuralColor.secondary)
                     .multilineTextAlignment(.center)
@@ -700,7 +1241,7 @@ struct DocumentImportView: View {
                 Button {
                     showFilePicker = true
                 } label: {
-                    Label("Choisir un fichier (Google Drive / PDF)", systemImage: "arrow.down.doc.fill")
+                    Label("Choisir des fichiers", systemImage: "arrow.down.doc.fill")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -742,9 +1283,13 @@ struct DocumentImportView: View {
             .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
 
             if isProcessing {
-                ProgressView("Analyse pédagogique du document par l'IA...")
-                    .font(.caption)
-                    .tint(Color.blue)
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .tint(Color.blue)
+                    Text(processingStatus)
+                        .font(.caption)
+                        .foregroundStyle(MuralColor.secondary)
+                }
             }
 
             if let error = errorMessage {
@@ -755,75 +1300,86 @@ struct DocumentImportView: View {
         }
     }
 
-    private func docPreviewSection(_ doc: StudyDocument) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(doc.title)
+    private var docsPreviewSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("\(selectedDocs.count) fichier(s) importé(s)")
                     .font(.system(.title3, design: .rounded, weight: .bold))
-                Text("Source: \(doc.source) • \(doc.pageCount) page(s)")
-                    .font(.caption)
-                    .foregroundStyle(MuralColor.secondary)
-            }
-
-            Divider()
-
-            Text("Résumé du Professeur")
-                .font(.headline)
-            Text(doc.summary)
-                .font(.subheadline)
-                .foregroundStyle(MuralColor.secondary)
-                .lineSpacing(3)
-
-            if !doc.keyConcepts.isEmpty {
-                Divider()
-                Text("Concepts Clés Extraits")
-                    .font(.headline)
-                ForEach(doc.keyConcepts) { concept in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(concept.term)
-                            .font(.subheadline.bold())
-                            .foregroundStyle(MuralColor.ink)
-                        Text(concept.definition)
-                            .font(.caption)
-                            .foregroundStyle(MuralColor.secondary)
-                    }
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(MuralColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
+                Spacer()
+                Button("Réinitialiser") {
+                    selectedDocs = []
                 }
+                .font(.caption)
+            }
+            
+            ForEach(selectedDocs) { doc in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(doc.title)
+                            .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        Spacer()
+                        Text(doc.fileType)
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.15), in: Capsule())
+                        Text(doc.level)
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.15), in: Capsule())
+                    }
+                    
+                    Text(doc.summary)
+                        .font(.caption)
+                        .foregroundStyle(MuralColor.secondary)
+                        .lineSpacing(2)
+                    
+                    if !doc.keyConcepts.isEmpty {
+                        Text("Concepts : \(doc.keyConcepts.map(\.term).joined(separator: ", "))")
+                            .font(.caption2)
+                            .foregroundStyle(MuralColor.ink.opacity(0.7))
+                    }
+                }
+                .padding(14)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
             }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
     }
 
     private func handleFileSelection(_ result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
-            guard let url = urls.first else { return }
+            guard !urls.isEmpty else { return }
             isProcessing = true
             errorMessage = nil
+            processingStatus = "Import de \(urls.count) fichier(s)…"
             Task {
-                do {
-                    var doc = try await DocumentImportManager.shared.importFile(
-                        from: url,
-                        targetLanguageID: coordinator.store.preferences.learningLanguageID
-                    )
-                    try await DocumentImportManager.shared.analyzeDocument(
-                        document: &doc,
-                        apiClient: coordinator.apiClient,
-                        preferences: coordinator.store.preferences
-                    )
-                    await MainActor.run {
-                        self.selectedDoc = doc
-                        self.isProcessing = false
+                var imported: [StudyDocument] = []
+                for url in urls {
+                    do {
+                        var doc = try await DocumentImportManager.shared.importFile(
+                            from: url,
+                            targetLanguageID: coordinator.store.preferences.learningLanguageID
+                        )
+                        await MainActor.run { processingStatus = "Analyse IA de « \(doc.title) »…" }
+                        try await DocumentImportManager.shared.analyzeDocument(
+                            document: &doc,
+                            apiClient: coordinator.apiClient,
+                            preferences: coordinator.store.preferences
+                        )
+                        imported.append(doc)
+                    } catch {
+                        print("Skip file \(url.lastPathComponent): \(error.localizedDescription)")
                     }
-                } catch {
-                    await MainActor.run {
-                        self.errorMessage = error.localizedDescription
-                        self.isProcessing = false
+                }
+                await MainActor.run {
+                    if imported.isEmpty {
+                        errorMessage = "Aucun fichier n'a pu être importé."
+                    } else {
+                        selectedDocs = imported
                     }
+                    isProcessing = false
                 }
             }
         case .failure(let error):
@@ -841,6 +1397,7 @@ struct DocumentImportView: View {
         )
         isProcessing = true
         errorMessage = nil
+        processingStatus = "Analyse pédagogique…"
         Task {
             do {
                 try await DocumentImportManager.shared.analyzeDocument(
@@ -849,7 +1406,7 @@ struct DocumentImportView: View {
                     preferences: coordinator.store.preferences
                 )
                 await MainActor.run {
-                    self.selectedDoc = doc
+                    self.selectedDocs = [doc]
                     self.isProcessing = false
                 }
             } catch {
@@ -868,7 +1425,7 @@ struct AssimilTeacherSessionView: View {
     let coordinator: ConversationCoordinator
     
     @Environment(\.dismiss) private var dismiss
-    @State private var currentStep: String = "dialogue" // dialogue, grammar, exercises, conversation
+    @State private var currentStep: String = "dialogue"
     @State private var selectedLineIndex: Int = 0
     
     @State private var teacherMessage: String = ""
@@ -882,18 +1439,14 @@ struct AssimilTeacherSessionView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Step Bar
                 stepPickerBar
                 
-                // Orb & Current Focus Area
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Orb
                         MuralOrb(energy: isThinking ? 0.8 : (isListening ? 0.6 : 0.2), listening: isListening, active: true)
                             .frame(width: 140, height: 140)
                             .padding(.top, 10)
                         
-                        // Teacher Speech Card
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Text("PROFESSEUR MURAL")
@@ -918,7 +1471,6 @@ struct AssimilTeacherSessionView: View {
                         .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
                         .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
 
-                        // Step Specific Content
                         if currentStep == "dialogue" {
                             dialogueStepView
                         } else if currentStep == "grammar" {
@@ -930,7 +1482,6 @@ struct AssimilTeacherSessionView: View {
                     .padding(20)
                 }
 
-                // Bottom Controls / Input
                 bottomControlBar
             }
             .background(MuralColor.cream)
@@ -1120,7 +1671,7 @@ struct AssimilTeacherSessionView: View {
 
     private func teachDialogueLine(_ line: AssimilLine) {
         synthesizer.speak(text: line.targetText, languageCode: "de-DE", rate: coordinator.store.preferences.speechRate)
-        teacherMessage = "Phrase \(line.lineIndex) : « \(line.targetText) »\n(Traduction : \(line.nativeTranslation))\n\nRépétez la phrase à l'oral ou écrivez-la ci-dessous pour vérifier votre prononciation et orthographe."
+        teacherMessage = "Phrase \(line.lineIndex) : « \(line.targetText) »\n(Traduction : \(line.nativeTranslation))\n\nRépétez la phrase à l'oral ou écrivez-la ci-dessous."
     }
 
     private func sendUserReply() {
@@ -1169,7 +1720,7 @@ struct AssimilTeacherSessionView: View {
     }
 }
 
-// MARK: - Document Teacher Session View
+// MARK: - Document Teacher Session View (Single Document Interactive)
 struct DocumentTeacherSessionView: View {
     let document: StudyDocument
     let coordinator: ConversationCoordinator
@@ -1179,6 +1730,7 @@ struct DocumentTeacherSessionView: View {
     @State private var userReply: String = ""
     @State private var isThinking = false
     @State private var conversationHistory: [[String: String]] = []
+    @State private var showRawContent = false
     
     private let synthesizer = NativeSynthesizer()
 
@@ -1193,7 +1745,7 @@ struct DocumentTeacherSessionView: View {
                         
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text("TUTEUR GOOGLE DRIVE")
+                                Text("TUTEUR — \(document.fileType) • \(document.level)")
                                     .font(.caption.bold())
                                     .foregroundStyle(Color.blue)
                                 Spacer()
@@ -1205,7 +1757,7 @@ struct DocumentTeacherSessionView: View {
                                 }
                             }
                             
-                            Text(teacherMessage.isEmpty ? "Bonjour ! J'ai analysé votre document « \(document.title) ». Que souhaitez-vous approfondir ?" : teacherMessage)
+                            Text(teacherMessage.isEmpty ? "Bonjour ! J'ai lu votre document « \(document.title) ». Que souhaitez-vous travailler ?" : teacherMessage)
                                 .font(.system(.body, design: .rounded))
                                 .foregroundStyle(MuralColor.ink)
                                 .lineSpacing(3)
@@ -1214,6 +1766,28 @@ struct DocumentTeacherSessionView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
                         .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
+                        
+                        // Inline document reader
+                        DisclosureGroup(isExpanded: $showRawContent) {
+                            ScrollView {
+                                Text(document.rawContent)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(MuralColor.secondary)
+                                    .textSelection(.enabled)
+                                    .padding(12)
+                            }
+                            .frame(maxHeight: 300)
+                            .background(MuralColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                Text("Lire le contenu du document (\(document.pageCount) page(s))")
+                            }
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.blue)
+                        }
+                        .padding(12)
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
 
                         // Quick Quiz Cards
                         if !document.quizQuestions.isEmpty {
@@ -1277,8 +1851,9 @@ struct DocumentTeacherSessionView: View {
 
     private func startDocumentTutoring() {
         isThinking = true
-        let prompt = DocumentTeacherPolicy.systemPrompt(
-            doc: document,
+        let prompt = CourseQAPolicy.socraticCoursePrompt(
+            document: document,
+            level: document.level,
             correctionLevel: coordinator.store.preferences.correctionLevel
         )
         
@@ -1316,8 +1891,9 @@ struct DocumentTeacherSessionView: View {
         isThinking = true
         
         conversationHistory.append(["role": "user", "content": text])
-        let prompt = DocumentTeacherPolicy.systemPrompt(
-            doc: document,
+        let prompt = CourseQAPolicy.socraticCoursePrompt(
+            document: document,
+            level: document.level,
             correctionLevel: coordinator.store.preferences.correctionLevel
         )
         
@@ -1336,7 +1912,7 @@ struct DocumentTeacherSessionView: View {
                 }
             } catch {
                 await MainActor.run {
-                    self.teacherMessage = "Merci pour votre réponse. Poursuivons l'analyse du texte !"
+                    self.teacherMessage = "Merci pour votre réponse. Poursuivons !"
                     self.isThinking = false
                 }
             }

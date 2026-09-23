@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import PDFKit
 import UniformTypeIdentifiers
 import MuralCore
@@ -7,7 +8,53 @@ import MuralCore
 final class DocumentImportManager {
     static let shared = DocumentImportManager()
     
-    // MARK: - Extract Content from Security-Scoped URL
+    // MARK: - Import Entire Folder (Recursive Scan with Levels)
+    func importFolder(from folderURL: URL, targetLanguageID: String = "de") async throws -> [StudyDocument] {
+        let isSecurityScoped = folderURL.startAccessingSecurityScopedResource()
+        defer {
+            if isSecurityScoped {
+                folderURL.stopAccessingSecurityScopedResource()
+            }
+        }
+        
+        let rootFolderName = folderURL.lastPathComponent
+        var documents: [StudyDocument] = []
+        let fileManager = FileManager.default
+        
+        let resourceKeys: [URLResourceKey] = [.isRegularFileKey, .isDirectoryKey, .nameKey, .fileSizeKey]
+        guard let enumerator = fileManager.enumerator(
+            at: folderURL,
+            includingPropertiesForKeys: resourceKeys,
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        ) else {
+            throw DocumentImportError.cannotOpenFolder
+        }
+        
+        for case let fileURL as URL in enumerator {
+            guard let resourceValues = try? fileURL.resourceValues(forKeys: Set(resourceKeys)),
+                  let isRegular = resourceValues.isRegularFile, isRegular else {
+                continue
+            }
+            
+            let ext = fileURL.pathExtension.lowercased()
+            guard Self.supportedExtensions.contains(ext) else {
+                continue
+            }
+            
+            // Extract text from this individual file
+            if let doc = try? await extractDocument(from: fileURL, parentFolder: rootFolderName, targetLanguageID: targetLanguageID) {
+                documents.append(doc)
+            }
+        }
+        
+        guard !documents.isEmpty else {
+            throw DocumentImportError.emptyFolder
+        }
+        
+        return documents
+    }
+    
+    // MARK: - Extract Single File (Universal Format Support)
     func importFile(from url: URL, targetLanguageID: String = "de") async throws -> StudyDocument {
         let isSecurityScoped = url.startAccessingSecurityScopedResource()
         defer {
@@ -16,18 +63,29 @@ final class DocumentImportManager {
             }
         }
         
+        return try await extractDocument(from: url, parentFolder: nil, targetLanguageID: targetLanguageID)
+    }
+    
+    private func extractDocument(from url: URL, parentFolder: String?, targetLanguageID: String) async throws -> StudyDocument {
         let filename = url.lastPathComponent
         let ext = url.pathExtension.lowercased()
+        let pathString = url.path
         
         var textContent = ""
         var pageCount = 1
-        var detectedSource = "Fichiers iOS"
+        var detectedFormat = "Texte"
+        var detectedSource = parentFolder != nil ? "Dossier : \(parentFolder!)" : "Fichiers iOS"
         
-        if url.path.contains("Google Drive") || url.path.contains("com.google.Drive") {
+        if pathString.contains("Google Drive") || pathString.contains("com.google.Drive") {
             detectedSource = "Google Drive"
         }
         
-        if ext == "pdf" {
+        // Auto-detect Level from filename and folder path
+        let detectedLevel = StudyLevel.detect(from: "\(pathString)/\(filename)").rawValue
+        
+        switch ext {
+        case "pdf":
+            detectedFormat = "PDF"
             guard let pdfDoc = PDFDocument(url: url) else {
                 throw DocumentImportError.cannotOpenPDF
             }
@@ -42,8 +100,31 @@ final class DocumentImportManager {
                 }
             }
             textContent = pagesText.joined(separator: "\n\n")
-        } else {
-            // Text, Markdown, CSV, etc.
+            
+        case "docx", "doc", "rtf", "rtfd", "html", "htm":
+            detectedFormat = ext.uppercased()
+            if let attributed = try? NSAttributedString(url: url, options: [:], documentAttributes: nil) {
+                textContent = attributed.string
+            } else if let raw = try? String(contentsOf: url, encoding: .utf8) {
+                textContent = raw
+            } else if let raw = try? String(contentsOf: url, encoding: .isoLatin1) {
+                textContent = raw
+            }
+            
+        case "png", "jpg", "jpeg", "webp", "heic":
+            detectedFormat = "Image (OCR)"
+            if let data = try? Data(contentsOf: url), let img = UIImage(data: data) {
+                textContent = try await VisionOCRManager.shared.extractTextWithVision(from: img, targetLanguageCode: targetLanguageID)
+            }
+            
+        case "epub":
+            detectedFormat = "ePub"
+            if let raw = try? String(contentsOf: url, encoding: .utf8) {
+                textContent = raw
+            }
+            
+        default: // txt, md, markdown, json, csv, tsv, xml
+            detectedFormat = ext.isEmpty ? "Texte" : ext.uppercased()
             if let str = try? String(contentsOf: url, encoding: .utf8) {
                 textContent = str
             } else if let str = try? String(contentsOf: url, encoding: .isoLatin1) {
@@ -64,8 +145,11 @@ final class DocumentImportManager {
             source: detectedSource,
             rawContent: textContent,
             pageCount: pageCount,
-            summary: "Document importé avec succès (\(pageCount) page(s)).",
-            targetLanguageID: targetLanguageID
+            summary: "Document de cours importé (\(detectedFormat) • Niveau \(detectedLevel)).",
+            targetLanguageID: targetLanguageID,
+            level: detectedLevel,
+            folderName: parentFolder,
+            fileType: detectedFormat
         )
     }
     
@@ -79,7 +163,7 @@ final class DocumentImportManager {
         let instructions = DocumentTeacherPolicy.documentAnalysisPrompt(title: document.title, targetLanguage: targetLang)
         let sampleContent = String(document.rawContent.prefix(5000))
         let history = [
-            ["role": "user", "content": "Document : \(document.title)\n\nContenu :\n\(sampleContent)"]
+            ["role": "user", "content": "Document : \(document.title)\nNiveau suggéré : \(document.level)\n\nContenu :\n\(sampleContent)"]
         ]
         
         let result = try await apiClient.respondHistory(instructions: instructions, history: history, preferences: preferences)
@@ -94,6 +178,9 @@ final class DocumentImportManager {
             
             if let summary = dict["summary"] as? String {
                 document.summary = summary
+            }
+            if let lvl = dict["level"] as? String, !lvl.isEmpty {
+                document.level = lvl
             }
             
             if let rawConcepts = dict["keyConcepts"] as? [[String: Any]] {
@@ -124,18 +211,28 @@ final class DocumentImportManager {
             }
         }
     }
+    
+    private static let supportedExtensions: Set<String> = [
+        "pdf", "docx", "doc", "rtf", "rtfd", "txt", "md", "markdown",
+        "epub", "html", "htm", "png", "jpg", "jpeg", "webp", "heic",
+        "json", "csv", "tsv", "pptx", "xlsx"
+    ]
 }
 
 public enum DocumentImportError: LocalizedError {
+    case cannotOpenFolder
     case cannotOpenPDF
     case unsupportedFormat
     case emptyFile
+    case emptyFolder
     
     public var errorDescription: String? {
         switch self {
+        case .cannotOpenFolder: return "Impossible d'accéder à ce dossier. Vérifiez les autorisations."
         case .cannotOpenPDF: return "Impossible d'ouvrir ce fichier PDF ou le document est protégé."
-        case .unsupportedFormat: return "Format de fichier non pris en charge. Veuillez choisir un PDF ou un fichier texte."
+        case .unsupportedFormat: return "Format de fichier non pris en charge."
         case .emptyFile: return "Le fichier sélectionné ne contient aucun texte exploitable."
+        case .emptyFolder: return "Ce dossier ne contient aucun fichier de cours pris en charge."
         }
     }
 }
