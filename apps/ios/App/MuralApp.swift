@@ -9,7 +9,13 @@ import SwiftUI
     }
     var body: some Scene {
         WindowGroup {
-            if let store { RootView(store: store).preferredColorScheme(.light) }
+            if let store {
+                RootView(store: store)
+                    .preferredColorScheme(.light)
+                    .task {
+                        _ = await NotificationManager.shared.requestAuthorization()
+                    }
+            }
             else {
                 ContentUnavailableView("Let’s try again", systemImage: "externaldrive.badge.exclamationmark", description: Text(startupError ?? "The learning record is unavailable."))
                     .preferredColorScheme(.light)

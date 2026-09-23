@@ -84,16 +84,20 @@ struct StudyHubView: View {
     @Bindable var coordinator: ConversationCoordinator
     @State private var lessons: [AssimilLesson] = []
     @State private var documents: [StudyDocument] = []
+    @State private var fsrsDueItems: [FSRSItem] = []
     @State private var selectedLevelFilter: StudyLevel = .all
     
     @State private var showScanner = false
     @State private var showDocImporter = false
     @State private var showFolderImporter = false
+    @State private var showFSRSVoiceSession = false
+    @State private var showNotificationSettings = false
     @State private var activeAssimilLesson: AssimilLesson?
     @State private var activeDocument: StudyDocument?
     @State private var activeFolderSession: FolderStudySession?
     
     private let storeManager = StudyStoreManager.shared
+    private let fsrsStore = FSRSStoreManager.shared
 
     init(coordinator: ConversationCoordinator) {
         self.coordinator = coordinator
@@ -104,6 +108,9 @@ struct StudyHubView: View {
             VStack(alignment: .leading, spacing: 24) {
                 headerSection
                 quickActionsSection
+                
+                // FSRS Spaced Repetition & Daily Notification Hub
+                fsrsVoiceSection
                 
                 // Level filter pills
                 levelFilterBar
@@ -126,6 +133,7 @@ struct StudyHubView: View {
         .navigationTitle("Professeur & Assimil")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            seedFSRSIfNeeded()
             reloadContent()
         }
         .sheet(isPresented: $showScanner, onDismiss: { reloadContent() }) {
@@ -149,6 +157,12 @@ struct StudyHubView: View {
                 importFolder(folderURL)
             }
         }
+        .sheet(isPresented: $showNotificationSettings) {
+            NotificationSettingsSheet()
+        }
+        .fullScreenCover(isPresented: $showFSRSVoiceSession, onDismiss: { reloadContent() }) {
+            FSRSVoiceReviewSessionView(coordinator: coordinator)
+        }
         .fullScreenCover(item: $activeAssimilLesson, onDismiss: { reloadContent() }) { lesson in
             AssimilTeacherSessionView(lesson: lesson, coordinator: coordinator)
         }
@@ -163,6 +177,22 @@ struct StudyHubView: View {
     private func reloadContent() {
         lessons = storeManager.loadLessons()
         documents = storeManager.loadDocuments()
+        fsrsDueItems = fsrsStore.getDueItems(for: coordinator.language.id)
+    }
+    
+    private func seedFSRSIfNeeded() {
+        let existing = fsrsStore.loadItems(for: "de")
+        if existing.isEmpty {
+            let seeds = [
+                FSRSItem(term: "obwohl", meaning: "bien que (subordonnée avec verbe à la fin)", example: "Ich lerne Deutsch, obwohl es schwierig ist.", contextCategory: "Grammaire", level: "B2", languageID: "de", stability: 0.4, difficulty: 4.5),
+                FSRSItem(term: "sich freuen auf (+ Akk)", meaning: "se réjouir de / attendre avec impatience", example: "Ich freue mich auf die Prüfung.", contextCategory: "Vocabulaire", level: "B2", languageID: "de", stability: 0.5, difficulty: 5.0),
+                FSRSItem(term: "Es kommt darauf an", meaning: "Ça dépend", example: "Es kommt auf den Patienten an.", contextCategory: "Expression", level: "B2", languageID: "de", stability: 0.6, difficulty: 4.0),
+                FSRSItem(term: "die Behandlung", meaning: "le traitement médical / la prise en charge", example: "Die Behandlung war erfolgreich.", contextCategory: "Médical", level: "B2", languageID: "de", stability: 0.4, difficulty: 4.8),
+                FSRSItem(term: "trotzdem", meaning: "néanmoins / quand même (inversion sujet-verbe)", example: "Er war müde, trotzdem arbeitete er weiter.", contextCategory: "Grammaire", level: "B2", languageID: "de", stability: 0.5, difficulty: 5.2),
+                FSRSItem(term: "abhängen von (+ Dat)", meaning: "dépendre de", example: "Das hängt vom Befund ab.", contextCategory: "Expression", level: "B2", languageID: "de", stability: 0.5, difficulty: 4.5)
+            ]
+            fsrsStore.saveItems(seeds)
+        }
     }
     
     private func importFolder(_ folderURL: URL) {
@@ -233,6 +263,86 @@ struct StudyHubView: View {
         .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
     }
 
+    // MARK: - FSRS Spaced Repetition & Notification Card
+    private var fsrsVoiceSection: some View {
+        VStack(spacing: 14) {
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "waveform.badge.magnifyingglass")
+                        .font(.title3)
+                        .foregroundStyle(MuralColor.orange)
+                    Text("Mémoire FSRS & Répétition Vocale")
+                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .foregroundStyle(MuralColor.ink)
+                }
+                Spacer()
+                Button {
+                    showNotificationSettings = true
+                } label: {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.title3)
+                        .foregroundStyle(MuralColor.orange)
+                }
+            }
+            
+            Text("L'algorithme FSRS s'auto-adapte à votre mémoire au fil du temps. Les révisions se font **100% en vocal** (sans écrit) au cours d'une conversation fluide avec l'IA.")
+                .font(.caption)
+                .foregroundStyle(MuralColor.secondary)
+                .lineSpacing(2)
+            
+            // Due terms preview
+            if !fsrsDueItems.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("À réactiver aujourd'hui (\(fsrsDueItems.count)) :")
+                        .font(.caption2.bold())
+                        .foregroundStyle(MuralColor.ink)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(fsrsDueItems.prefix(6)) { item in
+                                let r = Int(item.retrievability() * 100)
+                                HStack(spacing: 4) {
+                                    Text(item.term)
+                                        .font(.caption.bold())
+                                    Text("\(r)%")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(r < 70 ? .red : .orange)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(MuralColor.cream, in: Capsule())
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Primary Action Button (100% Voice session)
+            Button {
+                showFSRSVoiceSession = true
+            } label: {
+                HStack {
+                    Image(systemName: "mic.fill")
+                        .font(.headline)
+                    Text("Lancer la Révision 100% Vocale (FSRS)")
+                        .font(.subheadline.bold())
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    LinearGradient(colors: [MuralColor.orange, Color(red: 0.95, green: 0.45, blue: 0.2)], startPoint: .leading, endPoint: .trailing),
+                    in: RoundedRectangle(cornerRadius: 14)
+                )
+                .shadow(color: MuralColor.orange.opacity(0.3), radius: 6, y: 3)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+        .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
+    }
+    
     private var quickActionsSection: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
@@ -1928,3 +2038,398 @@ struct DocumentTeacherSessionView: View {
         )
     }
 }
+
+// MARK: - FSRS 100% Voice Review Session View (Hands-Free Oral Mastery)
+struct FSRSVoiceReviewSessionView: View {
+    let coordinator: ConversationCoordinator
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var dueItems: [FSRSItem] = []
+    @State private var currentItemIndex: Int = 0
+    @State private var teacherMessage: String = ""
+    @State private var userSpokenReply: String = ""
+    @State private var isListening = false
+    @State private var isThinking = false
+    @State private var conversationHistory: [[String: String]] = []
+    @State private var sessionStats: (reviewed: Int, mastered: Int) = (0, 0)
+    
+    private let synthesizer = NativeSynthesizer()
+    private let fsrsStore = FSRSStoreManager.shared
+
+    private var currentItem: FSRSItem? {
+        guard currentItemIndex >= 0 && currentItemIndex < dueItems.count else { return nil }
+        return dueItems[currentItemIndex]
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Progress indicator
+                if !dueItems.isEmpty {
+                    HStack {
+                        Text("Item \(currentItemIndex + 1) / \(dueItems.count)")
+                            .font(.caption.bold())
+                            .foregroundStyle(MuralColor.secondary)
+                        Spacer()
+                        if let item = currentItem {
+                            Text("Rétention: \(Int(item.retrievability() * 100))%")
+                                .font(.caption.bold())
+                                .foregroundStyle(MuralColor.orange)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                }
+
+                ScrollView {
+                    VStack(spacing: 18) {
+                        // Interactive Orb
+                        MuralOrb(energy: isThinking ? 0.85 : (isListening ? 0.6 : 0.25), listening: isListening, active: true)
+                            .frame(width: 150, height: 150)
+                            .padding(.top, 12)
+                        
+                        // Teacher Oral Card
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("PROFESSEUR VOCAL FSRS")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(MuralColor.orange)
+                                Spacer()
+                                Button {
+                                    speakTeacher()
+                                } label: {
+                                    Image(systemName: "speaker.wave.2.fill")
+                                        .foregroundStyle(MuralColor.orange)
+                                }
+                            }
+                            
+                            Text(teacherMessage.isEmpty ? "Démarrage de la séance vocale..." : teacherMessage)
+                                .font(.system(.body, design: .rounded))
+                                .foregroundStyle(MuralColor.ink)
+                                .lineSpacing(3)
+                        }
+                        .padding(18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+                        .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
+
+                        // Quick action rating badges (auto or manual touch)
+                        if let item = currentItem {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Notion étudiée : « \(item.term) »")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(MuralColor.ink)
+                                Text(item.meaning)
+                                    .font(.caption)
+                                    .foregroundStyle(MuralColor.secondary)
+                                if let ex = item.example {
+                                    Text("Exemple : \(ex)")
+                                        .font(.caption2.italic())
+                                        .foregroundStyle(MuralColor.secondary)
+                                }
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(MuralColor.cream.opacity(0.7), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                    .padding(20)
+                }
+
+                // Bottom voice bar (Hands-Free Oral or Quick Reply)
+                VStack(spacing: 10) {
+                    HStack(spacing: 12) {
+                        TextField("Parler ou taper votre réponse...", text: $userSpokenReply)
+                            .padding(12)
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+                        
+                        Button {
+                            sendOralReply()
+                        } label: {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 34))
+                                .foregroundStyle(MuralColor.orange)
+                        }
+                        .disabled(userSpokenReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
+                    }
+                    
+                    // FSRS Rating buttons
+                    HStack(spacing: 8) {
+                        ForEach(FSRSRating.allCases, id: \.self) { rating in
+                            Button {
+                                recordRating(rating)
+                            } label: {
+                                Text(rating.label)
+                                    .font(.caption2.bold())
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(colorForRating(rating).opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+                                    .foregroundStyle(colorForRating(rating))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(14)
+                .background(MuralColor.cream)
+            }
+            .background(MuralColor.cream)
+            .navigationTitle("Révision Vocale FSRS")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Terminer") {
+                        synthesizer.stop()
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                startFSRSSession()
+            }
+        }
+    }
+
+    private func startFSRSSession() {
+        dueItems = fsrsStore.getDueItems(for: coordinator.language.id, limit: 8)
+        guard !dueItems.isEmpty else {
+            teacherMessage = "Bravo ! Vous êtes à jour sur vos révisions FSRS. N'hésitez pas à lancer une conversation libre pour découvrir de nouvelles expressions !"
+            return
+        }
+        currentItemIndex = 0
+        promptNextItem()
+    }
+
+    private func promptNextItem() {
+        guard let item = currentItem else {
+            teacherMessage = "Super séance ! Vous avez révisé \(sessionStats.reviewed) notion(s). Votre mémoire FSRS est consolidée !"
+            speakTeacher()
+            return
+        }
+        
+        isThinking = true
+        let prompt = """
+        Tu es le Professeur Mural d'Allemand. Tu animes une révision 100% VOCALE basée sur l'algorithme FSRS.
+        L'élément à réviser est : « \(item.term) » (\(item.meaning)).
+        Exemple de contexte : \(item.example ?? "")
+        Niveau visé : \(item.level)
+        
+        MISSION VOCALE :
+        1. Ne donne pas directement la réponse !
+        2. Pose une question naturelle et vivante à l'élève à l'oral pour lui faire utiliser ou traduire ce terme.
+        3. Reste concis (1 à 2 phrases).
+        """
+        
+        conversationHistory = [["role": "user", "content": "Lance la question orale pour réviser « \(item.term) »."]]
+        
+        Task {
+            do {
+                let result = try await coordinator.apiClient.respondHistory(
+                    instructions: prompt,
+                    history: conversationHistory,
+                    preferences: coordinator.store.preferences
+                )
+                await MainActor.run {
+                    self.teacherMessage = result.text
+                    self.conversationHistory.append(["role": "assistant", "content": result.text])
+                    self.isThinking = false
+                    speakTeacher()
+                }
+            } catch {
+                await MainActor.run {
+                    self.teacherMessage = "Comment utilisez-vous « \(item.term) » dans une phrase en allemand ?"
+                    self.isThinking = false
+                    speakTeacher()
+                }
+            }
+        }
+    }
+
+    private func sendOralReply() {
+        guard !userSpokenReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, let item = currentItem else { return }
+        let text = userSpokenReply
+        userSpokenReply = ""
+        isThinking = true
+        
+        conversationHistory.append(["role": "user", "content": text])
+        
+        let prompt = """
+        Tu es le Professeur Mural d'Allemand.
+        L'élève répond à la question sur « \(item.term) » (\(item.meaning)).
+        Sa réponse est : « \(text) »
+        
+        MISSION :
+        1. Évalue brièvement et oralement sa réponse avec bienveillance en français.
+        2. Donne la formulation modèle exacte en allemand.
+        3. Inclus à la fin une note FSRS sous la forme : `[RATING: 1|2|3|4]` (1=Again, 2=Hard, 3=Good, 4=Easy).
+        """
+        
+        Task {
+            do {
+                let result = try await coordinator.apiClient.respondHistory(
+                    instructions: prompt,
+                    history: conversationHistory,
+                    preferences: coordinator.store.preferences
+                )
+                
+                var cleanText = result.text
+                var detectedRating: FSRSRating = .good
+                
+                if cleanText.contains("[RATING: 1]") { detectedRating = .again }
+                else if cleanText.contains("[RATING: 2]") { detectedRating = .hard }
+                else if cleanText.contains("[RATING: 3]") { detectedRating = .good }
+                else if cleanText.contains("[RATING: 4]") { detectedRating = .easy }
+                
+                cleanText = cleanText.replacingOccurrences(of: "\\[RATING: \\d\\]", with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                await MainActor.run {
+                    self.teacherMessage = cleanText
+                    self.conversationHistory.append(["role": "assistant", "content": cleanText])
+                    self.isThinking = false
+                    speakTeacher()
+                    
+                    // Record review in FSRS
+                    fsrsStore.recordReview(itemId: item.id, rating: detectedRating, duration: 6)
+                    sessionStats.reviewed += 1
+                    
+                    // Schedule next item after 4 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
+                        self.currentItemIndex += 1
+                        self.promptNextItem()
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.teacherMessage = "Bien reçu ! Passons à la suite."
+                    self.isThinking = false
+                }
+            }
+        }
+    }
+
+    private func recordRating(_ rating: FSRSRating) {
+        guard let item = currentItem else { return }
+        fsrsStore.recordReview(itemId: item.id, rating: rating, duration: 4)
+        sessionStats.reviewed += 1
+        currentItemIndex += 1
+        promptNextItem()
+    }
+
+    private func colorForRating(_ rating: FSRSRating) -> Color {
+        switch rating {
+        case .again: return .red
+        case .hard: return .orange
+        case .good: return .blue
+        case .easy: return .green
+        }
+    }
+
+    private func speakTeacher() {
+        guard !teacherMessage.isEmpty else { return }
+        synthesizer.speak(
+            text: teacherMessage,
+            languageCode: "de-DE",
+            rate: coordinator.store.preferences.speechRate
+        )
+    }
+}
+
+// MARK: - Daily Notification Settings Sheet
+struct NotificationSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var settings: NotificationSettings = NotificationManager.shared.settings
+    @State private var morningDate: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? .now
+    @State private var eveningDate: Date = Calendar.current.date(from: DateComponents(hour: 19, minute: 30)) ?? .now
+    @State private var statusMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(header: Text("Rappels Quotidiens Vocaux")) {
+                    Toggle("Activer les notifications quotidiennes", isOn: $settings.isEnabled)
+                    
+                    if settings.isEnabled {
+                        Picker("Fréquence journalière", selection: $settings.notificationsPerDay) {
+                            Text("1 fois par jour").tag(1)
+                            Text("2 fois par jour (Matin & Soir)").tag(2)
+                        }
+                        
+                        DatePicker("Rappel du matin", selection: $morningDate, displayedComponents: .hourAndMinute)
+                        
+                        if settings.notificationsPerDay >= 2 {
+                            DatePicker("Rappel du soir", selection: $eveningDate, displayedComponents: .hourAndMinute)
+                        }
+                    }
+                }
+                
+                Section(header: Text("Style des messages")) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Messages presque humains & motivants :")
+                            .font(.caption.bold())
+                        Text("« Hé oh ! C'est l'heure de réviser 😉 Tu te rappelles comment on dit ... en allemand ? Viens me dire ça en vocal ! »")
+                            .font(.caption2.italic())
+                            .foregroundStyle(MuralColor.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                Section {
+                    Button {
+                        testNotification()
+                    } label: {
+                        Label("Tester une notification immédiatement", systemImage: "paperplane.fill")
+                            .font(.subheadline)
+                    }
+                }
+                
+                if let status = statusMessage {
+                    Section {
+                        Text(status)
+                            .font(.caption)
+                            .foregroundStyle(Color.green)
+                    }
+                }
+            }
+            .navigationTitle("Notifications Journalières")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Fermer") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Enregistrer") {
+                        save()
+                        dismiss()
+                    }
+                    .fontWeight(.bold)
+                }
+            }
+            .onAppear {
+                let cal = Calendar.current
+                morningDate = cal.date(from: DateComponents(hour: settings.morningHour, minute: settings.morningMinute)) ?? morningDate
+                eveningDate = cal.date(from: DateComponents(hour: settings.eveningHour, minute: settings.eveningMinute)) ?? eveningDate
+            }
+        }
+    }
+
+    private func save() {
+        let cal = Calendar.current
+        settings.morningHour = cal.component(.hour, from: morningDate)
+        settings.morningMinute = cal.component(.minute, from: morningDate)
+        settings.eveningHour = cal.component(.hour, from: eveningDate)
+        settings.eveningMinute = cal.component(.minute, from: eveningDate)
+        NotificationManager.shared.saveSettings(settings)
+    }
+
+    private func testNotification() {
+        Task {
+            _ = await NotificationManager.shared.requestAuthorization()
+            NotificationManager.shared.scheduleNotifications()
+            await MainActor.run {
+                statusMessage = "Notification programmée ! Vous recevrez vos rappels aux heures choisies."
+            }
+        }
+    }
+}
+

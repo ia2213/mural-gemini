@@ -130,7 +130,8 @@ import MuralCore
         let learner = store.learner
         // Each new conversation starts fresh; learned vocabulary and difficulty still carry forward.
         let history: [[String: Any]] = []
-        let instructions = TeachingPolicy.voice(language: language, learner: learner, theme: selectedTheme, interests: store.preferences.interests, meaningLanguage: store.preferences.meaningLanguage, correctionLevel: store.preferences.correctionLevel)
+        let baseInstructions = TeachingPolicy.voice(language: language, learner: learner, theme: selectedTheme, interests: store.preferences.interests, meaningLanguage: store.preferences.meaningLanguage, correctionLevel: store.preferences.correctionLevel)
+        let instructions = FSRSPromptPolicy.buildVoiceConversationPrompt(basePolicyPrompt: baseInstructions, languageID: language.id, level: "B2")
         connectionTask = Task { [weak self] in
             guard let self else { return }
             do { try await self.transport.connect(api: self.api, instructions: instructions, history: history, languageCode: self.language.id, speechRate: self.store.preferences.speechRate, voiceIdentifier: self.store.preferences.selectedVoiceIdentifier, preferences: self.store.preferences) }
@@ -440,6 +441,24 @@ import MuralCore
                 self.session?.assessments.removeAll { $0.passageID == p.id }; self.session?.assessments.append(validated)
                 self.lastAssessmentKey = p.revisionKey
                 self.addUsage(APIUsage(input: result.inputTokens, output: result.outputTokens, searches: result.searchCalls)); self.save()
+                
+                // Update FSRS memory scheduler based on spoken words
+                for word in validated.words {
+                    let rating: FSRSRating = word.kind == .independent ? (validated.outcome == .success ? .easy : .good) : (validated.outcome == .breakdown ? .again : .hard)
+                    let fsrsItem = FSRSItem(
+                        term: word.lemma,
+                        meaning: word.meaning,
+                        example: word.quote,
+                        contextCategory: "Vocal",
+                        level: "B2",
+                        languageID: snapshot.languageID
+                    )
+                    FSRSStoreManager.shared.saveItem(fsrsItem)
+                    if let savedItem = FSRSStoreManager.shared.loadItems(for: snapshot.languageID).first(where: { $0.term.lowercased() == word.lemma.lowercased() }) {
+                        FSRSStoreManager.shared.recordReview(itemId: savedItem.id, rating: rating, duration: 5)
+                    }
+                }
+                
                 let learner = self.store.learner
                 if self.conversationPace.observe(validated, passage: p, languageID: snapshot.languageID) {
                     self.append("instructions", self.conversationPace.instruction)
