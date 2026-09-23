@@ -74,11 +74,12 @@
 - Réglable dans l'UI (Réglages / Preferences) : **Fort**, **Moyen**, **Faible** (`correctionLevel` dans `TeachingPolicy.swift`).
 
 ### E. Mode Étude Assimil OCR & Documents Google Drive
-- **OCR Assimil (Livre de méthode)** :
-  - Capture caméra / Galerie photo via `CameraPickerView` et `PhotosPicker`.
-  - Double moteur OCR : Apple Vision (`VNRecognizeTextRequest`) hors-ligne + analyse multimodale Gemini 2.0 Flash.
-  - Structuration de leçon : dialogue bilingue numéroté, remarques de grammaire, exercices d'entraînement.
-  - Session Professeur interactive : lecture audio des répliques, répétition et analyse de la prononciation, explications grammaticales, correction en temps réel des exercices.
+- **OCR Assimil Multi-Pages (Livre de méthode)** :
+  - **Prise de photos multiples :** Possibilité de scanner successivement plusieurs pages (ex: page gauche de dialogue + page droite de traduction/grammaire/exercices).
+  - **Grille de prévisualisation :** Affichage des vignettes scannées avec possibilité d'ajouter ou supprimer des pages.
+  - **Double moteur OCR :** Fusion multimodale en un seul appel Gemini 2.0 / 1.5 Flash + fallback local Apple Vision (`VNRecognizeTextRequest`).
+  - **Structuration de leçon :** Dialogue bilingue assemblé, remarques de grammaire, exercices d'entraînement.
+  - **Session Professeur interactive :** Répétition orale avec synthèse vocale, explications grammaticales et correction en temps réel.
 - **Dossiers de cours par niveaux & Tous formats (Google Drive / iCloud / Local)** :
   - **Sélecteur de dossier complet :** Scannage récursif de sous-dossiers et détection automatique des niveaux (A1, A2, B1, B2, C1).
   - **Support universel de fichiers :** PDF, Word (.docx), PowerPoint (.pptx), Excel/CSV, images (avec OCR auto), ePub, HTML, RTF, Markdown, texte brut.
