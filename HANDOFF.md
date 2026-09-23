@@ -44,10 +44,11 @@
   - Double moteur OCR : Apple Vision (`VNRecognizeTextRequest`) hors-ligne + analyse multimodale Gemini 2.0 Flash.
   - Structuration de leçon : dialogue bilingue numéroté, remarques de grammaire, exercices d'entraînement.
   - Session Professeur interactive : lecture audio des répliques, répétition et analyse de la prononciation, explications grammaticales, correction en temps réel des exercices.
-- **Accès Google Drive & Documents de cours (PDF/TXT)** :
-  - Sélecteur de fichiers iOS (`.fileImporter`) accédant directement à Google Drive, iCloud et fichiers locaux.
-  - Extraction PDF textuelle (`PDFKit`).
-  - Synthèse pédagogique, extraction des concepts clés et quiz interactif avec le tuteur IA.
+- **Dossiers de cours par niveaux & Tous formats (Google Drive / iCloud / Local)** :
+  - **Sélecteur de dossier complet :** Scannage récursif de sous-dossiers et détection automatique des niveaux (A1, A2, B1, B2, C1).
+  - **Support universel de fichiers :** PDF, Word (.docx), PowerPoint (.pptx), Excel/CSV, images (avec OCR auto), ePub, HTML, RTF, Markdown, texte brut.
+  - **Visualisation et lecture en ligne :** Possibilité de lire le document directement dans l'app pendant que l'IA y accède en continu.
+  - **Mode « Cours en Questions » :** Pédagogie interactive où le professeur IA pose des questions progressives (vocabulaire, grammaire B2, cas, syntaxe), analyse les réponses orales/écrites, explique les erreurs en français et donne les formulations modèles en allemand.
 
 ---
 
