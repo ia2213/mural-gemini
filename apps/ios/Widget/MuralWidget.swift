@@ -36,7 +36,7 @@ struct MuralWidgetProvider: TimelineProvider {
     }
 
     private func loadEntry() -> MuralWidgetEntry {
-        let defaults = UserDefaults(suiteName: "group.no.william.mural") ?? UserDefaults.standard
+        let defaults = UserDefaults(suiteName: "group.no.william.fluence") ?? UserDefaults.standard
         let language = defaults.string(forKey: "widget_language") ?? "Spanish"
         let streak = defaults.integer(forKey: "widget_streak")
         let wordCount = defaults.integer(forKey: "widget_word_count")
@@ -160,7 +160,7 @@ struct LargeWidgetView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("MURAL")
+                    Text("FLUENCE")
                         .font(.system(.caption2, design: .rounded, weight: .bold))
                         .tracking(1.5)
                         .foregroundStyle(Color(red: 0.96, green: 0.45, blue: 0.22))
@@ -257,14 +257,14 @@ struct MuralWidgetEntryView: View {
 }
 
 @main
-struct MuralWidget: Widget {
-    let kind: String = "MuralWidget"
+struct FluenceWidget: Widget {
+    let kind: String = "FluenceWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: MuralWidgetProvider()) { entry in
             MuralWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Mural Progress")
+        .configurationDisplayName("Fluence Progress")
         .description("Track your language learning streak, learned words, and progress.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }

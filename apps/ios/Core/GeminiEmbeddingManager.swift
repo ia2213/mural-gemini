@@ -43,7 +43,7 @@ public final class GeminiEmbeddingManager: @unchecked Sendable {
     public init() {
         let fm = FileManager.default
         let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? fm.temporaryDirectory
-        let dir = appSupport.appendingPathComponent("MuralEmbeddings", isDirectory: true)
+        let dir = appSupport.appendingPathComponent("FluenceEmbeddings", isDirectory: true)
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         self.vectorStoreURL = dir.appendingPathComponent("vector_chunks.json")
         self.vectorCache = loadStoredChunks()

@@ -132,7 +132,7 @@ struct ManagedAccountKeychain {
     init(scope: String) { self.scope = scope }
     private var query: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: "chat.mural.managed-account",
+         kSecAttrService as String: "chat.fluence.managed-account",
          kSecAttrAccount as String: Data(SHA256.hash(data: Data(scope.utf8))).base64EncodedString(),
          kSecAttrSynchronizable as String: false]
     }

@@ -50,7 +50,7 @@ public struct HermesSyncPayload: Codable, Sendable {
 public final class HermesOrchestratorClient: @unchecked Sendable {
     public static let shared = HermesOrchestratorClient()
     
-    private let userProfileKey = "MuralHermesUserProfile"
+    private let userProfileKey = "FluenceHermesUserProfile"
     private var cachedProfile: HermesUserProfile
     
     public init() {

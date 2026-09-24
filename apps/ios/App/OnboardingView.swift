@@ -54,7 +54,7 @@ struct OnboardingView: View {
                             .transition(.opacity)
                             .frame(height: step == 0 ? 76 : 60)
                             .accessibilityIdentifier("onboarding-greeting")
-                    }.padding(.top, step == 0 ? 8 : 0).accessibilityElement(children: .ignore).accessibilityLabel("Welcome to Mural")
+                    }.padding(.top, step == 0 ? 8 : 0).accessibilityElement(children: .ignore).accessibilityLabel("Welcome to Fluence")
 
                     Group {
                         if step == 0 { languageStep }
@@ -140,7 +140,7 @@ struct OnboardingView: View {
             VStack(spacing: 10) {
                 Text("A little help,\nin your language.")
                     .font(.system(.title2, design: .rounded, weight: .semibold)).tracking(-0.5)
-                Text("Mural speaks \(target.name). Choose the language you read most easily for meanings.")
+                Text("Fluence speaks \(target.name). Choose the language you read most easily for meanings.")
                     .font(.subheadline).foregroundStyle(FluenceColor.secondary)
             }.multilineTextAlignment(.center).accessibilityIdentifier("onboarding-meaning-title")
             Picker("Subtitle language", selection: Binding(get: { meaningLanguage }, set: { meaningLanguage = $0; hasChosenMeaning = true })) {
@@ -216,7 +216,7 @@ struct OnboardingView: View {
 
 enum AIProcessingConsent {
     static let version = 1
-    static let summary = "With your permission, Mural sends audio and selected text to Groq (Llama 3.1 & Whisper Turbo) to provide conversations and meanings. Provider retention rules apply."
+    static let summary = "With your permission, Fluence sends audio and selected text to Groq (Llama 3.3 & Whisper) to provide conversations and meanings. Provider retention rules apply."
     enum ConsentError: LocalizedError {
         case required
         var errorDescription: String? { "Before using AI features, open Talk and tap the microphone to review how Groq processes your audio and text." }
@@ -232,7 +232,7 @@ struct AIConsentView: View {
             Text("Before we talk.").font(.system(.title, design: .rounded, weight: .semibold))
                 .accessibilityIdentifier("ai-consent-title")
             Text(AIProcessingConsent.summary).font(.body)
-            Text("Your learning record is stored on this iPhone. Mural does not save raw audio. You can keep browsing your saved words and conversations without agreeing.")
+            Text("Your learning record is stored on this iPhone. Fluence does not save raw audio. You can keep browsing your saved words and conversations without agreeing.")
                 .font(.subheadline).foregroundStyle(FluenceColor.secondary)
             Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!).font(.subheadline).underline()
             Button("Agree and continue", action: agree).font(.headline).frame(maxWidth: .infinity).padding(18)

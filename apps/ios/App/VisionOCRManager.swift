@@ -266,7 +266,7 @@ final class VisionOCRManager {
             dialogueLines.append(AssimilLine(
                 lineIndex: i + 1,
                 targetText: line,
-                nativeTranslation: "À traduire avec Mural"
+                nativeTranslation: "À traduire avec Fluence"
             ))
         }
         
@@ -277,7 +277,7 @@ final class VisionOCRManager {
             nativeLanguageID: "fr",
             rawExtractedText: rawText,
             dialogue: dialogueLines,
-            grammarNotes: ["Texte scanné prêt pour l'étude avec le professeur Mural."],
+            grammarNotes: ["Texte scanné prêt pour l'étude avec le professeur Fluence."],
             exercises: []
         )
     }

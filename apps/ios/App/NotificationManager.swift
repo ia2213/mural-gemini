@@ -36,7 +36,7 @@ public struct NotificationSettings: Codable, Sendable {
 final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationManager()
     
-    private let settingsKey = "MuralNotificationSettings"
+    private let settingsKey = "FluenceNotificationSettings"
     private(set) var settings: NotificationSettings
     
     override init() {
@@ -82,7 +82,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         
         // Morning Notification
         let morningContent = buildNotificationContent(
-            title: "Mural Professeur 🇩🇪",
+            title: "Fluence Professeur 🇩🇪",
             dueItems: dueItems,
             period: .morning
         )
@@ -90,13 +90,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         morningComponents.hour = settings.morningHour
         morningComponents.minute = settings.morningMinute
         let morningTrigger = UNCalendarNotificationTrigger(dateMatching: morningComponents, repeats: true)
-        let morningRequest = UNNotificationRequest(identifier: "mural_daily_morning", content: morningContent, trigger: morningTrigger)
+        let morningRequest = UNNotificationRequest(identifier: "fluence_daily_morning", content: morningContent, trigger: morningTrigger)
         center.add(morningRequest)
         
         // Evening Notification (if 2 notifications per day enabled)
         if settings.notificationsPerDay >= 2 {
             let eveningContent = buildNotificationContent(
-                title: "Mural Professeur 🎙️",
+                title: "Fluence Professeur 🎙️",
                 dueItems: dueItems,
                 period: .evening
             )
@@ -104,7 +104,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             eveningComponents.hour = settings.eveningHour
             eveningComponents.minute = settings.eveningMinute
             let eveningTrigger = UNCalendarNotificationTrigger(dateMatching: eveningComponents, repeats: true)
-            let eveningRequest = UNNotificationRequest(identifier: "mural_daily_evening", content: eveningContent, trigger: eveningTrigger)
+            let eveningRequest = UNNotificationRequest(identifier: "fluence_daily_evening", content: eveningContent, trigger: eveningTrigger)
             center.add(eveningRequest)
         }
     }
@@ -169,7 +169,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     ) async {
         // Notification tapped -> open vocal session
         await MainActor.run {
-            NotificationCenter.default.post(name: NSNotification.Name("MuralOpenVoiceSession"), object: nil)
+            NotificationCenter.default.post(name: NSNotification.Name("FluenceOpenVoiceSession"), object: nil)
         }
     }
 }

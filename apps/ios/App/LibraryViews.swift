@@ -185,7 +185,7 @@ struct TranscriptView: View {
                     if let session {
                         ForEach(session.passages) { passage in
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(passage.speaker == .assistant ? "MURAL" : "YOU").font(.caption).tracking(1).foregroundStyle(FluenceColor.secondary)
+                                Text(passage.speaker == .assistant ? "FLUENCE" : "YOU").font(.caption).tracking(1).foregroundStyle(FluenceColor.secondary)
                                 Text(passage.text).font(.system(.title3, design: .rounded)).textSelection(.enabled)
                                     .accessibilityIdentifier(passage.speaker == .user ? "transcript-user-passage" : "transcript-assistant-passage")
                                 if session.languageID == "zh" { PinyinHelp(text: passage.text) }
@@ -254,7 +254,7 @@ struct EditableTranscriptView: View {
                     ForEach(session?.passages ?? []) { passage in
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text(passage.speaker == .user ? "YOU" : "MURAL").font(.caption).tracking(1)
+                                Text(passage.speaker == .user ? "YOU" : "FLUENCE").font(.caption).tracking(1)
                                 Spacer()
                                 if passage.speaker == .user && session?.endedAt != nil {
                                     Button("Edit") { editedText = passage.text; editingID = passage.id }.font(.caption)
@@ -317,7 +317,7 @@ struct SettingsView: View {
                         Text("Faible / Fluide (Erreurs clés)").tag("low")
                     }
                     TextField("A few things you enjoy", text: Binding(get: { store.preferences.interests }, set: { value in store.updatePreferences { $0.interests = String(value.prefix(500)) } }), axis: .vertical)
-                } header: { Text("Just your pace") } footer: { Text(coordinator.isRunning ? "End this conversation to switch languages. Each language keeps its own words and progress." : "Each language keeps its own words and progress. Mural finds your pace through conversation.") }
+                } header: { Text("Just your pace") } footer: { Text(coordinator.isRunning ? "End this conversation to switch languages. Each language keeps its own words and progress." : "Each language keeps its own words and progress. Fluence finds your pace through conversation.") }
                 if ManagedAccountConfiguration.load() != nil {
                     Section {
                         NavigationLink { ManagedAccountView() } label: {
@@ -445,25 +445,25 @@ struct SettingsView: View {
                     Text("Backups include transcripts and learning evidence, never your API key. Import adds conversations with new IDs. Existing conversations stay unchanged. There is no cloud sync.")
                 }
                 Section {
-                    Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!)
+                    Link("Privacy policy", destination: URL(string: "https://fluence.chat/privacy/")!)
                         .accessibilityIdentifier("settings-privacy-policy")
-                    Link("Terms of use", destination: URL(string: "https://mural.chat/terms/")!)
+                    Link("Terms of use", destination: URL(string: "https://fluence.chat/terms/")!)
                         .accessibilityIdentifier("settings-terms")
-                    Link("Contact support", destination: URL(string: "https://mural.chat/support/")!)
+                    Link("Contact support", destination: URL(string: "https://fluence.chat/support/")!)
                         .accessibilityIdentifier("settings-support")
                 } header: { Text("Help and privacy") }
                 Section {
-                    Text("Mural 0.1 · Personal build").font(.footnote)
-                    Text("Teacher: Groq Llama 3.1 8B · STT: Groq Whisper Turbo").font(.footnote)
+                    Text("Fluence 0.1 · Personal build").font(.footnote)
+                    Text("Teacher: Groq Llama 3.3 70B · STT: Groq Whisper").font(.footnote)
                     Link("Groq data controls", destination: URL(string: "https://groq.com/privacy/")!)
-                    Text("Audio and selected text go to Groq while you practise. Raw audio is not saved by Mural.").font(.footnote)
+                    Text("Audio and selected text go to Groq while you practise. Raw audio is not saved by Fluence.").font(.footnote)
                     Button("Open-source notices") { notices = true }
                 }
             }.scrollContentBackground(.hidden).background(FluenceColor.cream).tint(FluenceColor.secondary)
                 .navigationTitle("Make yourself comfortable").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { key = ""; dismiss() } } }
         }
-        .fileExporter(isPresented: $exporting, document: backup, contentType: .json, defaultFilename: "Mural-learning-backup") { result in if case .failure(let error) = result { message = error.localizedDescription } }
+        .fileExporter(isPresented: $exporting, document: backup, contentType: .json, defaultFilename: "Fluence-learning-backup") { result in if case .failure(let error) = result { message = error.localizedDescription } }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
             do {
                 let url = try result.get(); let granted = url.startAccessingSecurityScopedResource(); defer { if granted { url.stopAccessingSecurityScopedResource() } }

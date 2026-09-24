@@ -11,7 +11,7 @@ struct ManagedAccountView: View {
             VStack(spacing: 24) {
                 FluenceAura(active: !store.isBusy).frame(width: 112, height: 112).padding(.top, 16)
                 VStack(spacing: 8) {
-                    Text(store.session == nil ? "Welcome to Mural" : "Your Mural account")
+                    Text(store.session == nil ? "Welcome to Fluence" : "Your Fluence account")
                         .font(.system(.title, design: .rounded, weight: .semibold)).multilineTextAlignment(.center)
                     Text("Your conversations and learning history stay on this iPhone.")
                         .font(.subheadline).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
@@ -37,7 +37,7 @@ struct ManagedAccountView: View {
                         .disabled(store.isBusy)
                 } else {
                     VStack(spacing: 14) {
-                        Text("Mural stores your sign-in details and account sessions. You can practise with your own API key without an account.")
+                        Text("Fluence stores your sign-in details and account sessions. You can practise with your own API key without an account.")
                             .font(.footnote).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
                         Text("By signing in, you agree to the [Terms of use](https://mural.chat/terms/) and acknowledge the [Privacy policy](https://mural.chat/privacy/).")
                             .font(.footnote).multilineTextAlignment(.center).tint(FluenceColor.ink)
@@ -69,7 +69,7 @@ struct ManagedAccountView: View {
         .navigationTitle("Account").navigationBarTitleDisplayMode(.inline)
         .task { store.refresh() }
         .onDisappear { store.cancelSignIn() }
-        .confirmationDialog("Delete your Mural account?", isPresented: $confirmDeletion, titleVisibility: .visible) {
+        .confirmationDialog("Delete your Fluence account?", isPresented: $confirmDeletion, titleVisibility: .visible) {
             Button("Delete account", role: .destructive, action: store.deleteAccount)
             Button("Keep account", role: .cancel) {}
         } message: {

@@ -244,7 +244,7 @@ public enum AssimilTeacherPolicy {
         }.joined(separator: "\n\n")
 
         return """
-        Tu es le Professeur Mural dédié à l'apprentissage selon la méthode Assimil.
+        Tu es le Professeur Fluence dédié à l'apprentissage selon la méthode Assimil.
         Langue cible enseignée : \(targetLang).
         Langue de support / explications : Français.
         Titre de la leçon : \(lesson.title) (Leçon \(lesson.lessonNumber.map(String.init) ?? "1") - Niveau \(lesson.level)).
@@ -331,7 +331,7 @@ public enum CourseQAPolicy {
         let targetLang = LanguageRegistry.module(for: document.targetLanguageID)?.name ?? "German"
         
         return """
-        Tu es le Professeur Mural d'Allemand. Tu animes un COURS INTERACTIF EN QUESTIONS (méthode socratique et questions-réponses orales/écrites) basé sur le cours sélectionné.
+        Tu es le Professeur Fluence d'Allemand. Tu animes un COURS INTERACTIF EN QUESTIONS (méthode socratique et questions-réponses orales/écrites) basé sur le cours sélectionné.
         
         PARAMÈTRES DU COURS :
         - Document : « \(document.title) » (Dossier : \(document.folderName ?? "Général") • Format : \(document.fileType))
@@ -368,7 +368,7 @@ public enum CourseQAPolicy {
         let titles = documents.map { "• \($0.title) (\($0.fileType))" }.joined(separator: "\n")
         
         return """
-        Tu es le Professeur Mural en charge de l'entraînement intensif au niveau \(level).
+        Tu es le Professeur Fluence en charge de l'entraînement intensif au niveau \(level).
         L'élève a sélectionné son dossier complet de cours de niveau \(level) comprenant :
         \(titles)
         
@@ -383,7 +383,7 @@ public enum DocumentTeacherPolicy {
         let targetLang = LanguageRegistry.module(for: doc.targetLanguageID)?.name ?? "German"
         
         return """
-        Tu es le Professeur Mural spécialisé dans l'apprentissage basé sur des documents et cours choisis par l'élève (provenant de Google Drive ou de ses fichiers).
+        Tu es le Professeur Fluence spécialisé dans l'apprentissage basé sur des documents et cours choisis par l'élève (provenant de Google Drive ou de ses fichiers).
         Langue cible d'apprentissage : \(targetLang).
         Langue d'échange : Français et \(targetLang).
         Titre du document : \(doc.title) (Source : \(doc.source) • Niveau : \(doc.level)).
@@ -394,7 +394,7 @@ public enum DocumentTeacherPolicy {
         \(String(doc.rawContent.prefix(8000)))
         \"\"\"
         
-        RÔLE DU PROFESSEUR MURAL :
+        RÔLE DU PROFESSEUR FLUENCE :
         1. Tu agis comme un tuteur particulier expert sur le sujet du document.
         2. Tu aides l'élève à comprendre le texte, le vocabulaire technique ou spécialisé, et les concepts clés.
         3. Tu poses des questions de compréhension progressives et interactives (méthode socratique).
@@ -447,11 +447,11 @@ public final class StudyStoreManager: @unchecked Sendable {
     public init() {
         let fm = FileManager.default
         let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? fm.temporaryDirectory
-        let muralDir = appSupport.appendingPathComponent("MuralStudy", isDirectory: true)
-        try? fm.createDirectory(at: muralDir, withIntermediateDirectories: true)
+        let fluenceDir = appSupport.appendingPathComponent("FluenceStudy", isDirectory: true)
+        try? fm.createDirectory(at: fluenceDir, withIntermediateDirectories: true)
         
-        self.lessonsFileURL = muralDir.appendingPathComponent("assimil_lessons.json")
-        self.docsFileURL = muralDir.appendingPathComponent("study_documents.json")
+        self.lessonsFileURL = fluenceDir.appendingPathComponent("assimil_lessons.json")
+        self.docsFileURL = fluenceDir.appendingPathComponent("study_documents.json")
     }
     
     public func loadLessons() -> [AssimilLesson] {
