@@ -4,9 +4,9 @@ import CryptoKit
 import MuralCore
 
 extension ManagedAccountConfiguration {
-    /// These keys contain public client IDs, never OAuth secrets or Mural bearer tokens.
+    /// These keys contain public client IDs, never OAuth secrets or Fluence bearer tokens.
     static func load(bundle: Bundle = .main) -> Self? {
-        #if MURAL_SIGN_IN_WITH_APPLE
+        #if FLUENCE_SIGN_IN_WITH_APPLE
         let appleCapabilityEnabled = true
         #else
         let appleCapabilityEnabled = false
@@ -15,13 +15,13 @@ extension ManagedAccountConfiguration {
             let value = bundle.object(forInfoDictionaryKey: key)
             return value as? Bool == true || (value as? String)?.uppercased() == "YES"
         }
-        guard enabled("MuralManagedAccountsEnabled"),
-              let api = bundle.object(forInfoDictionaryKey: "MuralManagedAPIURL") as? String,
+        guard enabled("FluenceManagedAccountsEnabled"),
+              let api = bundle.object(forInfoDictionaryKey: "FluenceManagedAPIURL") as? String,
               let bundleID = bundle.bundleIdentifier else { return nil }
-        let google = enabled("MuralGoogleSignInEnabled")
-            ? bundle.object(forInfoDictionaryKey: "MuralGoogleClientID") as? String : nil
-        let apple = enabled("MuralAppleSignInEnabled") && appleCapabilityEnabled
-            ? bundle.object(forInfoDictionaryKey: "MuralAppleClientID") as? String : nil
+        let google = enabled("FluenceGoogleSignInEnabled")
+            ? bundle.object(forInfoDictionaryKey: "FluenceGoogleClientID") as? String : nil
+        let apple = enabled("FluenceAppleSignInEnabled") && appleCapabilityEnabled
+            ? bundle.object(forInfoDictionaryKey: "FluenceAppleClientID") as? String : nil
         let schemes = (bundle.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]] ?? [])
             .flatMap { $0["CFBundleURLSchemes"] as? [String] ?? [] }
         return try? Self(apiURL: api, googleClientID: google, appleClientID: apple,

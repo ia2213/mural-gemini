@@ -1,7 +1,7 @@
 import WidgetKit
 import SwiftUI
 
-struct MuralWidgetEntry: TimelineEntry {
+struct FluenceWidgetEntry: TimelineEntry {
     let date: Date
     let language: String
     let streak: Int
@@ -11,9 +11,9 @@ struct MuralWidgetEntry: TimelineEntry {
     let nextGoal: String
 }
 
-struct MuralWidgetProvider: TimelineProvider {
-    func placeholder(in context: Context) -> MuralWidgetEntry {
-        MuralWidgetEntry(
+struct FluenceWidgetProvider: TimelineProvider {
+    func placeholder(in context: Context) -> FluenceWidgetEntry {
+        FluenceWidgetEntry(
             date: Date(),
             language: "Spanish",
             streak: 5,
@@ -24,18 +24,18 @@ struct MuralWidgetProvider: TimelineProvider {
         )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (MuralWidgetEntry) -> Void) {
+    func getSnapshot(in context: Context, completion: @escaping (FluenceWidgetEntry) -> Void) {
         completion(loadEntry())
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<MuralWidgetEntry>) -> Void) {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<FluenceWidgetEntry>) -> Void) {
         let entry = loadEntry()
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date().addingTimeInterval(900)
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
     }
 
-    private func loadEntry() -> MuralWidgetEntry {
+    private func loadEntry() -> FluenceWidgetEntry {
         let defaults = UserDefaults(suiteName: "group.no.william.fluence") ?? UserDefaults.standard
         let language = defaults.string(forKey: "widget_language") ?? "Spanish"
         let streak = defaults.integer(forKey: "widget_streak")
@@ -44,7 +44,7 @@ struct MuralWidgetProvider: TimelineProvider {
         let levelLabel = defaults.string(forKey: "widget_level_label") ?? "Getting to know you"
         let nextGoal = defaults.string(forKey: "widget_next_goal") ?? "Building vocabulary"
 
-        return MuralWidgetEntry(
+        return FluenceWidgetEntry(
             date: Date(),
             language: language,
             streak: streak > 0 ? streak : 3,
@@ -57,7 +57,7 @@ struct MuralWidgetProvider: TimelineProvider {
 }
 
 struct SmallWidgetView: View {
-    var entry: MuralWidgetEntry
+    var entry: FluenceWidgetEntry
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -99,7 +99,7 @@ struct SmallWidgetView: View {
 }
 
 struct MediumWidgetView: View {
-    var entry: MuralWidgetEntry
+    var entry: FluenceWidgetEntry
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -154,7 +154,7 @@ struct MediumWidgetView: View {
 }
 
 struct LargeWidgetView: View {
-    var entry: MuralWidgetEntry
+    var entry: FluenceWidgetEntry
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -238,8 +238,8 @@ struct LargeWidgetView: View {
     }
 }
 
-struct MuralWidgetEntryView: View {
-    var entry: MuralWidgetProvider.Entry
+struct FluenceWidgetEntryView: View {
+    var entry: FluenceWidgetProvider.Entry
     @Environment(\.widgetFamily) var family
 
     var body: some View {
@@ -261,8 +261,8 @@ struct FluenceWidget: Widget {
     let kind: String = "FluenceWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MuralWidgetProvider()) { entry in
-            MuralWidgetEntryView(entry: entry)
+        StaticConfiguration(kind: kind, provider: FluenceWidgetProvider()) { entry in
+            FluenceWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Fluence Progress")
         .description("Track your language learning streak, learned words, and progress.")
