@@ -124,11 +124,12 @@ struct StudyHubView: View {
                 // Individual documents
                 documentsSection
                 
-                Spacer(minLength: 40)
+                Spacer(minLength: 120)
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
         }
+        .padding(.bottom, 60)
         .background(FluenceColor.cream)
         .navigationTitle("Professeur & Assimil")
         .navigationBarTitleDisplayMode(.inline)
