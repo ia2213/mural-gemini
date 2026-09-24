@@ -288,136 +288,93 @@ struct EditableTranscriptView: View {
 struct SettingsView: View {
     let coordinator: ConversationCoordinator
     @Environment(\.dismiss) private var dismiss
-    @State private var key = ""
-    @State private var hasKey = CredentialStore.hasKey
     @State private var message: String?
     @State private var exporting = false
     @State private var importing = false
     @State private var backup: BackupDocument?
     @State private var deleting = false
     @State private var notices = false
-    @State private var showingAPIKey = false
+    
     private var store: LearningStore { coordinator.store }
     private var totalVoiceSeconds: Double { store.sessions.reduce(0) { $0 + $1.voiceSeconds } }
+
     var body: some View {
         NavigationStack {
             Form {
+                // MARK: 1. APPRENTISSAGE
                 Section {
-                    Picker("Learning language", selection: Binding(get: { coordinator.language.id }, set: { coordinator.selectLanguage($0) })) {
-                        ForEach(LanguageRegistry.all) { language in Text(language.settingsTitle).tag(language.id) }
-                    }
-                    .pickerStyle(.menu)
-                    
-                    Toggle("Meaning subtitles", isOn: Binding(get: { store.preferences.meaningVisible }, set: { value in
-                        if value != store.preferences.meaningVisible { coordinator.toggleMeaning() }
-                    }))
-                    
-                    Picker("Meaning language", selection: Binding(get: { store.preferences.meaningLanguage }, set: { coordinator.selectMeaningLanguage($0) })) {
-                        ForEach(MeaningLanguages.all, id: \.self) { Text($0) }
-                    }
-                    .pickerStyle(.menu)
-                    
-                    Picker("Correction Level / Niveau", selection: Binding(get: { store.preferences.correctionLevel }, set: { val in store.updatePreferences { $0.correctionLevel = val } })) {
-                        Text("Fort / Strict").tag("high")
-                        Text("Moyen / Équilibré").tag("medium")
-                        Text("Faible / Fluide").tag("low")
-                    }
-                    .pickerStyle(.menu)
-                    TextField("A few things you enjoy", text: Binding(get: { store.preferences.interests }, set: { value in store.updatePreferences { $0.interests = String(value.prefix(500)) } }), axis: .vertical)
-                } header: { Text("Just your pace") } footer: { Text(coordinator.isRunning ? "End this conversation to switch languages. Each language keeps its own words and progress." : "Each language keeps its own words and progress. Fluence finds your pace through conversation.") }
-                if ManagedAccountConfiguration.load() != nil {
-                    Section {
-                        NavigationLink { ManagedAccountView() } label: {
-                            Label("Account", systemImage: "person.crop.circle")
-                        }.disabled(coordinator.isRunning).accessibilityIdentifier("managed-account-settings")
-                    }
-                }
-                Section {
-                    Picker("Moteur IA Principal", selection: Binding(get: { store.preferences.providerID }, set: { val in store.updatePreferences { $0.providerID = val } })) {
-                        Text("Auto (Groq → Gemini → VPS)").tag("auto")
-                        Text("Hermes VPS Agent").tag("hermes_vps")
-                        Text("Google Gemini API").tag("google")
-                        Text("Groq API Cloud").tag("groq")
-                    }
-                    .pickerStyle(.menu)
-                } header: { Text("MOTEUR IA PRINCIPAL") } footer: {
-                    Text("En mode Auto, l'application bascule automatiquement entre Groq, Google Gemini et votre VPS personnel si un service est indisponible.")
-                }
-
-                Section {
-                    TextField("VPS Endpoint URL", text: Binding(get: { store.preferences.vpsEndpoint }, set: { val in store.updatePreferences { $0.vpsEndpoint = val } }))
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    SecureField("VPS Auth Token (Facultatif)", text: Binding(get: { store.preferences.vpsAPIKey }, set: { val in store.updatePreferences { $0.vpsAPIKey = val } }))
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    Picker("VPS Model", selection: Binding(get: { store.preferences.vpsModel }, set: { val in store.updatePreferences { $0.vpsModel = val } })) {
-                        Text("Hermes Auto").tag("auto/best-coding")
-                        Text("Hermes 3 (8B)").tag("NousResearch/Hermes-3-Llama-3.1-8B")
-                        Text("Hermes Vocal").tag("hermes-agent-vps")
-                    }
-                    .pickerStyle(.menu)
-                } header: { Text("🏛️ AGENT HERMES VPS PERSONNEL") } footer: {
-                    Text("Connecté à votre serveur Oracle VPS personnel.")
-                }
-
-                Section {
-                    SecureField("Google API Key (AIzaSy...)", text: Binding(get: { store.preferences.googleAPIKey }, set: { val in store.updatePreferences { $0.googleAPIKey = val } }))
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    Picker("Gemini Model", selection: Binding(get: { store.preferences.geminiModel }, set: { val in store.updatePreferences { $0.geminiModel = val } })) {
-                        Text("Gemini 2.0 Flash").tag("gemini-2.0-flash")
-                        Text("Gemini 2.0 Lite").tag("gemini-2.0-flash-lite")
-                        Text("Gemini 1.5 Flash").tag("gemini-1.5-flash")
-                        Text("Gemini 1.5 Pro").tag("gemini-1.5-pro")
-                    }
-                    .pickerStyle(.menu)
-                    Link("Obtenir une clé Gemini gratuite", destination: URL(string: "https://aistudio.google.com/app/apikey")!)
-                } header: { Text("🌐 MOTEUR GOOGLE GEMINI") }
-
-                Section {
-                    Picker("Groq Model", selection: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } })) {
-                        Text("GPT-OSS 120B").tag("openai/gpt-oss-120b")
-                        Text("GPT-OSS 20B").tag("openai/gpt-oss-20b")
-                        Text("Qwen 3.8 27B").tag("qwen/qwen3.8-27b")
-                        Text("Llama 3.3 70B").tag("llama-3.3-70b-versatile")
-                        Text("Llama 3.1 8B").tag("llama-3.1-8b-instant")
-                    }
-                    .pickerStyle(.menu)
-                    DisclosureGroup(isExpanded: $showingAPIKey) {
-                        if hasKey { Label("Clé Groq sauvegardée sur cet iPhone", systemImage: "checkmark.shield") }
-                        SecureField(hasKey ? "Remplacer la clé Groq (gsk_...)" : "Clé Groq API (gsk_...)", text: $key)
-                            .textInputAutocapitalization(.never).autocorrectionDisabled().privacySensitive().accessibilityIdentifier("api-key")
-                        Button(hasKey ? "Enregistrer la nouvelle clé" : "Enregistrer la clé") {
-                            do { try CredentialStore.save(key); key = ""; hasKey = true; message = "Enregistré avec succès." }
-                            catch { message = error.localizedDescription }
-                        }.disabled(key.isEmpty || coordinator.isRunning)
-                        Link("Obtenir une clé Groq gratuite", destination: URL(string: "https://console.groq.com/keys")!)
-                        if hasKey {
-                            Button("Supprimer la clé", role: .destructive) {
-                                do { try CredentialStore.delete(); hasKey = false; message = "Clé supprimée." }
-                                catch { message = error.localizedDescription }
-                            }.disabled(coordinator.isRunning)
+                    Picker(selection: Binding(get: { coordinator.language.id }, set: { coordinator.selectLanguage($0) })) {
+                        ForEach(LanguageRegistry.all) { language in
+                            Text(language.settingsTitle).tag(language.id)
                         }
-                    } label: { Label("Clé API Groq", systemImage: "key").accessibilityIdentifier("advanced-api-key") }
-                } header: { Text("⚡ MOTEUR CLOUD GROQ") } footer: {
-                    Text("Sélectionnez votre modèle Groq. La reconnaissance vocale utilise Groq Whisper Turbo, et la synthèse vocale utilise les voix de votre iPhone.")
-                }
-                Section {
-                    Picker("Moteur Vocal / Voice Engine", selection: Binding(get: { store.preferences.ttsEngine }, set: { val in store.updatePreferences { $0.ttsEngine = val } })) {
-                        Text("Voix iOS Native (AVSpeechSynthesizer)").tag("ios")
-                        Text("Voix Google Gemini (IA Audio API)").tag("gemini")
+                    } label: {
+                        Label("Langue apprise", systemImage: "globe")
                     }
                     .pickerStyle(.menu)
+                    
+                    Toggle(isOn: Binding(get: { store.preferences.meaningVisible }, set: { value in
+                        if value != store.preferences.meaningVisible { coordinator.toggleMeaning() }
+                    })) {
+                        Label("Sous-titres & Traduction", systemImage: "captions.bubble.fill")
+                    }
+                    
+                    if store.preferences.meaningVisible {
+                        Picker(selection: Binding(get: { store.preferences.meaningLanguage }, set: { coordinator.selectMeaningLanguage($0) })) {
+                            ForEach(MeaningLanguages.all, id: \.self) { Text($0).tag($0) }
+                        } label: {
+                            Label("Langue de traduction", systemImage: "character.book.closed")
+                        }
+                        .pickerStyle(.menu)
+                    }
+                    
+                    Picker(selection: Binding(get: { store.preferences.correctionLevel }, set: { val in store.updatePreferences { $0.correctionLevel = val } })) {
+                        Text("Strict (corrige chaque phrase)").tag("high")
+                        Text("Équilibré (naturel)").tag("medium")
+                        Text("Fluide (erreurs clés)").tag("low")
+                    } label: {
+                        Label("Niveau de correction", systemImage: "checkmark.seal")
+                    }
+                    .pickerStyle(.menu)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Centres d'intérêt", systemImage: "sparkles")
+                            .font(.subheadline)
+                            .foregroundStyle(FluenceColor.ink)
+                        TextField("Ex: médecine, voyages, philosophie...", text: Binding(get: { store.preferences.interests }, set: { value in store.updatePreferences { $0.interests = String(value.prefix(500)) } }))
+                            .font(.subheadline)
+                            .foregroundStyle(FluenceColor.secondary)
+                    }
+                    .padding(.vertical, 2)
+                } header: {
+                    Text("Apprentissage")
+                }
+                
+                // MARK: 2. VOIX & AUDIO
+                Section {
+                    Picker(selection: Binding(get: { store.preferences.speechRate }, set: { val in store.updatePreferences { $0.speechRate = val } })) {
+                        Text("Lente (0.8x)").tag(Float(0.40))
+                        Text("Normale (1.0x)").tag(Float(0.50))
+                        Text("Rapide (1.2x)").tag(Float(0.60))
+                    } label: {
+                        Label("Vitesse vocale", systemImage: "gauge.with.dots.needle.50percent")
+                    }
+                    .pickerStyle(.menu)
+                    
                     let availableVoices = AVSpeechSynthesisVoice.speechVoices().filter {
                         $0.language.lowercased().hasPrefix(String(store.language.locale.prefix(2)).lowercased())
                     }
-                    Picker("Accent Vocal / Voice", selection: Binding(get: { store.preferences.selectedVoiceIdentifier }, set: { val in store.updatePreferences { $0.selectedVoiceIdentifier = val } })) {
-                        Text("Automatique (Par défaut)").tag("")
+                    Picker(selection: Binding(get: { store.preferences.selectedVoiceIdentifier }, set: { val in store.updatePreferences { $0.selectedVoiceIdentifier = val } })) {
+                        Text("Automatique").tag("")
                         ForEach(availableVoices, id: \.identifier) { v in
-                            let qualityStr = v.quality == .premium ? " (Premium)" : (v.quality == .enhanced ? " (Enhanced)" : "")
-                            Text("\(v.name) · \(v.language)\(qualityStr)").tag(v.identifier)
+                            let qualityStr = v.quality == .premium ? " (HD)" : ""
+                            Text("\(v.name)\(qualityStr)").tag(v.identifier)
                         }
+                    } label: {
+                        Label("Accent & Timbre", systemImage: "person.wave.2")
                     }
                     .pickerStyle(.menu)
-                    Button("Écouter un extrait de voix") {
+                    
+                    Button {
                         let text = store.language.greeting
                         let synth = AVSpeechSynthesizer()
                         let utterance = AVSpeechUtterance(string: text)
@@ -428,72 +385,214 @@ struct SettingsView: View {
                         }
                         utterance.rate = store.preferences.speechRate
                         synth.speak(utterance)
+                    } label: {
+                        Label("Écouter un extrait audio", systemImage: "speaker.wave.2.fill")
+                            .foregroundStyle(FluenceColor.accent)
                     }
-                } header: { Text("SYNTHÈSE VOCALE") } footer: {
-                    Text("Choisissez la voix de Fluence. Appuyez sur Écouter pour tester le rendu.")
+                } header: {
+                    Text("Voix & Audio")
                 }
+                
+                // MARK: 3. CONFIGURATION DES MOTEURS IA (Subpage)
                 Section {
-                    Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {
-                        Text("15 minutes").tag(15); Text("30 minutes").tag(30); Text("60 minutes").tag(60)
+                    Picker(selection: Binding(get: { store.preferences.providerID }, set: { val in store.updatePreferences { $0.providerID = val } })) {
+                        Text("Auto (Groq → Gemini → VPS)").tag("auto")
+                        Text("Groq Cloud (Llama 3.3)").tag("groq")
+                        Text("Google Gemini (2.0 Flash)").tag("google")
+                        Text("Hermes VPS Personnel").tag("hermes_vps")
+                    } label: {
+                        Label("Moteur actif", systemImage: "cpu")
                     }
                     .pickerStyle(.menu)
-                    Picker("Vitesse vocale / Speed", selection: Binding(get: { store.preferences.speechRate }, set: { val in store.updatePreferences { $0.speechRate = val } })) {
-                        Text("Lente (0.8x)").tag(Float(0.40))
-                        Text("Normale (1.0x)").tag(Float(0.50))
-                        Text("Rapide (1.2x)").tag(Float(0.60))
+                    
+                    NavigationLink {
+                        AISettingsSubView(coordinator: coordinator)
+                    } label: {
+                        Label("Clés API & Modèles avancés", systemImage: "slider.horizontal.2.square")
                     }
-                    .pickerStyle(.menu)
-                    LabeledContent("Temps vocal généré", value: "\(Int(totalVoiceSeconds / 60)) min \(Int(totalVoiceSeconds) % 60) sec")
-                    LabeledContent("Estimation coût vocal API", value: String(format: "$%.2f USD", totalVoiceSeconds / 60 * 0.05))
-                    LabeledContent("Recherches API effectuées", value: "\(store.sessions.reduce(0) { $0 + $1.searchCalls })")
-                    Link("Consulter mon usage sur Groq", destination: URL(string: "https://console.groq.com/")!)
-                } header: { Text("Limites & Usage") } footer: {
-                    Text("La limite de conversation permet d'éviter de consommer l'API involontairement.")
+                } header: {
+                    Text("Intelligence Artificielle")
+                } footer: {
+                    Text("En mode Auto, Fluence bascule automatiquement sur le meilleur modèle disponible sans interruption.")
                 }
+                
+                // MARK: 4. SAUVEGARDES & DONNÉES
                 Section {
-                    Button("Export learning backup", systemImage: "square.and.arrow.up") {
-                        do { backup = BackupDocument(data: try store.exportData()); exporting = true } catch { message = error.localizedDescription }
+                    Button {
+                        do { backup = BackupDocument(data: try store.exportData()); exporting = true }
+                        catch { message = error.localizedDescription }
+                    } label: {
+                        Label("Exporter mes données", systemImage: "square.and.arrow.up")
                     }
-                    Button("Import learning backup", systemImage: "square.and.arrow.down") { importing = true }.disabled(coordinator.isRunning)
-                    Button("Delete all conversations and learning", role: .destructive) { deleting = true }.disabled(coordinator.isRunning)
-                } header: { Text("Vos données d'apprentissage") } footer: {
-                    Text("L'exportation inclut vos mots et transcriptions de conversation. Vos réglages et votre clé API ne sont pas exportés.")
+                    
+                    Button {
+                        importing = true
+                    } label: {
+                        Label("Importer une sauvegarde", systemImage: "square.and.arrow.down")
+                    }
+                    .disabled(coordinator.isRunning)
+                    
+                    Button(role: .destructive) {
+                        deleting = true
+                    } label: {
+                        Label("Réinitialiser l'apprentissage", systemImage: "trash")
+                    }
+                    .disabled(coordinator.isRunning)
+                } header: {
+                    Text("Données & Sauvegarde")
                 }
+                
+                // MARK: 5. À PROPOS
                 Section {
-                    Link("Privacy policy", destination: URL(string: "https://fluence.chat/privacy/")!)
-                        .accessibilityIdentifier("settings-privacy-policy")
-                    Link("Terms of use", destination: URL(string: "https://fluence.chat/terms/")!)
-                        .accessibilityIdentifier("settings-terms")
-                    Link("Contact support", destination: URL(string: "https://fluence.chat/support/")!)
-                        .accessibilityIdentifier("settings-support")
-                } header: { Text("Aide & Vie privée") }
-                Section {
-                    Text("Fluence 0.2 · Personal build").font(.footnote)
-                    Text("Teacher: Groq Llama 3.3 70B · STT: Groq Whisper").font(.footnote)
-                    Link("Groq data controls", destination: URL(string: "https://groq.com/privacy/")!)
-                    Text("L'audio et le texte sélectionné sont traités par Groq (ou votre VPS) pendant la discussion. L'audio brut n'est pas sauvegardé par Fluence.").font(.footnote)
-                    Button("Open-source notices") { notices = true }
+                    HStack {
+                        Label("Version", systemImage: "info.circle")
+                        Spacer()
+                        Text("2.0 (Fluence)")
+                            .foregroundStyle(FluenceColor.secondary)
+                    }
+                    
+                    Link(destination: URL(string: "https://fluence.chat/privacy/")!) {
+                        Label("Politique de confidentialité", systemImage: "lock.shield")
+                    }
+                    
+                    Button {
+                        notices = true
+                    } label: {
+                        Label("Mentions légales open-source", systemImage: "doc.plaintext")
+                    }
+                } header: {
+                    Text("À propos")
                 }
-            }.scrollContentBackground(.hidden).background(FluenceColor.cream).tint(FluenceColor.secondary)
-                .navigationTitle("Réglages").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { key = ""; dismiss() } } }
-        }
-        .fileExporter(isPresented: $exporting, document: backup, contentType: .json, defaultFilename: "Fluence-learning-backup") { result in if case .failure(let error) = result { message = error.localizedDescription } }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
-            do {
-                let url = try result.get(); let granted = url.startAccessingSecurityScopedResource(); defer { if granted { url.stopAccessingSecurityScopedResource() } }
-                try store.importData(Archive.readImportData(from: url)); message = "Sauvegarde importée avec succès."
-            } catch { message = error.localizedDescription }
-        }
-        .confirmationDialog("Supprimer toutes les données d'apprentissage sur cet iPhone ?", isPresented: $deleting, titleVisibility: .visible) {
-            Button("Tout supprimer", role: .destructive) { coordinator.deleteLearningData() }
-        } message: { Text("Ceci supprimera vos conversations, vocabulaires et progrès. Exportez une sauvegarde d'abord si vous souhaitez les conserver. Votre clé API et vos préférences resteront.") }
-        .sheet(isPresented: $notices) {
-            NavigationStack {
-                ScrollView { Text(Bundle.main.url(forResource: "ThirdPartyNotices", withExtension: "txt").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Notices unavailable.").font(.footnote).padding(24).textSelection(.enabled) }
-                    .navigationTitle("Open-source notices").navigationBarTitleDisplayMode(.inline)
+            }
+            .navigationTitle("Réglages")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Terminé") { dismiss() }
+                        .fontWeight(.semibold)
+                }
             }
         }
+        .fileExporter(isPresented: $exporting, document: backup, contentType: .json, defaultFilename: "Fluence-learning-backup") { result in
+            if case .failure(let error) = result { message = error.localizedDescription }
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
+            do {
+                let url = try result.get()
+                let granted = url.startAccessingSecurityScopedResource()
+                defer { if granted { url.stopAccessingSecurityScopedResource() } }
+                try store.importData(Archive.readImportData(from: url))
+                message = "Sauvegarde importée avec succès."
+            } catch { message = error.localizedDescription }
+        }
+        .confirmationDialog("Supprimer toutes les données ?", isPresented: $deleting, titleVisibility: .visible) {
+            Button("Tout supprimer", role: .destructive) { coordinator.deleteLearningData() }
+        } message: {
+            Text("Ceci réinitialisera votre historique et vos mots mémorisés. Vos clés API resteront enregistrées.")
+        }
+        .sheet(isPresented: $notices) {
+            NavigationStack {
+                ScrollView {
+                    Text(Bundle.main.url(forResource: "ThirdPartyNotices", withExtension: "txt").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Notices unavailable.")
+                        .font(.footnote)
+                        .padding(24)
+                }
+                .navigationTitle("Mentions Légales")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Fermer") { notices = false }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Dedicated Clean AI Subpage
+struct AISettingsSubView: View {
+    let coordinator: ConversationCoordinator
+    @State private var groqKey = ""
+    @State private var hasGroqKey = CredentialStore.hasKey
+    @State private var message: String?
+    
+    private var store: LearningStore { coordinator.store }
+    
+    var body: some View {
+        Form {
+            // Groq Cloud
+            Section {
+                Picker("Modèle Groq", selection: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } })) {
+                    Text("Llama 3.3 70B (Optimal)").tag("llama-3.3-70b-versatile")
+                    Text("GPT-OSS 120B").tag("openai/gpt-oss-120b")
+                    Text("Qwen 3.8 27B").tag("qwen/qwen3.8-27b")
+                    Text("Llama 3.1 8B (Ultra-Rapide)").tag("llama-3.1-8b-instant")
+                }
+                .pickerStyle(.menu)
+                
+                SecureField(hasGroqKey ? "Clé enregistrée (remplacer)" : "Clé API Groq (gsk_...)", text: $groqKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                
+                if !groqKey.isEmpty {
+                    Button("Sauvegarder la clé Groq") {
+                        do {
+                            try CredentialStore.save(groqKey)
+                            groqKey = ""
+                            hasGroqKey = true
+                            message = "Clé Groq enregistrée."
+                        } catch { message = error.localizedDescription }
+                    }
+                }
+                
+                Link("Obtenir une clé Groq gratuite", destination: URL(string: "https://console.groq.com/keys")!)
+            } header: {
+                Label("Groq Cloud API", systemImage: "bolt.fill")
+            }
+            
+            // Google Gemini
+            Section {
+                Picker("Modèle Gemini", selection: Binding(get: { store.preferences.geminiModel }, set: { val in store.updatePreferences { $0.geminiModel = val } })) {
+                    Text("Gemini 2.0 Flash (Recommandé)").tag("gemini-2.0-flash")
+                    Text("Gemini 2.0 Lite").tag("gemini-2.0-flash-lite")
+                    Text("Gemini 1.5 Flash").tag("gemini-1.5-flash")
+                    Text("Gemini 1.5 Pro").tag("gemini-1.5-pro")
+                }
+                .pickerStyle(.menu)
+                
+                SecureField("Clé API Gemini (AIzaSy...)", text: Binding(get: { store.preferences.googleAPIKey }, set: { val in store.updatePreferences { $0.googleAPIKey = val } }))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                
+                Link("Obtenir une clé Gemini gratuite", destination: URL(string: "https://aistudio.google.com/app/apikey")!)
+            } header: {
+                Label("Google Gemini API", systemImage: "sparkle")
+            }
+            
+            // Hermes VPS
+            Section {
+                TextField("URL Endpoint VPS", text: Binding(get: { store.preferences.vpsEndpoint }, set: { val in store.updatePreferences { $0.vpsEndpoint = val } }))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                
+                SecureField("Token VPS (Facultatif)", text: Binding(get: { store.preferences.vpsAPIKey }, set: { val in store.updatePreferences { $0.vpsAPIKey = val } }))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                
+                Picker("Modèle VPS", selection: Binding(get: { store.preferences.vpsModel }, set: { val in store.updatePreferences { $0.vpsModel = val } })) {
+                    Text("Hermes Auto (OmniRoute)").tag("auto/best-coding")
+                    Text("Hermes 3 (8B Local)").tag("NousResearch/Hermes-3-Llama-3.1-8B")
+                    Text("Hermes Vocal VPS").tag("hermes-agent-vps")
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Label("Agent VPS Personnel Hermes", systemImage: "server.rack")
+            } footer: {
+                Text("Connexion directe à votre instance Oracle Cloud VPS.")
+            }
+        }
+        .navigationTitle("Configuration IA")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
