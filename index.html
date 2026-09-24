@@ -2,8 +2,11 @@
 <html lang="fr" class="dark">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Fluence · Conversation Immersion</title>
+  <title>Fluence</title>
   
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -21,42 +24,43 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
             display: ['Outfit', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
           },
           colors: {
             fluence: {
-              bg: '#090D16',
-              surface: '#0F172A',
-              card: 'rgba(30, 41, 59, 0.7)',
-              border: 'rgba(255, 255, 255, 0.08)',
-              ink: '#F8FAFC',
-              secondary: '#94A3B8',
-              accent: '#F97316', // warm coral
-              glow: '#38BDF8', // cyan breathing glow
+              bgLight: '#FDFBF7',
+              bgDark: '#0B0E14',
+              inkLight: '#1C1917',
+              inkDark: '#F8FAFC',
+              secLight: '#78716C',
+              secDark: '#94A3B8',
+              cardLight: '#FFFFFF',
+              cardDark: 'rgba(255, 255, 255, 0.04)',
+              borderLight: 'rgba(0, 0, 0, 0.06)',
+              borderDark: 'rgba(255, 255, 255, 0.08)',
+              accent: '#5973F2',
+              coral: '#FB923C',
+              lilac: '#A855F7',
+              cyan: '#38BDF8',
             }
           },
           animation: {
             'aura-pulse': 'auraPulse 4s ease-in-out infinite',
-            'mic-pulse': 'micPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'float': 'float 3s ease-in-out infinite',
-            'fade-in': 'fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            'mic-glow': 'micGlow 2.5s ease-in-out infinite alternate',
+            'fade-in': 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
           },
           keyframes: {
             auraPulse: {
-              '0%, 100%': { opacity: '0.6', filter: 'blur(35px)' },
-              '50%': { opacity: '0.95', filter: 'blur(45px)' },
+              '0%, 100%': { opacity: '0.45' },
+              '50%': { opacity: '0.85' },
             },
-            micPulse: {
-              '0%, 100%': { transform: 'scale(1)', boxShadow: '0 0 0 0 rgba(249, 115, 22, 0.4)' },
-              '50%': { transform: 'scale(1.05)', boxShadow: '0 0 0 15px rgba(249, 115, 22, 0)' },
-            },
-            float: {
-              '0%, 100%': { transform: 'translateY(0px)' },
-              '50%': { transform: 'translateY(-4px)' },
+            micGlow: {
+              '0%': { boxShadow: '0 0 15px rgba(89, 115, 242, 0.3)' },
+              '100%': { boxShadow: '0 0 35px rgba(89, 115, 242, 0.7)' },
             },
             fadeIn: {
-              '0%': { opacity: '0', transform: 'scale(0.98)' },
+              '0%': { opacity: '0', transform: 'scale(0.99)' },
               '100%': { opacity: '1', transform: 'scale(1)' },
             }
           }
@@ -66,185 +70,316 @@
   </script>
 
   <style>
-    /* Fluence Edge Aura */
-    .fluence-edge-aura {
+    /* iOS Exact Theme & System Styles */
+    :root {
+      --fluence-bg: #0B0E14;
+      --fluence-ink: #F8FAFC;
+      --fluence-secondary: #94A3B8;
+      --fluence-card: rgba(255, 255, 255, 0.04);
+      --fluence-border: rgba(255, 255, 255, 0.08);
+      --fluence-accent: #5973F2;
+    }
+    html.light {
+      --fluence-bg: #FDFBF7;
+      --fluence-ink: #1C1917;
+      --fluence-secondary: #78716C;
+      --fluence-card: #FFFFFF;
+      --fluence-border: rgba(0, 0, 0, 0.08);
+      --fluence-accent: #5973F2;
+    }
+
+    body {
+      background-color: var(--fluence-bg);
+      color: var(--fluence-ink);
+    }
+
+    /* Peripheral Aura - Identical to iOS SwiftUI FluenceAura */
+    .fluence-screen-aura {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 1;
-      box-shadow: inset 0 0 60px rgba(56, 189, 248, 0.12), inset 0 0 100px rgba(249, 115, 22, 0.08);
-      transition: all 0.5s ease;
+      border: 2px solid transparent;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(89, 115, 242, 0.35), rgba(168, 85, 247, 0.3), rgba(251, 146, 60, 0.35), rgba(56, 189, 248, 0.35)) border-box;
+      -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      filter: blur(4px);
+      opacity: 0.65;
+      transition: all 0.4s ease;
     }
     .aura-listening {
-      box-shadow: inset 0 0 80px rgba(249, 115, 22, 0.25), inset 0 0 120px rgba(56, 189, 248, 0.20) !important;
+      opacity: 1 !important;
+      filter: blur(8px) !important;
+      border-width: 5px !important;
     }
     .aura-speaking {
-      box-shadow: inset 0 0 80px rgba(56, 189, 248, 0.30), inset 0 0 130px rgba(168, 85, 247, 0.20) !important;
+      opacity: 1 !important;
+      filter: blur(8px) !important;
+      border-width: 5px !important;
     }
 
-    /* Glassmorphism */
-    .glass-nav {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    /* Native iOS Glass Components */
+    .ios-glass-bar {
+      background: rgba(11, 14, 20, 0.78);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
     }
-    .glass-header {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    html.light .ios-glass-bar {
+      background: rgba(253, 251, 247, 0.82);
     }
-    .glass-card {
-      background: rgba(30, 41, 59, 0.6);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+
+    .ios-card {
+      background: var(--fluence-card);
+      border: 1px solid var(--fluence-border);
+      border-radius: 18px;
     }
-    
-    /* Smooth Scrollbar */
+
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-fluence-bg text-fluence-ink min-h-screen flex flex-col font-sans select-none antialiased overflow-hidden">
+<body class="min-h-screen flex flex-col font-sans select-none antialiased overflow-hidden">
 
   <script>
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.expand();
-      window.Telegram.WebApp.setHeaderColor('#090D16');
-      window.Telegram.WebApp.setBackgroundColor('#090D16');
+      window.Telegram.WebApp.setHeaderColor('#0B0E14');
+      window.Telegram.WebApp.setBackgroundColor('#0B0E14');
     }
   </script>
 
-  <!-- Fluence Peripheral Breathing Aura -->
-  <div id="peripheralAura" class="fluence-edge-aura"></div>
+  <!-- Fluence Peripheral Aura (Bordures d'écran lumineuses) -->
+  <div id="peripheralAura" class="fluence-screen-aura"></div>
 
-  <!-- TOP BAR (Minimal iOS Style) -->
-  <header class="glass-header sticky top-0 z-30 px-4 py-3 flex items-center justify-between">
-    <!-- Language & Level Pill -->
-    <button onclick="switchTab('settings')" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition active:scale-95">
+  <!-- NAVIGATION HEADER (Identique à l'application iOS) -->
+  <header class="ios-glass-bar sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b border-white/5">
+    <!-- Left: Language Menu Button -->
+    <button onclick="openSettingsModal()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition active:scale-95">
       <span id="headerLangFlag" class="text-base">🇩🇪</span>
-      <span id="headerLangName" class="text-xs font-semibold text-fluence-ink">Allemand</span>
-      <span id="headerLevelBadge" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">B2</span>
+      <span id="headerLangName" class="text-xs font-bold text-slate-100">Allemand</span>
+      <span id="headerLevelBadge" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">B2</span>
     </button>
 
-    <!-- Center Status / Scenario -->
-    <button onclick="switchTab('themes')" class="flex items-center space-x-1.5 text-xs text-fluence-secondary hover:text-fluence-ink transition max-w-[140px] truncate">
-      <span id="headerScenario" class="truncate font-medium">☕ Au Café</span>
-    </button>
-
-    <!-- Right Actions -->
-    <div class="flex items-center space-x-2">
-      <button onclick="toggleAudioPlaybackMode()" id="audioModeBtn" class="p-2 rounded-full bg-white/5 hover:bg-white/10 text-fluence-secondary hover:text-white transition active:scale-95" title="Mode Audio">
-        <span id="audioModeIcon">🔊</span>
-      </button>
-      <button onclick="switchTab('settings')" class="p-2 rounded-full bg-white/5 hover:bg-white/10 text-fluence-secondary hover:text-white transition active:scale-95" title="Réglages">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-      </button>
+    <!-- Center: App Brand or Current Theme -->
+    <div class="flex items-center space-x-1">
+      <span class="font-display font-bold text-sm tracking-tight text-white">fluence</span>
     </div>
+
+    <!-- Right: Settings Gear Button -->
+    <button onclick="openSettingsModal()" class="p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition active:scale-95" title="Réglages">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+    </button>
   </header>
 
-  <!-- MAIN VIEWPORT -->
+  <!-- MAIN CONTAINER (4 Tabs Identiques à iOS) -->
   <main class="flex-1 relative z-10 overflow-hidden flex flex-col">
     
-    <!-- 🎙️ TAB 1: DISCUSSION (WHISPER UI IMMERSION) -->
-    <section id="tab-chat" class="tab-content flex-1 flex flex-col justify-between p-4 relative overflow-hidden">
+    <!-- 🎙️ TAB 0: DISCUSSION (WHISPER UI - VOCAL PUR) -->
+    <section id="tab-0" class="tab-pane flex-1 flex flex-col justify-between p-4 relative overflow-hidden">
       
-      <!-- Top Breathing Scenario Badge -->
-      <div class="flex justify-center mt-1">
-        <span id="whisperScenarioBadge" class="text-[11px] font-medium tracking-wide uppercase px-3 py-1 rounded-full bg-white/5 border border-white/10 text-fluence-secondary">
-          Scénario actif · Pratique Orale
-        </span>
+      <!-- Top Scenario Label if active -->
+      <div class="flex justify-center mt-2">
+        <button onclick="switchTab(3)" class="text-xs font-medium px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition flex items-center space-x-1.5">
+          <span id="whisperScenarioIcon">☕</span>
+          <span id="whisperScenarioText">Au Café · Pratique Orale</span>
+        </button>
       </div>
 
-      <!-- Messages container (for underlying bot history) -->
+      <!-- Messages container for background state -->
       <div id="messagesContainer" class="hidden"></div>
 
       <!-- CENTER: WHISPER TYPOGRAPHY CANVAS -->
       <div class="flex-1 flex flex-col justify-center items-center text-center px-4 my-auto relative">
-        <div id="whisperContainer" class="max-w-md w-full flex flex-col items-center space-y-4 transition-all duration-500">
+        <div class="max-w-md w-full flex flex-col items-center space-y-4">
           
-          <!-- AI Spoken Text (Large, Crisp, Breathing) -->
-          <div id="whisperAIText" class="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight transition-all duration-500 animate-fade-in">
+          <!-- Spoken Foreign Text (Large, 34pt, Rounded Bold) -->
+          <div id="whisperAIText" class="font-sans text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight animate-fade-in">
             Hallo! Wie geht es dir heute?
           </div>
 
-          <!-- Translation in French (Secondary, Clean) -->
-          <div id="whisperTranslation" class="text-base sm:text-lg text-fluence-secondary font-medium leading-relaxed max-w-sm">
+          <!-- Translation in French (Secondary 18pt) -->
+          <div id="whisperTranslation" class="text-base sm:text-lg text-slate-400 font-normal leading-relaxed max-w-sm">
             Bonjour ! Comment vas-tu aujourd'hui ?
           </div>
 
-          <!-- Grammar / Vocabulary Recast Chip (if available) -->
-          <div id="whisperCorrectionCard" class="hidden mt-2 p-3 rounded-2xl glass-card text-left text-xs max-w-sm w-full border border-orange-500/20">
-            <div class="flex items-center space-x-1.5 text-orange-400 font-semibold mb-1">
+          <!-- Grammar Recast Chip (if error made) -->
+          <div id="whisperCorrectionCard" class="hidden mt-2 p-3.5 rounded-2xl ios-card text-left text-xs max-w-sm w-full border border-indigo-500/30">
+            <div class="flex items-center space-x-1.5 text-indigo-400 font-semibold mb-1">
               <span>💡 Point Clé :</span>
             </div>
             <p id="whisperCorrectionText" class="text-slate-300 leading-normal"></p>
           </div>
 
           <!-- User Spoken Text Feedback -->
-          <div id="whisperUserText" class="hidden text-sm italic text-orange-300/90 max-w-xs px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20">
+          <div id="whisperUserText" class="hidden text-xs italic text-indigo-300 max-w-xs px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
             « Vous : ... »
           </div>
         </div>
       </div>
 
-      <!-- BOTTOM CONTROL DOCK -->
-      <div class="flex flex-col items-center space-y-4 pb-4">
+      <!-- BOTTOM INTERACTION DOCK (Au-dessus de la barre d'onglets) -->
+      <div class="flex flex-col items-center space-y-4 pb-2">
         
-        <!-- Status Label -->
+        <!-- Status Text -->
         <div id="whisperStatus" class="text-xs font-medium text-slate-400">
           Touchez le micro pour parler
         </div>
 
-        <!-- 3-Button Interaction Dock -->
+        <!-- Controls: Clavier | Grand Micro 76x76 | Audio -->
         <div class="flex items-center justify-center space-x-8">
           
-          <!-- Keyboard Button -->
-          <button onclick="toggleKeyboardDrawer()" class="w-12 h-12 rounded-full bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 text-slate-300 flex items-center justify-center transition active:scale-95" title="Écrire un message">
+          <!-- Clavier Button -->
+          <button onclick="toggleKeyboardDrawer()" class="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 flex items-center justify-center transition active:scale-95" title="Écrire un message">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
           </button>
 
-          <!-- Grand Bouton Micro Respirant (76x76) -->
-          <button id="mainMicBtn" onclick="toggleVoiceRecord()" class="relative w-20 h-20 rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 text-white shadow-xl shadow-orange-500/30 flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 animate-mic-pulse">
+          <!-- Grand Bouton Micro Central (76x76) -->
+          <button id="mainMicBtn" onclick="toggleVoiceRecord()" class="w-20 h-20 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-600/40 flex items-center justify-center transition-all duration-300 active:scale-95 animate-mic-glow">
             <span id="mainMicIcon" class="text-3xl">🎙️</span>
           </button>
 
-          <!-- Audio / Replay Button -->
-          <button onclick="replayCurrentTurnAudio()" class="w-12 h-12 rounded-full bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 text-slate-300 flex items-center justify-center transition active:scale-95" title="Réécouter">
+          <!-- Réécouter Button -->
+          <button onclick="replayCurrentTurnAudio()" class="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 flex items-center justify-center transition active:scale-95" title="Réécouter">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           </button>
         </div>
       </div>
 
       <!-- TEXT INPUT DRAWER (MODAL) -->
-      <div id="keyboardDrawer" class="hidden absolute inset-x-0 bottom-0 z-40 p-4 bg-slate-900/95 backdrop-blur-2xl border-t border-white/10 rounded-t-3xl transition-all duration-300">
+      <div id="keyboardDrawer" class="hidden absolute inset-x-0 bottom-0 z-40 p-4 ios-glass-bar border-t border-white/10 rounded-t-3xl transition-all duration-300">
         <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/5">
           <span class="text-xs font-semibold text-slate-400">Répondre par écrit</span>
           <button onclick="toggleKeyboardDrawer()" class="text-slate-400 hover:text-white text-xs">Fermer ✕</button>
         </div>
         <div class="flex items-center space-x-2">
-          <input type="text" id="chatInput" placeholder="Écrivez votre phrase..." class="flex-1 bg-slate-800/80 text-white placeholder-slate-500 text-sm px-4 py-2.5 rounded-full border border-white/10 focus:outline-none focus:border-orange-500">
-          <button onclick="sendTextMessage()" class="px-5 py-2.5 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition active:scale-95">
+          <input type="text" id="chatInput" placeholder="Écrivez votre phrase..." class="flex-1 bg-white/5 text-white placeholder-slate-500 text-sm px-4 py-2.5 rounded-full border border-white/10 focus:outline-none focus:border-indigo-500">
+          <button onclick="sendTextMessage()" class="px-5 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition active:scale-95">
             Envoyer
           </button>
         </div>
       </div>
     </section>
 
-    <!-- 🎭 TAB 2: THÈMES & SCÉNARIOS -->
-    <section id="tab-themes" class="tab-content hidden flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4 no-scrollbar">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="font-display text-2xl font-bold text-white">Scénarios</h2>
-          <p class="text-xs text-fluence-secondary">24 situations immersives de jeu de rôle</p>
+    <!-- 🎓 TAB 1: PROFESSEUR (ASSIMIL, FSRS & COURS) -->
+    <section id="tab-1" class="tab-pane hidden flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <div>
+        <h2 class="font-sans text-2xl font-bold text-white">Professeur</h2>
+        <p class="text-xs text-slate-400">Leçons interactives Assimil & Analyse de documents</p>
+      </div>
+
+      <!-- Assimil Lessons Card -->
+      <div class="ios-card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">📖</span>
+            <div>
+              <h3 class="text-sm font-bold text-white">Assimil Allemand</h3>
+              <p class="text-[11px] text-slate-400">Méthode intuitive & dialogue bilingue</p>
+            </div>
+          </div>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300">100 Leçons</span>
         </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <button onclick="startAssimilLesson(1)" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-left transition active:scale-95">
+            <div class="text-[10px] text-indigo-400 font-bold">LEÇON 1</div>
+            <div class="text-xs font-semibold text-white truncate">Guten Tag, Herr Müller</div>
+          </button>
+          <button onclick="startAssimilLesson(2)" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-left transition active:scale-95">
+            <div class="text-[10px] text-indigo-400 font-bold">LEÇON 2</div>
+            <div class="text-xs font-semibold text-white truncate">In der Stadt</div>
+          </button>
+          <button onclick="startAssimilLesson(3)" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-left transition active:scale-95">
+            <div class="text-[10px] text-indigo-400 font-bold">LEÇON 3</div>
+            <div class="text-xs font-semibold text-white truncate">Im Restaurant</div>
+          </button>
+          <button onclick="startAssimilLesson(4)" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-left transition active:scale-95">
+            <div class="text-[10px] text-indigo-400 font-bold">LEÇON 4</div>
+            <div class="text-xs font-semibold text-white truncate">Der Alltag</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Documents & OCR Study -->
+      <div class="ios-card p-4 space-y-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">📄</span>
+          <div>
+            <h3 class="text-sm font-bold text-white">Analyse de Documents & Textes</h3>
+            <p class="text-[11px] text-slate-400">Étudiez vos PDF médicaux et articles en allemand</p>
+          </div>
+        </div>
+
+        <div class="flex space-x-2">
+          <button onclick="switchTab(3)" class="flex-1 py-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold text-center transition">
+            Choisir un thème de discussion
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 📖 TAB 2: VOCABULAIRE (FSRS & CARTES DE RÉVISION) -->
+    <section id="tab-2" class="tab-pane hidden flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <div class="flex justify-between items-end">
+        <div>
+          <h2 class="font-sans text-2xl font-bold text-white">Vocabulaire</h2>
+          <p class="text-xs text-slate-400">Répétition espacée FSRS v4</p>
+        </div>
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+          <span id="srsDueCount">0</span> à réviser
+        </span>
+      </div>
+
+      <!-- FSRS Review Card -->
+      <div id="srsCardArea" class="flex-1 flex flex-col justify-center my-auto">
+        <div id="flashcard" onclick="flipSrsCard()" class="w-full ios-card rounded-3xl p-6 min-h-[260px] flex flex-col justify-between cursor-pointer border border-white/10 shadow-2xl relative transition-all duration-300">
+          
+          <div class="flex justify-between text-xs text-slate-400">
+            <span id="srsCardLang">Allemand 🇩🇪</span>
+            <span id="srsCardRecall" class="text-indigo-400 font-medium">Touchez pour retourner</span>
+          </div>
+
+          <div class="text-center my-auto">
+            <div id="srsWordTarget" class="font-sans text-3xl font-bold text-white mb-2">Guten Tag</div>
+            <div id="srsAnswerArea" class="hidden mt-2">
+              <div id="srsWordMeaning" class="text-lg text-slate-300 font-medium">Bonjour / Bonne journée</div>
+              <div id="srsWordExample" class="text-xs italic text-slate-400 mt-2">« Guten Tag, wie kann ich Ihnen helfen? »</div>
+            </div>
+          </div>
+
+          <div class="text-center text-[11px] text-slate-500">
+            FSRS v4.0 · Intervalle adaptatif
+          </div>
+        </div>
+
+        <!-- Grade Buttons -->
+        <div id="srsGradeBtns" class="hidden grid grid-cols-4 gap-2 mt-4">
+          <button onclick="gradeSrsCard(1)" class="py-2.5 rounded-2xl bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold active:scale-95 transition">Encore</button>
+          <button onclick="gradeSrsCard(2)" class="py-2.5 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold active:scale-95 transition">Difficile</button>
+          <button onclick="gradeSrsCard(3)" class="py-2.5 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold active:scale-95 transition">Bon</button>
+          <button onclick="gradeSrsCard(4)" class="py-2.5 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold active:scale-95 transition">Facile</button>
+        </div>
+      </div>
+
+      <!-- Word List -->
+      <div class="ios-card rounded-2xl p-4">
+        <div class="text-xs font-bold text-slate-300 mb-2">Tous les mots mémorisés (<span id="totalWordsCount">0</span>)</div>
+        <div id="vocabList" class="max-h-40 overflow-y-auto space-y-1.5 no-scrollbar"></div>
+      </div>
+    </section>
+
+    <!-- ✨ TAB 3: THÈMES (24 SCÉNARIOS IMMERSIFS) -->
+    <section id="tab-3" class="tab-pane hidden flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <div>
+        <h2 class="font-sans text-2xl font-bold text-white">Thèmes</h2>
+        <p class="text-xs text-slate-400">24 mises en situation et jeux de rôle</p>
       </div>
 
       <!-- Categories Filter -->
       <div class="flex space-x-2 overflow-x-auto pb-1 no-scrollbar">
-        <button onclick="filterThemes('all')" class="theme-cat-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-500 text-white">Tous</button>
+        <button onclick="filterThemes('all')" class="theme-cat-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 text-white">Tous</button>
         <button onclick="filterThemes('daily')" class="theme-cat-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white/5 text-slate-300 border border-white/10">Quotidien</button>
         <button onclick="filterThemes('professional')" class="theme-cat-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white/5 text-slate-300 border border-white/10">Médical & Pro</button>
         <button onclick="filterThemes('travel')" class="theme-cat-btn px-3 py-1.5 rounded-full text-xs font-semibold bg-white/5 text-slate-300 border border-white/10">Voyage</button>
@@ -253,92 +388,74 @@
       <!-- Scenarios Grid -->
       <div id="themesGrid" class="grid grid-cols-2 gap-3 pb-8"></div>
     </section>
+  </main>
 
-    <!-- 📚 TAB 3: VOCABULAIRE & FSRS -->
-    <section id="tab-srs" class="tab-content hidden flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4 no-scrollbar">
-      <div class="flex justify-between items-end">
-        <div>
-          <h2 class="font-display text-2xl font-bold text-white">Vocabulaire</h2>
-          <p class="text-xs text-fluence-secondary">Répétition espacée FSRS</p>
-        </div>
-        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">
-          <span id="srsDueCount">0</span> à réviser
-        </span>
+  <!-- NATIVE BOTTOM TAB BAR (Exactement identique à RootView.swift iOS) -->
+  <nav class="ios-glass-bar sticky bottom-0 z-30 px-6 py-2.5 flex items-center justify-around border-t border-white/5">
+    <!-- Tab 0: Discussion -->
+    <button onclick="switchTab(0)" id="tab-btn-0" class="flex flex-col items-center space-y-1 text-indigo-400 transition active:scale-95">
+      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      <span class="text-[10px] font-semibold">Discussion</span>
+    </button>
+
+    <!-- Tab 1: Professeur -->
+    <button onclick="switchTab(1)" id="tab-btn-1" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition active:scale-95">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+      <span class="text-[10px] font-semibold">Professeur</span>
+    </button>
+
+    <!-- Tab 2: Vocabulaire -->
+    <button onclick="switchTab(2)" id="tab-btn-2" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition active:scale-95">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <span class="text-[10px] font-semibold">Vocabulaire</span>
+    </button>
+
+    <!-- Tab 3: Thèmes -->
+    <button onclick="switchTab(3)" id="tab-btn-3" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition active:scale-95">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+      <span class="text-[10px] font-semibold">Thèmes</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: RÉGLAGES (Identique à SettingsView.swift de l'app iOS) -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex flex-col justify-end transition-all duration-300">
+    <div class="ios-glass-bar rounded-t-3xl max-h-[85vh] overflow-y-auto p-5 space-y-4 border-t border-white/10 no-scrollbar">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-white/5">
+        <h3 class="font-sans text-lg font-bold text-white">Réglages</h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white text-xs font-semibold px-2 py-1 rounded-full bg-white/5">Fermer ✕</button>
       </div>
 
-      <!-- FSRS Flashcard Card Area -->
-      <div id="srsCardArea" class="flex-1 flex flex-col justify-center my-auto">
-        <div id="flashcard" onclick="flipSrsCard()" class="w-full glass-card rounded-3xl p-6 min-h-[260px] flex flex-col justify-between cursor-pointer border border-white/10 shadow-2xl relative transition-transform duration-500">
-          
-          <div class="flex justify-between text-xs text-slate-400">
-            <span id="srsCardLang">Allemand 🇩🇪</span>
-            <span id="srsCardRecall" class="text-orange-400 font-medium">Touchez pour retourner</span>
-          </div>
-
-          <div class="text-center my-auto">
-            <div id="srsWordTarget" class="font-display text-3xl font-extrabold text-white mb-2">Guten Tag</div>
-            <div id="srsAnswerArea" class="hidden mt-2">
-              <div id="srsWordMeaning" class="text-lg text-slate-400 font-medium">Bonjour / Bonne journée</div>
-              <div id="srsWordExample" class="text-xs italic text-slate-500 mt-2">« Guten Tag, wie kann ich Ihnen helfen? »</div>
-            </div>
-          </div>
-
-          <div id="srsRevealBtnContainer" class="text-center text-[11px] text-slate-500">
-            FSRS v4.0 · Intervalle adaptatif
-          </div>
-        </div>
-
-        <!-- FSRS Grade Controls (Hidden until flipped) -->
-        <div id="srsGradeBtns" class="hidden grid grid-cols-4 gap-2 mt-4">
-          <button onclick="gradeSrsCard(1)" class="py-2.5 rounded-2xl bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold active:scale-95 transition">Encore</button>
-          <button onclick="gradeSrsCard(2)" class="py-2.5 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold active:scale-95 transition">Difficile</button>
-          <button onclick="gradeSrsCard(3)" class="py-2.5 rounded-2xl bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-bold active:scale-95 transition">Bon</button>
-          <button onclick="gradeSrsCard(4)" class="py-2.5 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold active:scale-95 transition">Facile</button>
-        </div>
-      </div>
-
-      <div class="glass-card rounded-2xl mt-4 p-4">
-        <div class="text-xs font-bold text-slate-300 mb-2">Tous les mots (<span id="totalWordsCount">0</span>)</div>
-        <div id="vocabList" class="max-h-40 overflow-y-auto space-y-1.5 no-scrollbar"></div>
-      </div>
-    </section>
-
-    <!-- ⚙️ TAB 4: RÉGLAGES -->
-    <section id="tab-settings" class="tab-content hidden flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4 no-scrollbar">
-      <div>
-        <h2 class="font-display text-2xl font-bold text-white">Réglages</h2>
-        <p class="text-xs text-fluence-secondary">Personnalisez votre tuteur et vos moteurs IA</p>
-      </div>
-
-      <!-- Group 1: Langue & Niveau -->
-      <div class="glass-card rounded-2xl p-4 space-y-3">
-        <h3 class="text-xs font-bold text-orange-400 uppercase tracking-wider">Apprentissage</h3>
+      <!-- Section: Apprentissage -->
+      <div class="ios-card p-4 space-y-3">
+        <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Apprentissage</h4>
         
         <div>
-          <label class="text-xs text-slate-300 block mb-1">Langue cible</label>
+          <label class="text-xs text-slate-300 block mb-1">Langue apprise</label>
           <div id="settingsLangGrid" class="grid grid-cols-3 gap-2"></div>
         </div>
 
         <div>
           <label class="text-xs text-slate-300 block mb-1">Niveau visé (CEFR)</label>
-          <div class="grid grid-cols-6 gap-1 bg-slate-800 p-1 rounded-xl">
+          <div class="grid grid-cols-6 gap-1 bg-white/5 p-1 rounded-xl">
             <button onclick="selectLevel('A1')" class="level-btn py-1.5 rounded-lg text-slate-300 text-xs font-medium">A1</button>
             <button onclick="selectLevel('A2')" class="level-btn py-1.5 rounded-lg text-slate-300 text-xs font-medium">A2</button>
             <button onclick="selectLevel('B1')" class="level-btn py-1.5 rounded-lg text-slate-300 text-xs font-medium">B1</button>
-            <button onclick="selectLevel('B2')" class="level-btn py-1.5 rounded-lg bg-orange-500 text-white text-xs font-bold">B2</button>
+            <button onclick="selectLevel('B2')" class="level-btn py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">B2</button>
             <button onclick="selectLevel('C1')" class="level-btn py-1.5 rounded-lg text-slate-300 text-xs font-medium">C1</button>
             <button onclick="selectLevel('C2')" class="level-btn py-1.5 rounded-lg text-slate-300 text-xs font-medium">C2</button>
           </div>
         </div>
       </div>
 
-      <!-- Group 2: IA & Clés API -->
-      <div class="glass-card rounded-2xl p-4 space-y-3">
-        <h3 class="text-xs font-bold text-orange-400 uppercase tracking-wider">Intelligence Artificielle</h3>
+      <!-- Section: Intelligence Artificielle -->
+      <div class="ios-card p-4 space-y-3">
+        <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Moteur d'Intelligence Artificielle</h4>
         
         <div>
           <label class="text-xs text-slate-300 block mb-1">Fournisseur</label>
-          <select id="apiProviderSelect" onchange="handleProviderChange()" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded-xl border border-white/10 focus:outline-none">
+          <select id="apiProviderSelect" onchange="handleProviderChange()" class="w-full bg-slate-900 text-white text-xs px-3 py-2 rounded-xl border border-white/10 focus:outline-none">
             <option value="groq" selected>Groq Cloud (Llama 3.3 70B · Ultra Rapide)</option>
             <option value="gemini">Google Gemini 2.0 Flash</option>
             <option value="local">Hermes VPS Personnel</option>
@@ -346,71 +463,69 @@
         </div>
 
         <div id="apiKeyInputContainer">
-          <label class="text-xs text-slate-300 block mb-1">Clé API Personnelle</label>
-          <input type="password" id="apiKeyInput" placeholder="gsk_... ou AIzaSy..." class="w-full bg-slate-800 text-white placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-white/10 focus:outline-none focus:border-orange-500">
+          <label class="text-xs text-slate-300 block mb-1">Clé API</label>
+          <input type="password" id="apiKeyInput" placeholder="gsk_... ou AIzaSy..." class="w-full bg-slate-900 text-white placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-white/10 focus:outline-none focus:border-indigo-500">
         </div>
 
-        <button onclick="saveApiKeySettings()" class="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs transition active:scale-95">
-          Sauvegarder la clé
+        <button onclick="saveApiKeySettings()" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition active:scale-95">
+          Sauvegarder la configuration
         </button>
       </div>
 
-      <!-- Group 3: Options audio -->
-      <div class="glass-card rounded-2xl p-4 space-y-3 mb-8">
-        <h3 class="text-xs font-bold text-orange-400 uppercase tracking-wider">Audio & Affichage</h3>
+      <!-- Section: Audio & Sous-titres -->
+      <div class="ios-card p-4 space-y-3 mb-4">
+        <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Audio & Affichage</h4>
         <div class="flex items-center justify-between">
           <span class="text-xs text-slate-300">Sous-titres en Français</span>
-          <input type="checkbox" id="toggleSubtitles" checked onchange="updateUserSetting('show_subtitles', this.checked ? 1 : 0)" class="w-4 h-4 accent-orange-500">
+          <input type="checkbox" id="toggleSubtitles" checked onchange="updateUserSetting('show_subtitles', this.checked ? 1 : 0)" class="w-4 h-4 accent-indigo-500">
         </div>
         <div class="flex items-center justify-between">
           <span class="text-xs text-slate-300">Lecture audio automatique</span>
-          <input type="checkbox" id="toggleAutoAudio" checked onchange="updateUserSetting('auto_audio', this.checked ? 1 : 0)" class="w-4 h-4 accent-orange-500">
+          <input type="checkbox" id="toggleAutoAudio" checked onchange="updateUserSetting('auto_audio', this.checked ? 1 : 0)" class="w-4 h-4 accent-indigo-500">
         </div>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
 
-  <!-- NATIVE BOTTOM TAB BAR (iOS Style Glass Pill) -->
-  <nav class="glass-nav sticky bottom-0 z-30 px-6 py-2.5 flex items-center justify-around">
-    <!-- Discussion -->
-    <button onclick="switchTab('chat')" id="nav-chat" class="nav-btn flex flex-col items-center space-y-1 text-orange-400 transition active:scale-95">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"></path></svg>
-      <span class="text-[10px] font-semibold">Discussion</span>
-    </button>
-
-    <!-- Thèmes -->
-    <button onclick="switchTab('themes')" id="nav-themes" class="nav-btn flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition active:scale-95">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-      <span class="text-[10px] font-semibold">Thèmes</span>
-    </button>
-
-    <!-- Vocabulaire FSRS -->
-    <button onclick="switchTab('srs')" id="nav-srs" class="nav-btn flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition active:scale-95">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-      <span class="text-[10px] font-semibold">Vocabulaire</span>
-    </button>
-
-    <!-- Réglages -->
-    <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center space-y-1 text-slate-400 hover:text-white transition active:scale-95">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-      <span class="text-[10px] font-semibold">Réglages</span>
-    </button>
-  </nav>
-
-  <!-- Application JS -->
-  <script src="./app.js?v=9.2"></script>
+  <!-- Application Logic -->
+  <script src="./app.js?v=11.0"></script>
   <script>
-    // Fluence UI Interactions Bridge
+    function openSettingsModal() {
+      document.getElementById('settingsModal')?.classList.remove('hidden');
+    }
+    function closeSettingsModal() {
+      document.getElementById('settingsModal')?.classList.add('hidden');
+    }
+
+    // Modal Drawer
     function toggleKeyboardDrawer() {
       const drawer = document.getElementById('keyboardDrawer');
       if (drawer) drawer.classList.toggle('hidden');
     }
 
-    function toggleAudioPlaybackMode() {
-      const isAuto = currentUser.auto_audio === 1;
-      updateUserSetting('auto_audio', isAuto ? 0 : 1);
-      const icon = document.getElementById('audioModeIcon');
-      if (icon) icon.textContent = isAuto ? '🔇' : '🔊';
+    // Tab Switcher (0: Discussion, 1: Professeur, 2: Vocabulaire, 3: Thèmes)
+    function switchTab(index) {
+      document.querySelectorAll('.tab-pane').forEach((pane, i) => {
+        if (i === index) pane.classList.remove('hidden');
+        else pane.classList.add('hidden');
+      });
+
+      for (let i = 0; i <= 3; i++) {
+        const btn = document.getElementById(`tab-btn-${i}`);
+        if (btn) {
+          if (i === index) {
+            btn.classList.remove('text-slate-400');
+            btn.classList.add('text-indigo-400');
+          } else {
+            btn.classList.remove('text-indigo-400');
+            btn.classList.add('text-slate-400');
+          }
+        }
+      }
+
+      if (index === 2 && typeof loadSrsDueWords === 'function') {
+        loadSrsDueWords();
+      }
     }
 
     function setWhisperAuraState(state) {
@@ -421,7 +536,7 @@
       else if (state === 'speaking') aura.classList.add('aura-speaking');
     }
 
-    // Wrap setOrbState to update the new Whisper UI
+    // Bridge Orb State
     const originalSetOrbState = window.setOrbState;
     window.setOrbState = function(state) {
       if (typeof originalSetOrbState === 'function') originalSetOrbState(state);
@@ -434,15 +549,15 @@
       if (state === 'listening') {
         if (status) status.textContent = "Je vous écoute...";
         if (micIcon) micIcon.textContent = "🛑";
-        micBtn?.classList.add('ring-4', 'ring-orange-400/50');
+        micBtn?.classList.add('ring-4', 'ring-indigo-400/50');
       } else if (state === 'thinking') {
         if (status) status.textContent = "Fluence réfléchit...";
         if (micIcon) micIcon.textContent = "✨";
-        micBtn?.classList.remove('ring-4', 'ring-orange-400/50');
+        micBtn?.classList.remove('ring-4', 'ring-indigo-400/50');
       } else if (state === 'speaking') {
         if (status) status.textContent = "Fluence vous parle...";
         if (micIcon) micIcon.textContent = "🔊";
-        micBtn?.classList.remove('ring-4', 'ring-orange-400/50');
+        micBtn?.classList.remove('ring-4', 'ring-indigo-400/50');
       } else {
         if (status) status.textContent = "Touchez le micro pour parler";
         if (micIcon) micIcon.textContent = "🎙️";
@@ -450,26 +565,6 @@
       }
     };
 
-    // Override tab switching highlights
-    const originalSwitchTab = window.switchTab;
-    window.switchTab = function(tabId) {
-      if (typeof originalSwitchTab === 'function') originalSwitchTab(tabId);
-      
-      ['chat', 'themes', 'srs', 'settings'].forEach(id => {
-        const btn = document.getElementById(`nav-${id}`);
-        if (btn) {
-          if (id === tabId) {
-            btn.classList.remove('text-slate-400');
-            btn.classList.add('text-orange-400');
-          } else {
-            btn.classList.remove('text-orange-400');
-            btn.classList.add('text-slate-400');
-          }
-        }
-      });
-    };
-
-    // Synchronize latest turn with Whisper Typography
     function updateWhisperTypography(germanText, translationFr, correction) {
       const textEl = document.getElementById('whisperAIText');
       const transEl = document.getElementById('whisperTranslation');
@@ -481,7 +576,7 @@
         setTimeout(() => {
           textEl.textContent = germanText;
           textEl.style.opacity = '1';
-        }, 200);
+        }, 150);
       }
       if (transEl && translationFr) {
         transEl.textContent = translationFr;
@@ -503,14 +598,24 @@
       }
     }
 
-    // Hook into response handler to update Whisper UI
-    const originalAppendAssistantMessage = window.appendAssistantMessage;
-    window.appendAssistantMessage = function(data) {
-      if (typeof originalAppendAssistantMessage === 'function') originalAppendAssistantMessage(data);
-      if (data && data.reply) {
-        updateWhisperTypography(data.reply, data.translationFr, data.correction);
+    function startAssimilLesson(num) {
+      const titles = [
+        "Guten Tag, Herr Müller",
+        "In der Stadt",
+        "Im Restaurant",
+        "Der Alltag"
+      ];
+      const title = titles[num - 1] || `Leçon ${num}`;
+      document.getElementById('whisperScenarioIcon').textContent = "📖";
+      document.getElementById('whisperScenarioText').textContent = `Assimil · Leçon ${num}`;
+      switchTab(0);
+      
+      const welcome = `Willkommen zur Assimil Lektion ${num}: "${title}". Lass uns diesen Dialog Satz für Satz gemeinsam durchgehen!`;
+      updateWhisperTypography(welcome, `Bienvenue dans la leçon Assimil ${num} : "${title}". Voyons ce dialogue ensemble phrase par phrase !`, null);
+      if (typeof playTTS === 'function') {
+        playTTS(welcome, currentUser?.learning_lang || 'de');
       }
-    };
+    }
   </script>
 </body>
 </html>
