@@ -17,7 +17,7 @@ struct PinyinHelp: View {
                     Text(reading).font(.callout).textSelection(.enabled)
                         .accessibilityIdentifier("pinyin-reading")
                 }
-            }.foregroundStyle(MuralColor.secondary)
+            }.foregroundStyle(FluenceColor.secondary)
         }
     }
 }

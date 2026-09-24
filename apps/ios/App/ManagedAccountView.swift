@@ -9,12 +9,12 @@ struct ManagedAccountView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                MuralOrb(active: !store.isBusy).frame(width: 112, height: 112).padding(.top, 16)
+                FluenceAura(active: !store.isBusy).frame(width: 112, height: 112).padding(.top, 16)
                 VStack(spacing: 8) {
                     Text(store.session == nil ? "Welcome to Mural" : "Your Mural account")
                         .font(.system(.title, design: .rounded, weight: .semibold)).multilineTextAlignment(.center)
                     Text("Your conversations and learning history stay on this iPhone.")
-                        .font(.subheadline).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
+                        .font(.subheadline).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
                 }
                 if store.configuration == nil {
                     Text("Accounts aren’t available in this build yet. You can keep practising with your own Gemini API key in Settings.")
@@ -29,7 +29,7 @@ struct ManagedAccountView: View {
                                 .accessibilityIdentifier("managed-account-email")
                         }
                         Text("Purchases and hosted conversations aren’t available in this build.")
-                            .font(.footnote).foregroundStyle(MuralColor.secondary)
+                            .font(.footnote).foregroundStyle(FluenceColor.secondary)
                         Button("Refresh account", action: store.refresh).buttonStyle(.bordered)
                         Button("Sign out on all devices", action: store.signOut).buttonStyle(.bordered)
                         Button("Delete account", role: .destructive) { confirmDeletion = true }
@@ -38,9 +38,9 @@ struct ManagedAccountView: View {
                 } else {
                     VStack(spacing: 14) {
                         Text("Mural stores your sign-in details and account sessions. You can practise with your own API key without an account.")
-                            .font(.footnote).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
+                            .font(.footnote).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
                         Text("By signing in, you agree to the [Terms of use](https://mural.chat/terms/) and acknowledge the [Privacy policy](https://mural.chat/privacy/).")
-                            .font(.footnote).multilineTextAlignment(.center).tint(MuralColor.ink)
+                            .font(.footnote).multilineTextAlignment(.center).tint(FluenceColor.ink)
                             .accessibilityIdentifier("managed-sign-in-agreement")
                         if store.configuration?.providers.contains(.google) == true {
                             Button { store.signIn(.google) } label: {
@@ -62,10 +62,10 @@ struct ManagedAccountView: View {
                 HStack(spacing: 24) {
                     Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!)
                     Link("Terms", destination: URL(string: "https://mural.chat/terms/")!)
-                }.font(.footnote).tint(MuralColor.ink)
+                }.font(.footnote).tint(FluenceColor.ink)
             }.padding(24).frame(maxWidth: 520).frame(maxWidth: .infinity)
         }
-        .background(MuralColor.cream).foregroundStyle(MuralColor.ink)
+        .background(FluenceColor.cream).foregroundStyle(FluenceColor.ink)
         .navigationTitle("Account").navigationBarTitleDisplayMode(.inline)
         .task { store.refresh() }
         .onDisappear { store.cancelSignIn() }

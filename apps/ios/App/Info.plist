@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>Mural</string>
+	<string>Fluence</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>Fluence</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,13 +29,13 @@
 		<true/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Mural listens while you practise speaking. Your voice is sent to Gemini during a conversation.</string>
+	<string>Fluence listens while you practise speaking. Your voice is sent to the AI during a conversation.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Mural uses speech recognition to process your spoken practice in real-time.</string>
+	<string>Fluence uses speech recognition to process your spoken practice in real-time.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Mural uses the camera to scan learning materials and visual prompts for interactive conversations.</string>
+	<string>Fluence uses the camera to scan learning materials and visual prompts for interactive conversations.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Mural allows selecting photos and scans of textbook lessons.</string>
+	<string>Fluence allows selecting photos and scans of textbook lessons.</string>
 	<key>UIUserInterfaceStyle</key>
 	<string>Light</string>
 	<key>UILaunchScreen</key>

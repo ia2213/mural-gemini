@@ -129,7 +129,7 @@ struct StudyHubView: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
         }
-        .background(MuralColor.cream)
+        .background(FluenceColor.cream)
         .navigationTitle("Professeur & Assimil")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -247,14 +247,14 @@ struct StudyHubView: View {
             HStack {
                 Image(systemName: "graduationcap.fill")
                     .font(.title)
-                    .foregroundStyle(MuralColor.orange)
+                    .foregroundStyle(FluenceColor.orange)
                 Text("Professeur Particulier")
                     .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(MuralColor.ink)
+                    .foregroundStyle(FluenceColor.ink)
             }
             Text("Importez un **dossier entier** de cours par niveau (A1→C1), ou des fichiers individuels (PDF, Word, images, texte…). L'IA lit le contenu en ligne et vous fait cours en questions interactives.")
                 .font(.subheadline)
-                .foregroundStyle(MuralColor.secondary)
+                .foregroundStyle(FluenceColor.secondary)
                 .lineSpacing(3)
         }
         .padding(18)
@@ -270,10 +270,10 @@ struct StudyHubView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "waveform.badge.magnifyingglass")
                         .font(.title3)
-                        .foregroundStyle(MuralColor.orange)
+                        .foregroundStyle(FluenceColor.orange)
                     Text("Mémoire FSRS & Répétition Vocale")
                         .font(.system(.headline, design: .rounded, weight: .bold))
-                        .foregroundStyle(MuralColor.ink)
+                        .foregroundStyle(FluenceColor.ink)
                 }
                 Spacer()
                 Button {
@@ -281,13 +281,13 @@ struct StudyHubView: View {
                 } label: {
                     Image(systemName: "bell.badge.fill")
                         .font(.title3)
-                        .foregroundStyle(MuralColor.orange)
+                        .foregroundStyle(FluenceColor.orange)
                 }
             }
             
             Text("L'algorithme FSRS s'auto-adapte à votre mémoire au fil du temps. Les révisions se font **100% en vocal** (sans écrit) au cours d'une conversation fluide avec l'IA.")
                 .font(.caption)
-                .foregroundStyle(MuralColor.secondary)
+                .foregroundStyle(FluenceColor.secondary)
                 .lineSpacing(2)
             
             // Due terms preview
@@ -295,7 +295,7 @@ struct StudyHubView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("À réactiver aujourd'hui (\(fsrsDueItems.count)) :")
                         .font(.caption2.bold())
-                        .foregroundStyle(MuralColor.ink)
+                        .foregroundStyle(FluenceColor.ink)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -310,7 +310,7 @@ struct StudyHubView: View {
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
-                                .background(MuralColor.cream, in: Capsule())
+                                .background(FluenceColor.cream, in: Capsule())
                             }
                         }
                     }
@@ -331,10 +331,10 @@ struct StudyHubView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
-                    LinearGradient(colors: [MuralColor.orange, Color(red: 0.95, green: 0.45, blue: 0.2)], startPoint: .leading, endPoint: .trailing),
+                    LinearGradient(colors: [FluenceColor.orange, Color(red: 0.95, green: 0.45, blue: 0.2)], startPoint: .leading, endPoint: .trailing),
                     in: RoundedRectangle(cornerRadius: 14)
                 )
-                .shadow(color: MuralColor.orange.opacity(0.3), radius: 6, y: 3)
+                .shadow(color: FluenceColor.orange.opacity(0.3), radius: 6, y: 3)
             }
             .buttonStyle(.plain)
         }
@@ -352,7 +352,7 @@ struct StudyHubView: View {
                 } label: {
                     quickActionCard(
                         icon: "camera.viewfinder",
-                        iconColor: MuralColor.orange,
+                        iconColor: FluenceColor.orange,
                         bgColor: Color(red: 1.0, green: 0.92, blue: 0.82),
                         title: "Scanner Assimil",
                         subtitle: "Photo de livre & OCR"
@@ -391,16 +391,16 @@ struct StudyHubView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Importer un dossier entier de cours")
                             .font(.system(.subheadline, design: .rounded, weight: .bold))
-                            .foregroundStyle(MuralColor.ink)
+                            .foregroundStyle(FluenceColor.ink)
                         Text("Google Drive, iCloud, ou fichiers locaux — tous les niveaux (A1→C1)")
                             .font(.caption2)
-                            .foregroundStyle(MuralColor.secondary)
+                            .foregroundStyle(FluenceColor.secondary)
                             .lineLimit(2)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption.bold())
-                        .foregroundStyle(MuralColor.secondary)
+                        .foregroundStyle(FluenceColor.secondary)
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -424,10 +424,10 @@ struct StudyHubView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .foregroundStyle(MuralColor.ink)
+                    .foregroundStyle(FluenceColor.ink)
                 Text(subtitle)
                     .font(.caption2)
-                    .foregroundStyle(MuralColor.secondary)
+                    .foregroundStyle(FluenceColor.secondary)
             }
         }
         .padding(14)
@@ -449,10 +449,10 @@ struct StudyHubView: View {
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
                             .background(
-                                selectedLevelFilter == level ? MuralColor.orange : MuralColor.cream,
+                                selectedLevelFilter == level ? FluenceColor.orange : FluenceColor.cream,
                                 in: Capsule()
                             )
-                            .foregroundStyle(selectedLevelFilter == level ? .white : MuralColor.ink)
+                            .foregroundStyle(selectedLevelFilter == level ? .white : FluenceColor.ink)
                     }
                     .buttonStyle(.plain)
                 }
@@ -467,7 +467,7 @@ struct StudyHubView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Label("Dossiers de Cours", systemImage: "folder.fill")
                         .font(.system(.headline, design: .rounded, weight: .semibold))
-                        .foregroundStyle(MuralColor.ink)
+                        .foregroundStyle(FluenceColor.ink)
                     
                     ForEach(folderGroups, id: \.0) { (folderName, docs) in
                         Button {
@@ -491,7 +491,7 @@ struct StudyHubView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(folderName)
                                         .font(.system(.body, design: .rounded, weight: .semibold))
-                                        .foregroundStyle(MuralColor.ink)
+                                        .foregroundStyle(FluenceColor.ink)
                                         .lineLimit(1)
                                     HStack(spacing: 8) {
                                         let level = StudyLevel.detect(from: folderName)
@@ -502,11 +502,11 @@ struct StudyHubView: View {
                                             .background(Color.green.opacity(0.15), in: Capsule())
                                         Text("\(docs.count) fichier(s)")
                                             .font(.caption2)
-                                            .foregroundStyle(MuralColor.secondary)
+                                            .foregroundStyle(FluenceColor.secondary)
                                         let types = Set(docs.map(\.fileType))
                                         Text(types.joined(separator: ", "))
                                             .font(.caption2)
-                                            .foregroundStyle(MuralColor.secondary)
+                                            .foregroundStyle(FluenceColor.secondary)
                                             .lineLimit(1)
                                     }
                                 }
@@ -536,13 +536,13 @@ struct StudyHubView: View {
             HStack {
                 Label("Leçons Assimil Scannées", systemImage: "book.pages")
                     .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(MuralColor.ink)
+                    .foregroundStyle(FluenceColor.ink)
                 Spacer()
                 Text("\(lessons.count)")
                     .font(.caption.bold())
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(MuralColor.butter.opacity(0.8), in: Capsule())
+                    .background(FluenceColor.butter.opacity(0.8), in: Capsule())
             }
 
             if lessons.isEmpty {
@@ -559,16 +559,16 @@ struct StudyHubView: View {
                         HStack(spacing: 14) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(MuralColor.orange.opacity(0.15))
+                                    .fill(FluenceColor.orange.opacity(0.15))
                                     .frame(width: 46, height: 46)
                                 Text(lesson.lessonNumber.map { "\($0)" } ?? "📖")
                                     .font(.system(.headline, design: .rounded, weight: .bold))
-                                    .foregroundStyle(MuralColor.orange)
+                                    .foregroundStyle(FluenceColor.orange)
                             }
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(lesson.title)
                                     .font(.system(.body, design: .rounded, weight: .medium))
-                                    .foregroundStyle(MuralColor.ink)
+                                    .foregroundStyle(FluenceColor.ink)
                                     .lineLimit(1)
                                 HStack(spacing: 8) {
                                     Text("\(lesson.dialogue.count) répliques")
@@ -576,12 +576,12 @@ struct StudyHubView: View {
                                     Text("\(lesson.exercises.count) exercices")
                                 }
                                 .font(.caption2)
-                                .foregroundStyle(MuralColor.secondary)
+                                .foregroundStyle(FluenceColor.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption.bold())
-                                .foregroundStyle(MuralColor.secondary)
+                                .foregroundStyle(FluenceColor.secondary)
                         }
                         .padding(14)
                         .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
@@ -606,7 +606,7 @@ struct StudyHubView: View {
             HStack {
                 Label("Documents Individuels", systemImage: "doc.text")
                     .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(MuralColor.ink)
+                    .foregroundStyle(FluenceColor.ink)
                 Spacer()
                 Text("\(ungroupedDocuments.count)")
                     .font(.caption.bold())
@@ -655,7 +655,7 @@ struct StudyHubView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(doc.title)
                     .font(.system(.body, design: .rounded, weight: .medium))
-                    .foregroundStyle(MuralColor.ink)
+                    .foregroundStyle(FluenceColor.ink)
                     .lineLimit(1)
                 HStack(spacing: 6) {
                     Text(doc.fileType)
@@ -670,16 +670,16 @@ struct StudyHubView: View {
                         .background(Color.green.opacity(0.12), in: Capsule())
                     Text(doc.source)
                         .font(.caption2)
-                        .foregroundStyle(MuralColor.secondary)
+                        .foregroundStyle(FluenceColor.secondary)
                     Text("• \(doc.pageCount) p.")
                         .font(.caption2)
-                        .foregroundStyle(MuralColor.secondary)
+                        .foregroundStyle(FluenceColor.secondary)
                 }
             }
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption.bold())
-                .foregroundStyle(MuralColor.secondary)
+                .foregroundStyle(FluenceColor.secondary)
         }
         .padding(14)
         .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
@@ -703,13 +703,13 @@ struct StudyHubView: View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 28))
-                .foregroundStyle(MuralColor.secondary.opacity(0.7))
+                .foregroundStyle(FluenceColor.secondary.opacity(0.7))
             Text(title)
                 .font(.system(.subheadline, design: .rounded, weight: .medium))
-                .foregroundStyle(MuralColor.ink)
+                .foregroundStyle(FluenceColor.ink)
             Text(subtitle)
                 .font(.caption2)
-                .foregroundStyle(MuralColor.secondary)
+                .foregroundStyle(FluenceColor.secondary)
                 .multilineTextAlignment(.center)
         }
         .padding(24)
@@ -759,14 +759,14 @@ struct FolderCourseSessionView: View {
                 // Main chat
                 ScrollView {
                     VStack(spacing: 16) {
-                        MuralOrb(energy: isThinking ? 0.8 : 0.3, listening: false, active: true)
+                        FluenceAura(energy: isThinking ? 0.8 : 0.3, listening: false, active: true)
                             .frame(width: 120, height: 120)
                             .padding(.top, 6)
                         
                         // Teacher card
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text("PROFESSEUR MURAL — \(session.detectedLevel)")
+                                Text("TUTEUR FLUENCE — \(session.detectedLevel)")
                                     .font(.caption.bold())
                                     .foregroundStyle(Color.green)
                                 Spacer()
@@ -780,7 +780,7 @@ struct FolderCourseSessionView: View {
                             
                             Text(teacherMessage.isEmpty ? "Bienvenue dans le dossier « \(session.folderName) » ! Je vais vous faire cours sur ces \(session.documents.count) fichier(s). Prêt ?" : teacherMessage)
                                 .font(.system(.body, design: .rounded))
-                                .foregroundStyle(MuralColor.ink)
+                                .foregroundStyle(FluenceColor.ink)
                                 .lineSpacing(3)
                         }
                         .padding(16)
@@ -794,12 +794,12 @@ struct FolderCourseSessionView: View {
                                 ScrollView {
                                     Text(doc.rawContent)
                                         .font(.system(.caption, design: .monospaced))
-                                        .foregroundStyle(MuralColor.secondary)
+                                        .foregroundStyle(FluenceColor.secondary)
                                         .textSelection(.enabled)
                                         .padding(12)
                                 }
                                 .frame(maxHeight: 300)
-                                .background(MuralColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                                .background(FluenceColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: "doc.text.magnifyingglass")
@@ -819,7 +819,7 @@ struct FolderCourseSessionView: View {
                 // Input bar
                 inputBar
             }
-            .background(MuralColor.cream)
+            .background(FluenceColor.cream)
             .navigationTitle("Cours : \(session.folderName)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -857,7 +857,7 @@ struct FolderCourseSessionView: View {
                             selectedDocIndex == idx ? Color.green : Color.white,
                             in: Capsule()
                         )
-                        .foregroundStyle(selectedDocIndex == idx ? .white : MuralColor.ink)
+                        .foregroundStyle(selectedDocIndex == idx ? .white : FluenceColor.ink)
                     }
                     .buttonStyle(.plain)
                 }
@@ -884,7 +884,7 @@ struct FolderCourseSessionView: View {
             .disabled(userReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
         }
         .padding(12)
-        .background(MuralColor.cream)
+        .background(FluenceColor.cream)
     }
     
     private func startFolderCourse() {
@@ -1033,7 +1033,7 @@ struct AssimilScannerView: View {
                 }
                 .padding(20)
             }
-            .background(MuralColor.cream)
+            .background(FluenceColor.cream)
             .navigationTitle("Scanner Assimil (Multi-Pages)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1082,16 +1082,16 @@ struct AssimilScannerView: View {
         VStack(spacing: 18) {
             Image(systemName: "camera.viewfinder")
                 .font(.system(size: 60))
-                .foregroundStyle(MuralColor.orange)
+                .foregroundStyle(FluenceColor.orange)
                 .padding(.top, 20)
             
             Text("Photographiez les pages Assimil")
                 .font(.system(.title3, design: .rounded, weight: .bold))
-                .foregroundStyle(MuralColor.ink)
+                .foregroundStyle(FluenceColor.ink)
             
             Text("Vous pouvez prendre **plusieurs photos** (ex: page gauche du dialogue et page droite de traduction/grammaire/exercices).")
                 .font(.subheadline)
-                .foregroundStyle(MuralColor.secondary)
+                .foregroundStyle(FluenceColor.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
 
@@ -1104,13 +1104,13 @@ struct AssimilScannerView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(MuralColor.orange, in: RoundedRectangle(cornerRadius: 14))
+                        .background(FluenceColor.orange, in: RoundedRectangle(cornerRadius: 14))
                 }
                 
                 PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images) {
                     Label("Choisir plusieurs photos (Galerie)", systemImage: "photo.stack")
                         .font(.headline)
-                        .foregroundStyle(MuralColor.ink)
+                        .foregroundStyle(FluenceColor.ink)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
@@ -1149,7 +1149,7 @@ struct AssimilScannerView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                             Text("Page \(idx + 1)")
                                 .font(.caption2.bold())
-                                .foregroundStyle(MuralColor.ink)
+                                .foregroundStyle(FluenceColor.ink)
                                 .padding(.horizontal, 4)
                         }
                         
@@ -1175,10 +1175,10 @@ struct AssimilScannerView: View {
                 } label: {
                     Label("Ajouter page", systemImage: "camera.badge.plus")
                         .font(.caption.bold())
-                        .foregroundStyle(MuralColor.orange)
+                        .foregroundStyle(FluenceColor.orange)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(MuralColor.orange.opacity(0.12), in: Capsule())
+                        .background(FluenceColor.orange.opacity(0.12), in: Capsule())
                 }
                 
                 PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 5, matching: .images) {
@@ -1194,10 +1194,10 @@ struct AssimilScannerView: View {
             if isProcessing {
                 VStack(spacing: 10) {
                     ProgressView()
-                        .tint(MuralColor.orange)
+                        .tint(FluenceColor.orange)
                     Text(processingStatus)
                         .font(.caption)
-                        .foregroundStyle(MuralColor.secondary)
+                        .foregroundStyle(FluenceColor.secondary)
                 }
                 .padding(.vertical, 10)
             } else {
@@ -1212,8 +1212,8 @@ struct AssimilScannerView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(MuralColor.orange, in: RoundedRectangle(cornerRadius: 14))
-                    .shadow(color: MuralColor.orange.opacity(0.3), radius: 6, y: 3)
+                    .background(FluenceColor.orange, in: RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: FluenceColor.orange.opacity(0.3), radius: 6, y: 3)
                 }
                 .buttonStyle(.plain)
             }
@@ -1237,7 +1237,7 @@ struct AssimilScannerView: View {
                         .font(.system(.title3, design: .rounded, weight: .bold))
                     Text("Leçon \(lesson.lessonNumber.map(String.init) ?? "1") • \(lesson.dialogue.count) phrases")
                         .font(.caption)
-                        .foregroundStyle(MuralColor.secondary)
+                        .foregroundStyle(FluenceColor.secondary)
                 }
                 Spacer()
                 Button("Re-scanner") {
@@ -1258,20 +1258,20 @@ struct AssimilScannerView: View {
                         HStack(alignment: .top) {
                             Text("\(line.lineIndex).")
                                 .font(.caption.bold())
-                                .foregroundStyle(MuralColor.orange)
+                                .foregroundStyle(FluenceColor.orange)
                             Text(line.targetText)
                                 .font(.system(.body, design: .rounded, weight: .medium))
-                                .foregroundStyle(MuralColor.ink)
+                                .foregroundStyle(FluenceColor.ink)
                             Spacer()
                         }
                         Text(line.nativeTranslation)
                             .font(.caption)
-                            .foregroundStyle(MuralColor.secondary)
+                            .foregroundStyle(FluenceColor.secondary)
                             .padding(.leading, 18)
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(MuralColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                    .background(FluenceColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
                 }
             }
 
@@ -1282,7 +1282,7 @@ struct AssimilScannerView: View {
                 ForEach(lesson.grammarNotes, id: \.self) { note in
                     Text("• " + note)
                         .font(.caption)
-                        .foregroundStyle(MuralColor.secondary)
+                        .foregroundStyle(FluenceColor.secondary)
                 }
             }
         }
@@ -1362,7 +1362,7 @@ struct DocumentImportView: View {
                 }
                 .padding(20)
             }
-            .background(MuralColor.cream)
+            .background(FluenceColor.cream)
             .navigationTitle("Importer un Fichier")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1407,11 +1407,11 @@ struct DocumentImportView: View {
                 
                 Text("Tous types de fichiers")
                     .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(MuralColor.ink)
+                    .foregroundStyle(FluenceColor.ink)
                 
                 Text("PDF, Word (.docx), images (OCR auto), texte, Markdown, ePub, CSV, HTML… Sélectionnez un ou plusieurs fichiers.")
                     .font(.subheadline)
-                    .foregroundStyle(MuralColor.secondary)
+                    .foregroundStyle(FluenceColor.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 10)
 
@@ -1433,16 +1433,16 @@ struct DocumentImportView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Ou coller un texte de cours :")
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(MuralColor.ink)
+                    .foregroundStyle(FluenceColor.ink)
                 
                 TextField("Titre du cours / leçon", text: $pastedTitle)
                     .padding(12)
-                    .background(MuralColor.cream, in: RoundedRectangle(cornerRadius: 10))
+                    .background(FluenceColor.cream, in: RoundedRectangle(cornerRadius: 10))
                 
                 TextField("Collez le texte du cours ici...", text: $pastedContent, axis: .vertical)
                     .lineLimit(4...8)
                     .padding(12)
-                    .background(MuralColor.cream, in: RoundedRectangle(cornerRadius: 10))
+                    .background(FluenceColor.cream, in: RoundedRectangle(cornerRadius: 10))
                 
                 Button {
                     createFromPastedText()
@@ -1452,7 +1452,7 @@ struct DocumentImportView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(MuralColor.ink, in: RoundedRectangle(cornerRadius: 10))
+                        .background(FluenceColor.ink, in: RoundedRectangle(cornerRadius: 10))
                 }
                 .disabled(pastedContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
@@ -1465,7 +1465,7 @@ struct DocumentImportView: View {
                         .tint(Color.blue)
                     Text(processingStatus)
                         .font(.caption)
-                        .foregroundStyle(MuralColor.secondary)
+                        .foregroundStyle(FluenceColor.secondary)
                 }
             }
 
@@ -1509,13 +1509,13 @@ struct DocumentImportView: View {
                     
                     Text(doc.summary)
                         .font(.caption)
-                        .foregroundStyle(MuralColor.secondary)
+                        .foregroundStyle(FluenceColor.secondary)
                         .lineSpacing(2)
                     
                     if !doc.keyConcepts.isEmpty {
                         Text("Concepts : \(doc.keyConcepts.map(\.term).joined(separator: ", "))")
                             .font(.caption2)
-                            .foregroundStyle(MuralColor.ink.opacity(0.7))
+                            .foregroundStyle(FluenceColor.ink.opacity(0.7))
                     }
                 }
                 .padding(14)
@@ -1620,27 +1620,27 @@ struct AssimilTeacherSessionView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
-                        MuralOrb(energy: isThinking ? 0.8 : (isListening ? 0.6 : 0.2), listening: isListening, active: true)
+                        FluenceAura(energy: isThinking ? 0.8 : (isListening ? 0.6 : 0.2), listening: isListening, active: true)
                             .frame(width: 140, height: 140)
                             .padding(.top, 10)
                         
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text("PROFESSEUR MURAL")
+                                Text("TUTEUR FLUENCE")
                                     .font(.caption.bold())
-                                    .foregroundStyle(MuralColor.orange)
+                                    .foregroundStyle(FluenceColor.orange)
                                 Spacer()
                                 Button {
                                     speakTeacherMessage()
                                 } label: {
                                     Image(systemName: "speaker.wave.2.fill")
-                                        .foregroundStyle(MuralColor.orange)
+                                        .foregroundStyle(FluenceColor.orange)
                                 }
                             }
                             
                             Text(teacherMessage.isEmpty ? "Bonjour ! Je suis votre professeur pour cette leçon Assimil. Choisissez une étape pour commencer." : teacherMessage)
                                 .font(.system(.body, design: .rounded))
-                                .foregroundStyle(MuralColor.ink)
+                                .foregroundStyle(FluenceColor.ink)
                                 .lineSpacing(3)
                         }
                         .padding(16)
@@ -1661,7 +1661,7 @@ struct AssimilTeacherSessionView: View {
 
                 bottomControlBar
             }
-            .background(MuralColor.cream)
+            .background(FluenceColor.cream)
             .navigationTitle(lesson.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1703,8 +1703,8 @@ struct AssimilTeacherSessionView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(currentStep == id ? MuralColor.orange : MuralColor.cream, in: Capsule())
-            .foregroundStyle(currentStep == id ? .white : MuralColor.ink)
+            .background(currentStep == id ? FluenceColor.orange : FluenceColor.cream, in: Capsule())
+            .foregroundStyle(currentStep == id ? .white : FluenceColor.ink)
         }
         .buttonStyle(.plain)
     }
@@ -1723,14 +1723,14 @@ struct AssimilTeacherSessionView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("\(line.lineIndex). \(line.targetText)")
                                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                .foregroundStyle(selectedLineIndex == idx ? MuralColor.orange : MuralColor.ink)
+                                .foregroundStyle(selectedLineIndex == idx ? FluenceColor.orange : FluenceColor.ink)
                             Text(line.nativeTranslation)
                                 .font(.caption2)
-                                .foregroundStyle(MuralColor.secondary)
+                                .foregroundStyle(FluenceColor.secondary)
                         }
                         Spacer()
                         Image(systemName: "speaker.wave.1")
-                            .foregroundStyle(MuralColor.orange)
+                            .foregroundStyle(FluenceColor.orange)
                     }
                     .padding(10)
                     .background(selectedLineIndex == idx ? Color(red: 1.0, green: 0.95, blue: 0.9) : Color.white, in: RoundedRectangle(cornerRadius: 12))
@@ -1748,10 +1748,10 @@ struct AssimilTeacherSessionView: View {
             ForEach(lesson.grammarNotes, id: \.self) { note in
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "lightbulb.fill")
-                        .foregroundStyle(MuralColor.orange)
+                        .foregroundStyle(FluenceColor.orange)
                     Text(note)
                         .font(.subheadline)
-                        .foregroundStyle(MuralColor.ink)
+                        .foregroundStyle(FluenceColor.ink)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1769,18 +1769,18 @@ struct AssimilTeacherSessionView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(ex.title)
                         .font(.subheadline.bold())
-                        .foregroundStyle(MuralColor.ink)
+                        .foregroundStyle(FluenceColor.ink)
                     ForEach(ex.items) { item in
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Q\(item.itemIndex): \(item.prompt)")
                                 .font(.caption.bold())
                             Text("Solution : \(item.expectedAnswer)")
                                 .font(.caption2)
-                                .foregroundStyle(MuralColor.secondary)
+                                .foregroundStyle(FluenceColor.secondary)
                         }
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(MuralColor.cream.opacity(0.8), in: RoundedRectangle(cornerRadius: 8))
+                        .background(FluenceColor.cream.opacity(0.8), in: RoundedRectangle(cornerRadius: 8))
                     }
                 }
                 .padding(12)
@@ -1802,13 +1802,13 @@ struct AssimilTeacherSessionView: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 34))
-                        .foregroundStyle(MuralColor.orange)
+                        .foregroundStyle(FluenceColor.orange)
                 }
                 .disabled(userReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
             }
         }
         .padding(12)
-        .background(MuralColor.cream)
+        .background(FluenceColor.cream)
     }
 
     private func startStep(_ step: String) {
@@ -1916,7 +1916,7 @@ struct DocumentTeacherSessionView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 16) {
-                        MuralOrb(energy: isThinking ? 0.8 : 0.3, listening: false, active: true)
+                        FluenceAura(energy: isThinking ? 0.8 : 0.3, listening: false, active: true)
                             .frame(width: 140, height: 140)
                             .padding(.top, 10)
                         
@@ -1936,7 +1936,7 @@ struct DocumentTeacherSessionView: View {
                             
                             Text(teacherMessage.isEmpty ? "Bonjour ! J'ai lu votre document « \(document.title) ». Que souhaitez-vous travailler ?" : teacherMessage)
                                 .font(.system(.body, design: .rounded))
-                                .foregroundStyle(MuralColor.ink)
+                                .foregroundStyle(FluenceColor.ink)
                                 .lineSpacing(3)
                         }
                         .padding(16)
@@ -1949,12 +1949,12 @@ struct DocumentTeacherSessionView: View {
                             ScrollView {
                                 Text(document.rawContent)
                                     .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(MuralColor.secondary)
+                                    .foregroundStyle(FluenceColor.secondary)
                                     .textSelection(.enabled)
                                     .padding(12)
                             }
                             .frame(maxHeight: 300)
-                            .background(MuralColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                            .background(FluenceColor.cream.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "doc.text.magnifyingglass")
@@ -1978,7 +1978,7 @@ struct DocumentTeacherSessionView: View {
                                     } label: {
                                         Text("❓ " + q.question)
                                             .font(.caption.bold())
-                                            .foregroundStyle(MuralColor.ink)
+                                            .foregroundStyle(FluenceColor.ink)
                                             .padding(10)
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                             .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
@@ -2007,9 +2007,9 @@ struct DocumentTeacherSessionView: View {
                     .disabled(userReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
                 }
                 .padding(12)
-                .background(MuralColor.cream)
+                .background(FluenceColor.cream)
             }
-            .background(MuralColor.cream)
+            .background(FluenceColor.cream)
             .navigationTitle(document.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -2136,12 +2136,12 @@ struct FSRSVoiceReviewSessionView: View {
                     HStack {
                         Text("Item \(currentItemIndex + 1) / \(dueItems.count)")
                             .font(.caption.bold())
-                            .foregroundStyle(MuralColor.secondary)
+                            .foregroundStyle(FluenceColor.secondary)
                         Spacer()
                         if let item = currentItem {
                             Text("Rétention: \(Int(item.retrievability() * 100))%")
                                 .font(.caption.bold())
-                                .foregroundStyle(MuralColor.orange)
+                                .foregroundStyle(FluenceColor.orange)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -2151,7 +2151,7 @@ struct FSRSVoiceReviewSessionView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         // Interactive Orb
-                        MuralOrb(energy: isThinking ? 0.85 : (isListening ? 0.6 : 0.25), listening: isListening, active: true)
+                        FluenceAura(energy: isThinking ? 0.85 : (isListening ? 0.6 : 0.25), listening: isListening, active: true)
                             .frame(width: 150, height: 150)
                             .padding(.top, 12)
                         
@@ -2160,19 +2160,19 @@ struct FSRSVoiceReviewSessionView: View {
                             HStack {
                                 Text("PROFESSEUR VOCAL FSRS")
                                     .font(.caption.bold())
-                                    .foregroundStyle(MuralColor.orange)
+                                    .foregroundStyle(FluenceColor.orange)
                                 Spacer()
                                 Button {
                                     speakTeacher()
                                 } label: {
                                     Image(systemName: "speaker.wave.2.fill")
-                                        .foregroundStyle(MuralColor.orange)
+                                        .foregroundStyle(FluenceColor.orange)
                                 }
                             }
                             
                             Text(teacherMessage.isEmpty ? "Démarrage de la séance vocale..." : teacherMessage)
                                 .font(.system(.body, design: .rounded))
-                                .foregroundStyle(MuralColor.ink)
+                                .foregroundStyle(FluenceColor.ink)
                                 .lineSpacing(3)
                         }
                         .padding(18)
@@ -2185,19 +2185,19 @@ struct FSRSVoiceReviewSessionView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Notion étudiée : « \(item.term) »")
                                     .font(.subheadline.bold())
-                                    .foregroundStyle(MuralColor.ink)
+                                    .foregroundStyle(FluenceColor.ink)
                                 Text(item.meaning)
                                     .font(.caption)
-                                    .foregroundStyle(MuralColor.secondary)
+                                    .foregroundStyle(FluenceColor.secondary)
                                 if let ex = item.example {
                                     Text("Exemple : \(ex)")
                                         .font(.caption2.italic())
-                                        .foregroundStyle(MuralColor.secondary)
+                                        .foregroundStyle(FluenceColor.secondary)
                                 }
                             }
                             .padding(14)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(MuralColor.cream.opacity(0.7), in: RoundedRectangle(cornerRadius: 12))
+                            .background(FluenceColor.cream.opacity(0.7), in: RoundedRectangle(cornerRadius: 12))
                         }
                     }
                     .padding(20)
@@ -2215,7 +2215,7 @@ struct FSRSVoiceReviewSessionView: View {
                         } label: {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 34))
-                                .foregroundStyle(MuralColor.orange)
+                                .foregroundStyle(FluenceColor.orange)
                         }
                         .disabled(userSpokenReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
                     }
@@ -2238,9 +2238,9 @@ struct FSRSVoiceReviewSessionView: View {
                     }
                 }
                 .padding(14)
-                .background(MuralColor.cream)
+                .background(FluenceColor.cream)
             }
-            .background(MuralColor.cream)
+            .background(FluenceColor.cream)
             .navigationTitle("Révision Vocale FSRS")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -2276,7 +2276,7 @@ struct FSRSVoiceReviewSessionView: View {
         
         isThinking = true
         let prompt = """
-        Tu es le Professeur Mural d'Allemand. Tu animes une révision 100% VOCALE basée sur l'algorithme FSRS.
+        Tu es le Professeur Fluence d'Allemand. Tu animes une révision 100% VOCALE basée sur l'algorithme FSRS.
         L'élément à réviser est : « \(item.term) » (\(item.meaning)).
         Exemple de contexte : \(item.example ?? "")
         Niveau visé : \(item.level)
@@ -2321,7 +2321,7 @@ struct FSRSVoiceReviewSessionView: View {
         conversationHistory.append(["role": "user", "content": text])
         
         let prompt = """
-        Tu es le Professeur Mural d'Allemand.
+        Tu es le Professeur Fluence d'Allemand.
         L'élève répond à la question sur « \(item.term) » (\(item.meaning)).
         Sa réponse est : « \(text) »
         
@@ -2436,7 +2436,7 @@ struct NotificationSettingsSheet: View {
                             .font(.caption.bold())
                         Text("« Hé oh ! C'est l'heure de réviser 😉 Tu te rappelles comment on dit ... en allemand ? Viens me dire ça en vocal ! »")
                             .font(.caption2.italic())
-                            .foregroundStyle(MuralColor.secondary)
+                            .foregroundStyle(FluenceColor.secondary)
                     }
                     .padding(.vertical, 4)
                 }

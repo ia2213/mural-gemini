@@ -38,7 +38,7 @@ struct OnboardingView: View {
                 Spacer()
                 HStack(spacing: 6) {
                     ForEach(0..<3) { index in
-                        Capsule().fill(index == step ? MuralColor.orange : MuralColor.peach)
+                        Capsule().fill(index == step ? FluenceColor.orange : FluenceColor.peach)
                             .frame(width: index == step ? 24 : 8, height: 6)
                     }
                 }.accessibilityElement(children: .ignore).accessibilityLabel("Step \(step + 1) of 3")
@@ -47,7 +47,7 @@ struct OnboardingView: View {
             ScrollView {
                 VStack(spacing: step == 0 ? 22 : 18) {
                     VStack(spacing: 4) {
-                        MuralOrb().frame(height: typeSize.isAccessibilitySize ? 80 : step == 0 ? 134 : 74)
+                        FluenceAura().frame(height: typeSize.isAccessibilitySize ? 80 : step == 0 ? 134 : 74)
                         Text(greeting)
                             .font(.system(size: typeSize.isAccessibilitySize ? 46 : step == 0 ? 60 : 48, weight: .medium, design: .rounded))
                             .tracking(-2).id(greeting)
@@ -71,17 +71,17 @@ struct OnboardingView: View {
                 Button(step < 2 ? "Continue" : "Start Conversation") { advance() }
                     .font(.system(.headline, design: .rounded)).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity).padding(.vertical, 19)
-                    .background(MuralColor.orange, in: Capsule())
+                    .background(FluenceColor.orange, in: Capsule())
                     .accessibilityIdentifier("onboarding-continue")
                 if !typeSize.isAccessibilitySize {
                     Text(step == 0 ? "We’ll find your pace through conversation." : (step == 1 ? "You can change both languages in Settings." : "Your key stays encrypted on this iPhone."))
-                        .font(.caption).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
+                        .font(.caption).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
                 }
             }.padding(.horizontal, 26).padding(.top, 16).padding(.bottom, 16)
-                .background(MuralColor.cream)
+                .background(FluenceColor.cream)
         }
         .background(OnboardingBackground())
-        .foregroundStyle(MuralColor.ink).tint(MuralColor.ink)
+        .foregroundStyle(FluenceColor.ink).tint(FluenceColor.ink)
         .interactiveDismissDisabled()
         .sensoryFeedback(.selection, trigger: targetID)
         .task(id: reduceMotion) {
@@ -99,7 +99,7 @@ struct OnboardingView: View {
     private var consentDetails: some View {
         VStack(spacing: 12) {
             Text(AIProcessingConsent.summary)
-                .font(.footnote).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
+                .font(.footnote).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("onboarding-ai-consent")
             Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!)
@@ -118,14 +118,14 @@ struct OnboardingView: View {
                         HStack(spacing: 14) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(language.nativeName).font(.system(.headline, design: .rounded))
-                                Text(language.settingsTitle).font(.caption).foregroundStyle(MuralColor.secondary)
+                                Text(language.settingsTitle).font(.caption).foregroundStyle(FluenceColor.secondary)
                             }
                             Spacer()
                             Image(systemName: targetID == language.id ? "checkmark.circle.fill" : "circle")
-                                .font(.title3).foregroundStyle(targetID == language.id ? MuralColor.orange : MuralColor.secondary.opacity(0.4))
+                                .font(.title3).foregroundStyle(targetID == language.id ? FluenceColor.orange : FluenceColor.secondary.opacity(0.4))
                         }.padding(.horizontal, 18).padding(.vertical, 13).frame(maxWidth: .infinity)
                             .background(targetID == language.id ? .white.opacity(0.92) : .white.opacity(0.52), in: RoundedRectangle(cornerRadius: 22))
-                            .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(targetID == language.id ? MuralColor.orange.opacity(0.55) : .clear, lineWidth: 1.5) }
+                            .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(targetID == language.id ? FluenceColor.orange.opacity(0.55) : .clear, lineWidth: 1.5) }
                     }.buttonStyle(.plain)
                         .accessibilityLabel(language.settingsTitle)
                         .accessibilityAddTraits(targetID == language.id ? .isSelected : [])
@@ -141,7 +141,7 @@ struct OnboardingView: View {
                 Text("A little help,\nin your language.")
                     .font(.system(.title2, design: .rounded, weight: .semibold)).tracking(-0.5)
                 Text("Mural speaks \(target.name). Choose the language you read most easily for meanings.")
-                    .font(.subheadline).foregroundStyle(MuralColor.secondary)
+                    .font(.subheadline).foregroundStyle(FluenceColor.secondary)
             }.multilineTextAlignment(.center).accessibilityIdentifier("onboarding-meaning-title")
             Picker("Subtitle language", selection: Binding(get: { meaningLanguage }, set: { meaningLanguage = $0; hasChosenMeaning = true })) {
                 ForEach(MeaningLanguages.all, id: \.self) { Text($0).tag($0) }
@@ -152,11 +152,11 @@ struct OnboardingView: View {
             VStack(spacing: 8) {
                 Text(target.greeting).font(.system(.title2, design: .rounded, weight: .medium))
                 if target.id == "zh", let reading = MandarinPinyin.reading(target.greeting) {
-                    Text(reading).font(.callout).foregroundStyle(MuralColor.secondary)
+                    Text(reading).font(.callout).foregroundStyle(FluenceColor.secondary)
                 }
-                Text(MeaningLanguages.greeting(in: meaningLanguage)).font(.body).foregroundStyle(MuralColor.secondary)
+                Text(MeaningLanguages.greeting(in: meaningLanguage)).font(.body).foregroundStyle(FluenceColor.secondary)
                     .accessibilityIdentifier("onboarding-meaning-example")
-                Text("Turn meanings on whenever you need a hand.").font(.caption).foregroundStyle(MuralColor.secondary).padding(.top, 8)
+                Text("Turn meanings on whenever you need a hand.").font(.caption).foregroundStyle(FluenceColor.secondary).padding(.top, 8)
             }.multilineTextAlignment(.center).padding(.vertical, 12)
         }
     }
@@ -164,11 +164,11 @@ struct OnboardingView: View {
     private var keyStep: some View {
         VStack(spacing: 20) {
             VStack(spacing: 10) {
-                Image(systemName: "key.fill").font(.system(size: 36, weight: .light)).foregroundStyle(MuralColor.orange)
+                Image(systemName: "key.fill").font(.system(size: 36, weight: .light)).foregroundStyle(FluenceColor.orange)
                 Text("Groq API Key")
                     .font(.system(.title2, design: .rounded, weight: .semibold)).tracking(-0.5)
                 Text("Enter your free Groq API key (gsk_...). It is saved securely on your iPhone's Keychain.")
-                    .font(.subheadline).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
+                    .font(.subheadline).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
             }
             VStack(spacing: 12) {
                 SecureField("Groq API key (gsk_...)", text: $apiKeyInput)
@@ -228,19 +228,19 @@ struct AIConsentView: View {
     let decline: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            Image(systemName: "waveform.bubble").font(.system(size: 32, weight: .light)).foregroundStyle(MuralColor.orange)
+            Image(systemName: "waveform.bubble").font(.system(size: 32, weight: .light)).foregroundStyle(FluenceColor.orange)
             Text("Before we talk.").font(.system(.title, design: .rounded, weight: .semibold))
                 .accessibilityIdentifier("ai-consent-title")
             Text(AIProcessingConsent.summary).font(.body)
             Text("Your learning record is stored on this iPhone. Mural does not save raw audio. You can keep browsing your saved words and conversations without agreeing.")
-                .font(.subheadline).foregroundStyle(MuralColor.secondary)
+                .font(.subheadline).foregroundStyle(FluenceColor.secondary)
             Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!).font(.subheadline).underline()
             Button("Agree and continue", action: agree).font(.headline).frame(maxWidth: .infinity).padding(18)
-                .background(MuralColor.orange, in: Capsule()).accessibilityIdentifier("ai-consent-agree")
+                .background(FluenceColor.orange, in: Capsule()).accessibilityIdentifier("ai-consent-agree")
             Button("Not now", action: decline).font(.subheadline).frame(maxWidth: .infinity)
                 .accessibilityIdentifier("ai-consent-decline")
-        }.padding(28).foregroundStyle(MuralColor.ink).tint(MuralColor.ink)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).background(MuralColor.cream)
+        }.padding(28).foregroundStyle(FluenceColor.ink).tint(FluenceColor.ink)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).background(FluenceColor.cream)
             .presentationDetents([.large]).interactiveDismissDisabled()
     }
 }
@@ -255,9 +255,9 @@ private struct OnboardingBackground: View {
                 [0, 0], [0.5, 0], [1, 0],
                 [0, 0.5], [Float(0.5 + sin(phase) * 0.12), Float(0.45 + cos(phase) * 0.1)], [1, 0.5],
                 [0, 1], [0.5, 1], [1, 1]
-            ], colors: [MuralColor.cream, MuralColor.butter.opacity(0.7), MuralColor.cream,
-                        MuralColor.cream, MuralColor.peach.opacity(0.75), MuralColor.lilac.opacity(0.45),
-                        MuralColor.cream, MuralColor.cream, MuralColor.cream])
-        }.background(MuralColor.cream).ignoresSafeArea().accessibilityHidden(true)
+            ], colors: [FluenceColor.cream, FluenceColor.butter.opacity(0.7), FluenceColor.cream,
+                        FluenceColor.cream, FluenceColor.peach.opacity(0.75), FluenceColor.lilac.opacity(0.45),
+                        FluenceColor.cream, FluenceColor.cream, FluenceColor.cream])
+        }.background(FluenceColor.cream).ignoresSafeArea().accessibilityHidden(true)
     }
 }
