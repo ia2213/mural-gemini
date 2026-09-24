@@ -112,13 +112,24 @@ import MuralCore
         default: "Microphone off"
         }
     }
+    private var hasConfiguredProvider: Bool {
+        if CredentialStore.hasKey { return true }
+        if !store.preferences.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        if !store.preferences.vpsEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        return false
+    }
+
     func start() {
         guard !isRunning else { return }
         guard hasAIConsent else { startAfterConsent = true; showAIConsent = true; return }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--preview") { showSettings = true; return }
         #endif
-        guard CredentialStore.hasKey else { showSettings = true; return }
+        guard hasConfiguredProvider else {
+            error = "Veuillez renseigner votre clé API (Groq ou Google Gemini) dans les Réglages pour démarrer."
+            showSettings = true
+            return
+        }
         cancelReset(); meanings.reset()
         error = nil; notice = nil; lastAssessmentKey = ""
         lastLanguageCheck = ""; pendingCommands = [:]

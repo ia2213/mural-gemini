@@ -66,45 +66,13 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return list.compactMap { $0["id"] as? String }.filter { !$0.contains("whisper") && !$0.contains("guard") && !$0.contains("prompt") }
     }
 
-    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, model: String = "") async throws -> APIResult {
-        guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
-        let endpoint = "https://api.groq.com/openai/v1/chat/completions"
-        let selectedModel = sanitizeModel(model)
-        let messages: [[String: Any]] = [
-            ["role": "system", "content": instructions],
-            ["role": "user", "content": input]
-        ]
-        var body: [String: Any] = [
-            "model": selectedModel,
-            "messages": messages,
-            "max_tokens": schema == nil ? 1400 : 2200
-        ]
-        let json: [String: Any]
-        do {
-            json = try await postURL(endpoint, body: body, token: key)
-        } catch let failure as ProviderFailure where [400, 403, 404, 429, 500, 502, 503].contains(failure.status) {
-            let available = (try? await fetchAvailableModels()) ?? []
-            if let fallbackModel = available.first(where: { $0 != selectedModel }) {
-                body["model"] = fallbackModel
-                json = try await postURL(endpoint, body: body, token: key)
-            } else if selectedModel != "qwen/qwen3.8-27b" {
-                body["model"] = "qwen/qwen3.8-27b"
-                json = try await postURL(endpoint, body: body, token: key)
-            } else {
-                throw failure
-            }
-        }
-        guard let choices = json["choices"] as? [[String: Any]],
-              let firstChoice = choices.first,
-              let message = firstChoice["message"] as? [String: Any],
-              let text = message["content"] as? String else { throw APIError.incomplete }
-        var usage = APIUsage()
-        if let u = json["usage"] as? [String: Any] {
-            usage.input = u["prompt_tokens"] as? Int ?? 0
-            usage.output = u["completion_tokens"] as? Int ?? 0
-        }
-        guard !text.isEmpty else { throw APIError.incomplete }
-        return APIResult(text: text, sources: [], usage: usage)
+    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, model: String = "", preferences: Preferences = Preferences()) async throws -> APIResult {
+        return try await respondHistory(
+            instructions: instructions,
+            history: [["role": "user", "content": input]],
+            model: model,
+            preferences: preferences
+        )
     }
 
     func executeGroq(instructions: String, history: [[String: String]], model: String = "") async throws -> APIResult {
@@ -214,8 +182,35 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         throw lastError ?? APIError.incomplete
     }
 
-    func transcribe(audioData: Data, language: String = "en") async throws -> String {
-        guard let key = CredentialStore.read(), !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
+    func transcribe(audioData: Data, language: String = "en", preferences: Preferences = Preferences()) async throws -> String {
+        let groqKey = CredentialStore.read()?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let geminiKey = preferences.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 1. Try Groq Whisper Turbo if key is present
+        if !groqKey.isEmpty {
+            do {
+                return try await transcribeGroq(audioData: audioData, language: language, key: groqKey)
+            } catch {
+                print("Groq Whisper transcription failed: \(error). Trying fallback...")
+            }
+        }
+        
+        // 2. Fallback to Gemini 2.0 Flash Audio Transcription
+        if !geminiKey.isEmpty {
+            do {
+                return try await transcribeGemini(audioData: audioData, key: geminiKey)
+            } catch {
+                print("Gemini transcription failed: \(error)")
+            }
+        }
+        
+        if groqKey.isEmpty && geminiKey.isEmpty {
+            throw APIError.missingKey
+        }
+        throw APIError.incomplete
+    }
+    
+    private func transcribeGroq(audioData: Data, language: String, key: String) async throws -> String {
         let endpoint = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!
         let boundary = "Boundary-\(UUID().uuidString)"
         var request = URLRequest(url: endpoint)
@@ -258,6 +253,36 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let text = json["text"] as? String else { throw APIError.incomplete }
         return text
+    }
+
+    private func transcribeGemini(audioData: Data, key: String) async throws -> String {
+        let endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\(key)"
+        let base64 = audioData.base64EncodedString()
+        let body: [String: Any] = [
+            "contents": [
+                [
+                    "parts": [
+                        ["text": "Transcribe the following spoken audio accurately. Output ONLY the verbatim spoken transcription in the exact language spoken. Do not add comments, quotes, or metadata."],
+                        [
+                            "inline_data": [
+                                "mime_type": "audio/m4a",
+                                "data": base64
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+        let json = try await postURL(endpoint, body: body)
+        guard let candidates = json["candidates"] as? [[String: Any]],
+              let first = candidates.first,
+              let content = first["content"] as? [String: Any],
+              let parts = content["parts"] as? [[String: Any]],
+              let firstPart = parts.first,
+              let text = firstPart["text"] as? String else {
+            throw APIError.incomplete
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     static func object(_ fields: [String: Any]) -> [String: Any] { ["type": "OBJECT", "properties": fields, "required": fields.keys.sorted()] }

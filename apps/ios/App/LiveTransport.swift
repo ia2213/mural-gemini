@@ -156,7 +156,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         try? session.setActive(true)
         ownsAudioActivation = true
         
-        let initialResult = try await api.respond(instructions: instructions, input: "Start conversation")
+        let initialResult = try await api.respond(instructions: instructions, input: "Start conversation", model: preferences.groqModel, preferences: preferences)
         guard attempt == token else { throw CancellationError() }
         let sessionID = UUID().uuidString
         onEvent?(["type": "fluence.session.created", "session": ["id": sessionID]])
@@ -263,7 +263,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         
         do {
             let lang = String(languageCode.prefix(2)).lowercased()
-            let userText = try await api.transcribe(audioData: data, language: lang).trimmingCharacters(in: .whitespacesAndNewlines)
+            let userText = try await api.transcribe(audioData: data, language: lang, preferences: preferences).trimmingCharacters(in: .whitespacesAndNewlines)
             try? FileManager.default.removeItem(at: url)
             
             let lower = userText.lowercased()
