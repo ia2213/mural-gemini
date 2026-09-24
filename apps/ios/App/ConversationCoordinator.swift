@@ -139,10 +139,21 @@ import MuralCore
         session = record; store.save(record)
         let generation = record.id
         let learner = store.learner
-        // Each new conversation starts fresh; learned vocabulary and difficulty still carry forward.
+        // Each new conversation starts fresh; learned vocabulary, recent topics and difficulty still carry forward.
         let history: [[String: Any]] = []
-        let baseInstructions = TeachingPolicy.voice(language: language, learner: learner, theme: selectedTheme, interests: store.preferences.interests, meaningLanguage: store.preferences.meaningLanguage, correctionLevel: store.preferences.correctionLevel)
-        let instructions = FSRSPromptPolicy.buildVoiceConversationPrompt(basePolicyPrompt: baseInstructions, languageID: language.id, level: "B2")
+        let recentSessionTitles = store.learningSessions.suffix(4).compactMap { $0.title }
+        let cefr = store.learner.levelLabel.isEmpty ? "B2" : store.learner.levelLabel
+        let baseInstructions = TeachingPolicy.voice(
+            language: language,
+            learner: learner,
+            theme: selectedTheme,
+            interests: store.preferences.interests,
+            meaningLanguage: store.preferences.meaningLanguage,
+            correctionLevel: store.preferences.correctionLevel,
+            cefrLevel: cefr,
+            recentTopics: recentSessionTitles
+        )
+        let instructions = FSRSPromptPolicy.buildVoiceConversationPrompt(basePolicyPrompt: baseInstructions, languageID: language.id, level: cefr)
         connectionTask = Task { [weak self] in
             guard let self else { return }
             do { try await self.transport.connect(api: self.api, instructions: instructions, history: history, languageCode: self.language.id, speechRate: self.store.preferences.speechRate, voiceIdentifier: self.store.preferences.selectedVoiceIdentifier, preferences: self.store.preferences) }

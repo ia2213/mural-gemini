@@ -156,7 +156,8 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         try? session.setActive(true)
         ownsAudioActivation = true
         
-        let initialResult = try await api.respond(instructions: instructions, input: "Start conversation", model: preferences.groqModel, preferences: preferences)
+        let startPrompt = "Initialisation de la session : Salue brièvement l'élève et lance immédiatement un sujet ou une question de réflexion captivante et stimulante au niveau ciblé (\(languageCode)), sans AUCUNE question banale du style 'comment vas-tu' ou 'qu'as-tu fait'."
+        let initialResult = try await api.respond(instructions: instructions, input: startPrompt, model: preferences.groqModel, preferences: preferences)
         guard attempt == token else { throw CancellationError() }
         let sessionID = UUID().uuidString
         onEvent?(["type": "fluence.session.created", "session": ["id": sessionID]])

@@ -49,46 +49,65 @@ struct FluenceAura: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || !active || scenePhase != .active)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
             let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-            let phase = t * 0.5
-            let e = reduceMotion ? 0 : min(1, max(0, energy))
+            let rotation = Angle.degrees((t * 40).truncatingRemainder(dividingBy: 360))
+            let e = reduceMotion ? 0.3 : min(1.0, max(0.0, energy))
+            let pulseScale = 1.0 + sin(t * 2.5) * 0.02
+            
+            let auraColors: [Color] = [
+                Color(red: 0.15, green: 0.45, blue: 0.98), // Electric Royal Blue
+                Color(red: 0.02, green: 0.75, blue: 0.95), // Siri Cyan
+                Color(red: 0.65, green: 0.25, blue: 0.95), // Gemini Neon Purple
+                Color(red: 0.98, green: 0.35, blue: 0.65), // Rose Magenta
+                Color(red: 0.98, green: 0.55, blue: 0.20), // Sunset Amber
+                Color(red: 0.15, green: 0.45, blue: 0.98)  // Loop back
+            ]
             
             ZStack {
-                // Subtle edge glow on the screen perimeter
-                RoundedRectangle(cornerRadius: 32)
+                // Layer 1: Wide Diffuse Atmospheric Edge Glow (Siri / Gemini Style)
+                RoundedRectangle(cornerRadius: 38, style: .continuous)
                     .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.5 + e * 0.5),
-                                Color(red: 0.85, green: 0.45, blue: 0.95).opacity(0.4 + e * 0.4),
-                                Color(red: 1.0, green: 0.55, blue: 0.35).opacity(0.4 + e * 0.4),
-                                Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.5 + e * 0.5)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                        AngularGradient(
+                            gradient: Gradient(colors: auraColors),
+                            center: .center,
+                            angle: rotation
                         ),
-                        lineWidth: listening ? 6 : 2
+                        lineWidth: listening ? 18 : 10
                     )
-                    .blur(radius: listening ? 10 : 3)
-                    .opacity(active ? 0.7 : 0.15)
-                    .padding(2)
+                    .blur(radius: listening ? 24 : 14)
+                    .opacity(listening ? 0.95 : 0.65)
                 
-                // Very faint breathing radial gradient in background
+                // Layer 2: Core Vibrant Light Rim
+                RoundedRectangle(cornerRadius: 34, style: .continuous)
+                    .stroke(
+                        AngularGradient(
+                            gradient: Gradient(colors: auraColors),
+                            center: .center,
+                            angle: rotation + .degrees(180)
+                        ),
+                        lineWidth: listening ? 6 : 3.5
+                    )
+                    .blur(radius: listening ? 4 : 2)
+                    .opacity(listening ? 1.0 : 0.85)
+                
+                // Layer 3: Faint Ambient Center Field during active speech/energy
                 Circle()
                     .fill(
                         RadialGradient(
                             colors: [
-                                Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.04 + e * 0.04),
+                                Color(red: 0.15, green: 0.45, blue: 0.98).opacity(0.06 + e * 0.12),
+                                Color(red: 0.65, green: 0.25, blue: 0.95).opacity(0.04 + e * 0.08),
                                 .clear
                             ],
                             center: .center,
-                            startRadius: 0,
-                            endRadius: 350
+                            startRadius: 20,
+                            endRadius: 360
                         )
                     )
-                    .scaleEffect(1.0 + sin(phase) * 0.05)
+                    .scaleEffect(pulseScale)
             }
+            .padding(1)
             .ignoresSafeArea()
             .accessibilityHidden(true)
         }
