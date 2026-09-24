@@ -219,8 +219,8 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 let level = max(0.0, min(1.0, Double(power + 50) / 50.0))
                 self.onLevels?(level, 0)
                 
-                // VAD Threshold: -42 dB ensures normal spoken voice is reliably caught
-                if power > -42 {
+                // VAD Threshold: -48 dB ensures soft speech, breathing pauses, and natural speech rhythm are captured
+                if power > -48 {
                     speechDurationCount += 1
                     if speechDurationCount >= 2 {
                         speechDetected = true
@@ -228,8 +228,9 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                     }
                 } else if speechDetected {
                     if silenceStart == nil { silenceStart = Date() }
-                    // 0.9s silence after speech triggers transcription
-                    if let start = silenceStart, Date().timeIntervalSince(start) >= 0.9 {
+                    // 1.85s silence required after speech before concluding the turn is finished
+                    // This allows natural pauses, grammatical thinking, and complex clauses
+                    if let start = silenceStart, Date().timeIntervalSince(start) >= 1.85 {
                         speechDetected = false
                         speechDurationCount = 0
                         silenceStart = nil
@@ -266,10 +267,10 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
             let userText = try await api.transcribe(audioData: data, language: lang, preferences: preferences).trimmingCharacters(in: .whitespacesAndNewlines)
             try? FileManager.default.removeItem(at: url)
             
-            let lower = userText.lowercased()
-            let isHallucination = lower.contains("untertitel") || lower.contains("amara.org") || lower.contains("vielen dank") || lower.contains("subtitles") || lower.contains("thank you for watching")
+            let lower = userText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            let isSubtitleArtifact = lower.hasPrefix("untertitel von") || lower.hasPrefix("untertitelung") || lower == "amara.org" || lower == "thank you for watching" || lower == "thank you for watching." || lower == "vielen dank fürs zuschauen." || lower == "vielen dank fürs zuschauen" || lower.hasPrefix("subtitles by")
             
-            if !userText.isEmpty && userText.count >= 2 && !isHallucination && !synthesizer.isSpeaking {
+            if !userText.isEmpty && userText.count >= 2 && !isSubtitleArtifact && !synthesizer.isSpeaking {
                 let startMS = Int(Date().timeIntervalSince1970 * 1000) % 1000000
                 onEvent?(["type": "session.input_transcript.delta", "delta": userText, "start_ms": startMS, "end_ms": startMS + 500, "event_id": UUID().uuidString])
                 
