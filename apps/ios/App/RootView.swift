@@ -22,40 +22,43 @@ struct RootView: View {
     }
     var body: some View {
         @Bindable var coordinator = coordinator
-        Group {
-            if horizontalSizeClass == .regular {
-                NavigationSplitView {
-                    List {
-                        Button { tab = 0 } label: { Label("Talk", systemImage: "waveform") }
-                        Button { tab = 1 } label: { Label("Themes", systemImage: "square.grid.2x2") }
-                        Button { tab = 2 } label: { Label("Study & OCR", systemImage: "graduationcap") }
-                        Button { tab = 3 } label: { Label("Words", systemImage: "book") }
-                        Button { coordinator.showSettings = true } label: { Label("Settings", systemImage: "slider.horizontal.3") }
-                    }
-                    .navigationTitle("Fluence")
-                    .listStyle(.sidebar)
-                } detail: {
-                    shell {
-                        switch tab {
-                        case 0: TalkView(coordinator: coordinator)
-                        case 1: ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 }
-                        case 2: StudyHubView(coordinator: coordinator)
-                        case 3: WordsView(coordinator: coordinator)
-                        default: TalkView(coordinator: coordinator)
+        ZStack {
+            FluenceColor.background.ignoresSafeArea()
+            
+            Group {
+                switch tab {
+                case 0: immersiveTalkShell { TalkView(coordinator: coordinator) }
+                case 1: immersiveShell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
+                case 2: immersiveShell { StudyHubView(coordinator: coordinator) }
+                case 3: immersiveShell { WordsView(coordinator: coordinator) }
+                default: TalkView(coordinator: coordinator)
+                }
+            }
+            .animation(.easeInOut(duration: 0.5), value: tab)
+            
+            // Subtlest navigation switcher (bottom floating pill)
+            if !coordinator.isRunning || tab != 0 {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 24) {
+                        tabButton(icon: "waveform", index: 0)
+                        tabButton(icon: "square.grid.2x2", index: 1)
+                        tabButton(icon: "graduationcap", index: 2)
+                        tabButton(icon: "book", index: 3)
+                        
+                        Button { coordinator.showSettings = true } label: {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(FluenceColor.secondary)
                         }
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
+                    .padding(.bottom, 20)
                 }
-            } else {
-                TabView(selection: $tab) {
-                    Tab("Talk", systemImage: "waveform", value: 0) { shell { TalkView(coordinator: coordinator) } }
-                    Tab("Themes", systemImage: "square.grid.2x2", value: 1) {
-                        shell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
-                    }
-                    Tab("Study & OCR", systemImage: "graduationcap", value: 2) {
-                        shell { StudyHubView(coordinator: coordinator) }
-                    }
-                    Tab("Words", systemImage: "book", value: 3) { shell { WordsView(coordinator: coordinator) } }
-                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .tint(FluenceColor.ink)
@@ -81,28 +84,28 @@ struct RootView: View {
             if phase == .background { coordinator.background() }
             else if phase == .active { coordinator.resume() }
         }
-        #if DEBUG
-        .task {
-            #if targetEnvironment(simulator)
-            if ProcessInfo.processInfo.arguments.contains("--verify-network-recovery") {
-                coordinator.notice = await LiveTransport.verifyRecoveryLifecycle() ? "Network recovery lifecycle passed" : "Network recovery lifecycle failed"
-                return
-            }
-            #endif
-            if AudioVerification.requested { await AudioVerification.run(coordinator) }
-            else if ProcessInfo.processInfo.arguments.contains("--ended-conversation") { coordinator.prepareEndedPreview() }
-        }
-        #endif
     }
-    private func shell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    
+    private func tabButton(icon: String, index: Int) -> some View {
+        Button { tab = index } label: {
+            Image(systemName: tab == index ? "\(icon).fill" : icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(tab == index ? FluenceColor.accent : FluenceColor.secondary)
+        }
+    }
+
+    private func immersiveTalkShell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         NavigationStack {
-            content().background(FluenceColor.cream).toolbar {
-                ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { coordinator.showSettings = true } label: { Image(systemName: "slider.horizontal.3") }
-                        .accessibilityLabel("Settings")
-                }
-            }.toolbarBackground(FluenceColor.cream, for: .navigationBar)
+            content()
+                .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+
+    private func immersiveShell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        NavigationStack {
+            content()
+                .background(FluenceColor.background)
+                .toolbarBackground(FluenceColor.background, for: .navigationBar)
         }
     }
 }
@@ -117,104 +120,66 @@ struct TalkView: View {
         ZStack {
             FluenceAura(energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45), listening: coordinator.state == .active && !coordinator.isMuted, active: coordinator.state != .closing)
             
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    Text(coordinator.selectedTheme?.title ?? coordinator.language.talkTitle)
-                        .font(.system(.caption, design: .rounded, weight: .medium)).foregroundStyle(FluenceColor.secondary)
-                        .padding(.horizontal, 14).padding(.vertical, 9).background(.ultraThinMaterial, in: Capsule()).padding(.top, 12)
+            VStack(spacing: 0) {
+                // Immersive top area for theme display
+                if let themeTitle = coordinator.selectedTheme?.title {
+                    Text(themeTitle)
+                        .font(.system(.caption, design: .rounded, weight: .bold))
+                        .foregroundStyle(FluenceColor.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(.top, 16)
+                }
+                
+                Spacer()
+                
+                // Central Whisper Area
+                VStack(spacing: 24) {
+                    WhisperText(text: linkedCaption, isLarge: true)
+                        .padding(.horizontal, 30)
+                        .shadow(color: FluenceColor.background.opacity(0.8), radius: 10)
                     
-                    Spacer(minLength: 20)
-                    
-                    captionArea
-                    
-                    Spacer(minLength: 20)
-                    
-                    VStack(spacing: 2) {
-                        if coordinator.state == .active, let seconds = coordinator.inactivitySeconds {
-                            Text("Ending in \(seconds)s").fontWeight(.medium).monospacedDigit()
-                            Text("Reply to continue").font(.system(.caption2, design: .rounded))
-                        } else { Text(coordinator.status) }
+                    if coordinator.store.preferences.meaningVisible {
+                        WhisperText(text: AttributedString(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "..." : ""))
+                            .foregroundStyle(FluenceColor.secondary)
+                            .padding(.horizontal, 40)
                     }
-                    .font(.system(.caption, design: .rounded)).foregroundStyle(FluenceColor.secondary)
-                    .multilineTextAlignment(.center).frame(minHeight: 36)
-                    .padding(.bottom, 16)
-                    .accessibilityElement(children: .ignore).accessibilityLabel(coordinator.status)
-                    .accessibilityAddTraits([.isStaticText, .updatesFrequently]).accessibilityIdentifier("conversation-status")
+                }
+                
+                Spacer()
+                
+                // Bottom Area (Controls & User Speech)
+                VStack(spacing: 20) {
+                    if let user = coordinator.userPassage {
+                        Text(user.text)
+                            .font(.system(.subheadline, design: .rounded))
+                            .italic()
+                            .foregroundStyle(FluenceColor.secondary.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                            .transition(.opacity)
+                    }
                     
                     controls
-                    Text(coordinator.microphoneLabel).font(.caption2).foregroundStyle(FluenceColor.secondary).padding(.top, 10)
-                        .accessibilityIdentifier("microphone-status")
-                    HStack(spacing: 24) {
-                        if coordinator.state == .active {
-                            Button("Type instead", systemImage: "keyboard") { typing = true }
-                            Button("A little help", systemImage: "sparkles") { coordinator.help() }
-                        } else if coordinator.session == nil {
-                            Text("Reply in whichever language comes to you.").foregroundStyle(FluenceColor.secondary)
-                        } else if !coordinator.isRunning {
-                            Button("New conversation", systemImage: "arrow.counterclockwise") { coordinator.resetConversation() }
-                                .accessibilityIdentifier("new-conversation")
-                        }
-                    }.font(.caption).padding(.top, 6).padding(.bottom, 12)
-                    if let notice = coordinator.notice {
-                        Text(notice).font(.footnote).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center).padding(.bottom, 12)
-                    }
-                }.padding(.horizontal, 30).frame(maxWidth: 760).frame(maxWidth: .infinity).frame(minHeight: geometry.size.height)
+                        .padding(.bottom, 30)
+                }
             }
+            .animation(.easeInOut(duration: 0.8), value: coordinator.caption)
         }
         .sheet(isPresented: $typing) { TypedReplyView(coordinator: coordinator) }
-        .animation(.smooth(duration: 0.35), value: coordinator.state)
         .sheet(item: $transcript) { session in
             TranscriptView(session: session, meaningLanguage: coordinator.store.preferences.meaningLanguage)
         }
         .sheet(item: $lookup) { item in LookupView(item: item, coordinator: coordinator) }
     }
-    private var captionArea: some View {
-        VStack(spacing: 16) {
-            Text(linkedCaption)
-                .font(.system(size: coordinator.assistantPassage == nil ? 34 : 22, weight: .semibold, design: .rounded))
-                .tracking(-0.8).multilineTextAlignment(.center).tint(FluenceColor.ink)
-                .environment(\.openURL, OpenURLAction { url in
-                    guard url.scheme == "mural-word", let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let word = components.queryItems?.first?.value else { return .discarded }
-                    lookup = WordLookup(word: word, sentence: coordinator.caption); return .handled
-                }).accessibilityIdentifier("target-caption")
-                .shadow(color: FluenceColor.background.opacity(0.8), radius: 10)
-                
-            if coordinator.language.id == "zh" { PinyinHelp(text: coordinator.caption) }
-            
-            if coordinator.store.preferences.meaningVisible {
-                Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Finding the meaning…" : "")
-                    .font(.title3).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
-                    .accessibilityIdentifier("meaning-caption")
-                    
-                if let error = coordinator.meaningError {
-                    VStack(spacing: 6) {
-                        Text(error).foregroundStyle(FluenceColor.secondary)
-                        Button("Try meaning again") { coordinator.retryMeaning() }
-                    }.font(.caption).multilineTextAlignment(.center)
-                }
-            }
-            
-            if let user = coordinator.userPassage {
-                VStack(spacing: 4) {
-                    Text(String(user.text.suffix(160)))
-                        .font(.subheadline).italic()
-                        .foregroundStyle(FluenceColor.secondary.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }.padding(.top, 8)
-            }
-            
-            if coordinator.working { ProgressView("Checking that for you…").font(.caption).tint(FluenceColor.secondary) }
-            if let sources = coordinator.session?.topics.last?.sources, !sources.isEmpty {
-                Button("Sources", systemImage: "link") { transcript = coordinator.session }.font(.caption)
-            }
-        }.frame(maxWidth: .infinity)
-    }
+    
     private var linkedCaption: AttributedString {
         var result = AttributedString()
         for segment in CaptionWords.segments(coordinator.caption, languageID: coordinator.language.id) {
             var part = AttributedString(segment.text)
             if coordinator.assistantPassage != nil, let word = segment.lookup {
-                var components = URLComponents(); components.scheme = "mural-word"; components.host = "lookup"
+                var components = URLComponents(); components.scheme = "fluence-word"; components.host = "lookup"
                 components.queryItems = [URLQueryItem(name: "word", value: word)]
                 part.link = components.url
             }
@@ -222,38 +187,48 @@ struct TalkView: View {
         }
         return result
     }
+
     private var controls: some View {
-        HStack(alignment: .center, spacing: 27) {
-            Button { coordinator.toggleMeaning() } label: {
-                VStack(spacing: 6) {
-                    Image(systemName: coordinator.store.preferences.meaningVisible ? "captions.bubble.fill" : "captions.bubble")
-                        .frame(width: 48, height: 48).modifier(SoftGlass(tint: coordinator.store.preferences.meaningVisible ? FluenceColor.butter.opacity(0.7) : .white.opacity(0.4)))
-                    Text("Meaning").font(.caption2)
-                }.contentShape(Rectangle())
-            }.buttonStyle(.plain)
-                .accessibilityLabel(coordinator.store.preferences.meaningVisible ? "Hide meaning subtitles" : "Show meaning subtitles")
-                .accessibilityValue(coordinator.store.preferences.meaningVisible ? "On" : "Off")
+        HStack(spacing: 40) {
+            // Typing mode toggle
+            Button { typing = true } label: {
+                Image(systemName: "keyboard")
+                    .font(.system(size: 22))
+                    .foregroundStyle(FluenceColor.secondary)
+            }
+            
+            // Primary Action (Mic / Start)
             Button {
                 if coordinator.state == .active { coordinator.toggleMute() }
                 else if !coordinator.isRunning { coordinator.start() }
             } label: {
                 ZStack {
-                    Circle().fill(LinearGradient(colors: [Color(red: 1, green: 0.73, blue: 0.48), FluenceColor.orange], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    if coordinator.state == .connecting || coordinator.state == .closing { ProgressView().tint(FluenceColor.ink) }
-                    else { Image(systemName: coordinator.isMuted && coordinator.state == .active ? "mic.slash" : "mic").font(.system(size: 28, weight: .regular)).contentTransition(.symbolEffect(.replace)) }
-                }.frame(width: 76, height: 76).shadow(color: FluenceColor.orange.opacity(0.25), radius: 10, y: 6)
-            }.buttonStyle(.plain).padding(.bottom, 18)
-                .disabled(coordinator.state == .connecting || coordinator.state == .closing)
-                .accessibilityLabel(coordinator.state == .active ? (coordinator.isMuted ? "Unmute microphone" : "Mute microphone") : "Start conversation")
-                .accessibilityIdentifier("start-conversation")
-            Button { if coordinator.isRunning { coordinator.end() } else { transcript = coordinator.session } } label: {
-                VStack(spacing: 6) {
-                    Image(systemName: coordinator.isRunning ? "phone.down" : "text.bubble").frame(width: 48, height: 48).modifier(SoftGlass())
-                    Text(coordinator.isRunning ? "End" : "Transcript").font(.caption2)
-                }.contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel(coordinator.isRunning ? "End conversation" : "Conversation transcript")
-                .disabled(coordinator.session == nil)
-        }.foregroundStyle(FluenceColor.ink)
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 84, height: 84)
+                    
+                    if coordinator.state == .connecting || coordinator.state == .closing {
+                        ProgressView().tint(FluenceColor.accent)
+                    } else {
+                        Image(systemName: coordinator.isMuted && coordinator.state == .active ? "mic.slash" : "mic")
+                            .font(.system(size: 30, weight: .medium))
+                            .foregroundStyle(coordinator.state == .active && !coordinator.isMuted ? FluenceColor.accent : FluenceColor.ink)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            
+            // End / Transcript
+            Button {
+                if coordinator.isRunning { coordinator.end() }
+                else { transcript = coordinator.session }
+            } label: {
+                Image(systemName: coordinator.isRunning ? "xmark.circle" : "text.bubble")
+                    .font(.system(size: 22))
+                    .foregroundStyle(FluenceColor.secondary)
+            }
+        }
     }
 }
 

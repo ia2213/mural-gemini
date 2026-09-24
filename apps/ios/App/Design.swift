@@ -51,43 +51,77 @@ struct FluenceAura: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || !active || scenePhase != .active)) { timeline in
             let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-            let phase = t * 0.8
+            let phase = t * 0.5
             let e = reduceMotion ? 0 : min(1, max(0, energy))
             
-            GeometryReader { geo in
-                ZStack {
-                    // Siri-like colored blobs around the edges and center
-                    Ellipse()
-                        .fill(Color(red: 0.4, green: 0.2, blue: 0.9).opacity(0.4 + e * 0.2)) // Deep purple
-                        .frame(width: geo.size.width * 0.8, height: geo.size.width * 0.8)
-                        .blur(radius: 60)
-                        .offset(x: sin(phase) * 60, y: -geo.size.height * 0.3 + (cos(phase * 0.7) * 40))
-                    
-                    Ellipse()
-                        .fill(Color(red: 0.2, green: 0.6, blue: 1.0).opacity(0.4 + e * 0.3)) // Cyan/Blue
-                        .frame(width: geo.size.width * 0.9, height: geo.size.width * 0.9)
-                        .blur(radius: 70)
-                        .offset(x: cos(phase * 1.2) * 50, y: geo.size.height * 0.3 + (sin(phase * 0.5) * 50))
-                    
-                    Ellipse()
-                        .fill(Color(red: 1.0, green: 0.3, blue: 0.6).opacity(0.3 + e * 0.2)) // Pink
-                        .frame(width: geo.size.width * 0.7, height: geo.size.width * 0.7)
-                        .blur(radius: 80)
-                        .offset(x: -geo.size.width * 0.4 + (sin(phase * 0.9) * 40), y: cos(phase * 0.8) * 60)
-                    
-                    Ellipse()
-                        .fill(Color(red: 1.0, green: 0.6, blue: 0.2).opacity(0.3 + e * 0.2)) // Orange/Amber
-                        .frame(width: geo.size.width * 0.7, height: geo.size.width * 0.7)
-                        .blur(radius: 70)
-                        .offset(x: geo.size.width * 0.4 + (cos(phase * 1.1) * 30), y: sin(phase * 0.6) * 50)
-                }
-                .opacity(listening ? 0.9 : 0.4)
-                .scaleEffect(listening ? 1.05 + (e * 0.05) : 1.0)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                // Subtle edge glow only
+                RoundedRectangle(cornerRadius: 40)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.6 + e * 0.4),
+                                Color(red: 0.8, green: 0.4, blue: 1.0).opacity(0.5 + e * 0.3),
+                                Color(red: 1.0, green: 0.6, blue: 0.4).opacity(0.4 + e * 0.2),
+                                Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.6 + e * 0.4)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: listening ? 8 : 2
+                    )
+                    .blur(radius: listening ? 12 : 4)
+                    .opacity(active ? 0.8 : 0.2)
+                    .padding(4)
+                
+                // Very faint breathing background
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.05 + e * 0.05),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 400
+                        )
+                    )
+                    .scaleEffect(1.0 + sin(phase) * 0.1)
             }
             .ignoresSafeArea()
             .accessibilityHidden(true)
         }
+    }
+}
+
+struct WhisperText: View {
+    var text: AttributedString
+    var isLarge: Bool = false
+    @State private var blurRadius: CGFloat = 10
+    @State private var opacity: Double = 0
+    
+    var body: some View {
+        Text(text)
+            .font(.system(size: isLarge ? 32 : 18, weight: .medium, design: .rounded))
+            .multilineTextAlignment(.center)
+            .blur(radius: blurRadius)
+            .opacity(opacity)
+            .onAppear {
+                withAnimation(.easeOut(duration: 1.5)) {
+                    blurRadius = 0
+                    opacity = 1.0
+                }
+            }
+            .onChange(of: String(text.characters)) { _, _ in
+                // Re-trigger effect on text change
+                blurRadius = 8
+                opacity = 0.2
+                withAnimation(.easeOut(duration: 1.2)) {
+                    blurRadius = 0
+                    opacity = 1.0
+                }
+            }
     }
 }
 
