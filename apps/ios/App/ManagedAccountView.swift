@@ -39,7 +39,7 @@ struct ManagedAccountView: View {
                     VStack(spacing: 14) {
                         Text("Fluence stores your sign-in details and account sessions. You can practise with your own API key without an account.")
                             .font(.footnote).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
-                        Text("By signing in, you agree to the [Terms of use](https://mural.chat/terms/) and acknowledge the [Privacy policy](https://mural.chat/privacy/).")
+                        Text("By signing in, you agree to the [Terms of use](https://fluence.chat/terms/) and acknowledge the [Privacy policy](https://fluence.chat/privacy/).")
                             .font(.footnote).multilineTextAlignment(.center).tint(FluenceColor.ink)
                             .accessibilityIdentifier("managed-sign-in-agreement")
                         if store.configuration?.providers.contains(.google) == true {
@@ -60,8 +60,8 @@ struct ManagedAccountView: View {
                         .accessibilityIdentifier("managedAccountMessage")
                 }
                 HStack(spacing: 24) {
-                    Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!)
-                    Link("Terms", destination: URL(string: "https://mural.chat/terms/")!)
+                    Link("Privacy policy", destination: URL(string: "https://fluence.chat/privacy/")!)
+                    Link("Terms", destination: URL(string: "https://fluence.chat/terms/")!)
                 }.font(.footnote).tint(FluenceColor.ink)
             }.padding(24).frame(maxWidth: 520).frame(maxWidth: .infinity)
         }

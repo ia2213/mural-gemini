@@ -102,7 +102,7 @@ struct OnboardingView: View {
                 .font(.footnote).foregroundStyle(FluenceColor.secondary).multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("onboarding-ai-consent")
-            Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!)
+            Link("Privacy policy", destination: URL(string: "https://fluence.chat/privacy/")!)
                 .font(.footnote).underline().accessibilityIdentifier("onboarding-privacy-policy")
         }
     }
@@ -234,7 +234,7 @@ struct AIConsentView: View {
             Text(AIProcessingConsent.summary).font(.body)
             Text("Your learning record is stored on this iPhone. Fluence does not save raw audio. You can keep browsing your saved words and conversations without agreeing.")
                 .font(.subheadline).foregroundStyle(FluenceColor.secondary)
-            Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!).font(.subheadline).underline()
+            Link("Privacy policy", destination: URL(string: "https://fluence.chat/privacy/")!).font(.subheadline).underline()
             Button("Agree and continue", action: agree).font(.headline).frame(maxWidth: .infinity).padding(18)
                 .background(FluenceColor.orange, in: Capsule()).accessibilityIdentifier("ai-consent-agree")
             Button("Not now", action: decline).font(.subheadline).frame(maxWidth: .infinity)

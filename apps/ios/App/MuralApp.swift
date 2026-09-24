@@ -1,6 +1,6 @@
 import SwiftUI
 
-@main struct MuralApp: App {
+@main struct FluenceApp: App {
     @State private var store: LearningStore?
     @State private var startupError: String?
     init() {
