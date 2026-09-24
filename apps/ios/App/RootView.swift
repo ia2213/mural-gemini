@@ -171,7 +171,7 @@ struct TalkView: View {
     private var captionArea: some View {
         VStack(spacing: 16) {
             Text(linkedCaption)
-                .font(.system(coordinator.assistantPassage == nil ? .largeTitle : .system(size: 38), design: .rounded, weight: .semibold))
+                .font(.system(size: coordinator.assistantPassage == nil ? 34 : 22, weight: .semibold, design: .rounded))
                 .tracking(-0.8).multilineTextAlignment(.center).tint(FluenceColor.ink)
                 .environment(\.openURL, OpenURLAction { url in
                     guard url.scheme == "mural-word", let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let word = components.queryItems?.first?.value else { return .discarded }
