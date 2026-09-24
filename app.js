@@ -533,6 +533,11 @@ function generateClientAIResponse(userMsg, user) {
 
 // Append User Bubble
 function appendUserMessage(text, isVoice = false) {
+  const userTextEl = document.getElementById('whisperUserText');
+  if (userTextEl && text) {
+    userTextEl.textContent = `« Vous : ${text} »`;
+    userTextEl.classList.remove('hidden');
+  }
   const container = document.getElementById('messagesContainer');
   if (!container) return;
 
@@ -552,6 +557,9 @@ function appendUserMessage(text, isVoice = false) {
 
 // Append Teacher Card
 function appendTeacherMessage(data) {
+  if (typeof updateWhisperTypography === 'function' && data) {
+    updateWhisperTypography(data.reply, data.translationFr, data.correction);
+  }
   const container = document.getElementById('messagesContainer');
   if (!container) return;
 
