@@ -244,10 +244,17 @@ function loadSavedPreferences() {
   } catch (e) {}
 }
 
-function saveLocalUser() {
+// Save preferences to localStorage and server
+function savePreferences() {
   try {
     localStorage.setItem('fluence_user_prefs', JSON.stringify(currentUser));
   } catch (e) {}
+
+  if (currentUser.id) {
+    if (currentUser.learning_lang) updateUserSetting('learning_lang', currentUser.learning_lang);
+    if (currentUser.level) updateUserSetting('level', currentUser.level);
+    if (currentUser.current_theme) updateUserSetting('current_theme', currentUser.current_theme);
+  }
 }
 
 // Load User Data
@@ -759,9 +766,9 @@ async function selectLevel(level) {
 
   document.querySelectorAll('.level-btn').forEach(btn => {
     if (btn.textContent.trim() === level) {
-      btn.className = 'level-btn py-2 rounded-lg bg-sky-500 text-xs font-bold text-tg-text';
+      btn.className = 'level-btn py-2 rounded-xl bg-indigo-600 text-xs font-bold text-white shadow-md shadow-indigo-600/30 transition';
     } else {
-      btn.className = 'level-btn py-2 rounded-lg chat-bot text-xs font-bold text-tg-hint hover:bg-stone-100';
+      btn.className = 'level-btn py-2 rounded-xl bg-white/5 text-xs font-medium text-slate-300 hover:bg-white/10 transition';
     }
   });
 }
