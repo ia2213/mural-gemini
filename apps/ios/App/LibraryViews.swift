@@ -47,9 +47,8 @@ struct ThemesView: View {
                     }
                 }
                 if themes.isEmpty { ContentUnavailableView.search(text: search) }
-                Spacer(minLength: 120)
             }.padding(24).frame(maxWidth: 1000).frame(maxWidth: .infinity, alignment: .topLeading)
-        }.padding(.bottom, 60).foregroundStyle(FluenceColor.ink)
+        }.foregroundStyle(FluenceColor.ink)
             .searchable(text: $search, prompt: "Find a conversation")
             .sheet(isPresented: $current) { CurrentTopicView(coordinator: coordinator) { choose(coordinator.selectedTheme) } }
     }
@@ -134,9 +133,8 @@ struct WordsView: View {
                         Text("Observé lors de nos conversations. Estimations non officielles.").font(.footnote).foregroundStyle(FluenceColor.secondary)
                     }.padding(22).background(FluenceColor.butter, in: RoundedRectangle(cornerRadius: 24))
                 }
-                Spacer(minLength: 120)
             }.padding(26).frame(maxWidth: 1000).frame(maxWidth: .infinity, alignment: .topLeading)
-        }.padding(.bottom, 60).foregroundStyle(FluenceColor.ink).searchable(text: $search, prompt: "Find a word")
+        }.foregroundStyle(FluenceColor.ink).searchable(text: $search, prompt: "Find a word")
             .sheet(item: $selected) { word in WordDetailView(word: word, store: coordinator.store) }
             .sheet(isPresented: $sessions) { SessionHistoryView(store: coordinator.store) }
     }
@@ -199,8 +197,7 @@ struct TranscriptView: View {
                         if session.fragments.isEmpty && session.topics.isEmpty { Text("Your conversation will appear here.").foregroundStyle(FluenceColor.secondary) }
                     } else { Text("Start a conversation and your words will appear here.") }
                 }.padding(26)
-                Spacer(minLength: 120)
-            }.background(FluenceColor.cream).padding(.bottom, 60).foregroundStyle(FluenceColor.ink)
+            }.background(FluenceColor.cream).foregroundStyle(FluenceColor.ink)
                 .navigationTitle("Notre conversation").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Terminé") { dismiss() } } }
         }
@@ -224,7 +221,7 @@ struct SessionHistoryView: View {
                         }.padding(.vertical, 8)
                     }.swipeActions { Button("Supprimer", role: .destructive) { deleting = session }.disabled(session.endedAt == nil) }
                 }
-            }.scrollContentBackground(.hidden).background(FluenceColor.cream).padding(.bottom, 60)
+            }.scrollContentBackground(.hidden).background(FluenceColor.cream)
                 .navigationTitle("Conversations").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Terminé") { dismiss() } } }
         }.sheet(item: $selected) { session in EditableTranscriptView(sessionID: session.id, store: store) }
@@ -269,8 +266,7 @@ struct EditableTranscriptView: View {
                     }
                     ForEach(session?.topics ?? []) { topic in Text(.init(topic.text)); SourcesView(sources: topic.sources, date: topic.retrievedAt) }
                 }.padding(26)
-                Spacer(minLength: 120)
-            }.background(FluenceColor.cream).padding(.bottom, 60).foregroundStyle(FluenceColor.ink)
+            }.background(FluenceColor.cream).foregroundStyle(FluenceColor.ink)
                 .navigationTitle("Notre conversation").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Terminé") { dismiss() } } }
         }.sheet(isPresented: Binding(get: { editingID != nil }, set: { if !$0 { editingID = nil } })) {
@@ -478,9 +474,6 @@ struct SettingsView: View {
                     Text("L'audio et le texte sélectionné sont traités par Groq (ou votre VPS) pendant la discussion. L'audio brut n'est pas sauvegardé par Fluence.").font(.footnote)
                     Button("Open-source notices") { notices = true }
                 }
-                
-                // Add bottom spacer inside the Form to ensure it scrolls up above the floating tab bar
-                Color.clear.frame(height: 120).listRowBackground(Color.clear)
             }.scrollContentBackground(.hidden).background(FluenceColor.cream).tint(FluenceColor.secondary)
                 .navigationTitle("Réglages").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { key = ""; dismiss() } } }

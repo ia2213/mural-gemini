@@ -7,6 +7,7 @@ struct RootView: View {
     @State private var onboarding = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    
     init(store: LearningStore) {
         let coordinator = ConversationCoordinator(store: store)
         #if DEBUG && targetEnvironment(simulator)
@@ -20,54 +21,52 @@ struct RootView: View {
         #endif
         _coordinator = State(initialValue: coordinator)
     }
+    
     var body: some View {
         @Bindable var coordinator = coordinator
-        ZStack {
-            FluenceColor.background.ignoresSafeArea()
+        TabView(selection: $tab) {
+            NavigationStack {
+                TalkView(coordinator: coordinator)
+            }
+            .tabItem {
+                Label("Discussion", systemImage: "waveform")
+            }
+            .tag(0)
             
-            Group {
-                switch tab {
-                case 0: immersiveTalkShell { TalkView(coordinator: coordinator) }
-                case 1: immersiveShell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
-                case 2: immersiveShell { StudyHubView(coordinator: coordinator) }
-                case 3: immersiveShell { WordsView(coordinator: coordinator) }
-                default: TalkView(coordinator: coordinator)
+            NavigationStack {
+                StudyHubView(coordinator: coordinator)
+            }
+            .tabItem {
+                Label("Professeur", systemImage: "graduationcap.fill")
+            }
+            .tag(1)
+            
+            NavigationStack {
+                WordsView(coordinator: coordinator)
+            }
+            .tabItem {
+                Label("Vocabulaire", systemImage: "book.fill")
+            }
+            .tag(2)
+            
+            NavigationStack {
+                ThemesView(coordinator: coordinator) { theme in
+                    coordinator.chooseTheme(theme)
+                    tab = 0
                 }
             }
-            .animation(.easeInOut(duration: 0.5), value: tab)
-            
-            // Subtlest navigation switcher (bottom floating pill)
-            if !coordinator.isRunning || tab != 0 {
-                VStack {
-                    Spacer()
-                    HStack(spacing: 24) {
-                        tabButton(icon: "waveform", index: 0)
-                        tabButton(icon: "square.grid.2x2", index: 1)
-                        tabButton(icon: "graduationcap", index: 2)
-                        tabButton(icon: "book", index: 3)
-                        
-                        Button { coordinator.showSettings = true } label: {
-                            Image(systemName: "slider.horizontal.3")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(FluenceColor.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 14)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
-                    .padding(.bottom, 20)
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+            .tabItem {
+                Label("Thèmes", systemImage: "sparkles")
             }
+            .tag(3)
         }
-        .tint(FluenceColor.ink)
+        .tint(FluenceColor.accent)
         .sheet(isPresented: $coordinator.showSettings) { SettingsView(coordinator: coordinator) }
         .sheet(isPresented: $coordinator.showAIConsent, onDismiss: { coordinator.resumeAfterAIConsent() }) {
             AIConsentView(agree: { coordinator.acceptAIConsent() }, decline: { coordinator.declineAIConsent() })
         }
         .fullScreenCover(isPresented: $onboarding) { OnboardingView(coordinator: coordinator) { coordinator.store.updatePreferences { $0.hasOnboarded = true }; onboarding = false } }
-        .alert("A little interruption", isPresented: Binding(get: { coordinator.error != nil || coordinator.store.error != nil }, set: { if !$0 { coordinator.error = nil; coordinator.store.error = nil } })) {
+        .alert("Information", isPresented: Binding(get: { coordinator.error != nil || coordinator.store.error != nil }, set: { if !$0 { coordinator.error = nil; coordinator.store.error = nil } })) {
             Button("OK", role: .cancel) { coordinator.error = nil; coordinator.store.error = nil }
         } message: { Text(coordinator.error ?? coordinator.store.error ?? "") }
         .onAppear {
@@ -85,29 +84,6 @@ struct RootView: View {
             else if phase == .active { coordinator.resume() }
         }
     }
-    
-    private func tabButton(icon: String, index: Int) -> some View {
-        Button { tab = index } label: {
-            Image(systemName: tab == index ? "\(icon).fill" : icon)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(tab == index ? FluenceColor.accent : FluenceColor.secondary)
-        }
-    }
-
-    private func immersiveTalkShell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        NavigationStack {
-            content()
-                .toolbar(.hidden, for: .navigationBar)
-        }
-    }
-
-    private func immersiveShell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        NavigationStack {
-            content()
-                .background(FluenceColor.background)
-                .toolbarBackground(FluenceColor.background, for: .navigationBar)
-        }
-    }
 }
 
 struct TalkView: View {
@@ -116,56 +92,131 @@ struct TalkView: View {
     @State private var typing = false
     @State private var transcript: SessionRecord?
     @State private var lookup: WordLookup?
+    
     var body: some View {
         ZStack {
-            FluenceAura(energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45), listening: coordinator.state == .active && !coordinator.isMuted, active: coordinator.state != .closing)
+            FluenceColor.background.ignoresSafeArea()
+            
+            // Subtle glowing perimeter aura
+            FluenceAura(
+                energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45),
+                listening: coordinator.state == .active && !coordinator.isMuted,
+                active: coordinator.state != .closing
+            )
             
             VStack(spacing: 0) {
-                // Immersive top area for theme display
+                // Top status or active theme pill
                 if let themeTitle = coordinator.selectedTheme?.title {
-                    Text(themeTitle)
-                        .font(.system(.caption, design: .rounded, weight: .bold))
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .font(.caption2)
+                        Text(themeTitle)
+                            .font(.system(.caption, design: .rounded, weight: .semibold))
+                    }
+                    .foregroundStyle(FluenceColor.accent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(FluenceColor.accent.opacity(0.12), in: Capsule())
+                    .padding(.top, 12)
+                } else {
+                    Text(coordinator.status)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(FluenceColor.secondary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .padding(.top, 16)
+                        .padding(.top, 12)
                 }
                 
-                Spacer()
+                Spacer(minLength: 20)
                 
-                // Central Whisper Area
-                VStack(spacing: 24) {
-                    WhisperText(text: linkedCaption, isLarge: true)
-                        .padding(.horizontal, 30)
-                        .shadow(color: FluenceColor.background.opacity(0.8), radius: 10)
+                // Central High-Contrast Text Area
+                VStack(spacing: 20) {
+                    Text(linkedCaption)
+                        .font(.system(size: coordinator.assistantPassage == nil ? 38 : 26, weight: .bold, design: .rounded))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(FluenceColor.ink)
+                        .padding(.horizontal, 28)
+                        .environment(\.openURL, OpenURLAction { url in
+                            guard url.scheme == "fluence-word", let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let word = components.queryItems?.first?.value else { return .discarded }
+                            lookup = WordLookup(word: word, sentence: coordinator.caption)
+                            return .handled
+                        })
                     
                     if coordinator.store.preferences.meaningVisible {
-                        WhisperText(text: AttributedString(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "..." : ""))
+                        Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Traduction en cours…" : "")
+                            .font(.system(.title3, design: .rounded))
                             .foregroundStyle(FluenceColor.secondary)
-                            .padding(.horizontal, 40)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
                     }
                 }
                 
-                Spacer()
+                Spacer(minLength: 20)
                 
-                // Bottom Area (Controls & User Speech)
+                // Bottom User Feedback & Primary Controls
                 VStack(spacing: 20) {
                     if let user = coordinator.userPassage {
-                        Text(user.text)
+                        Text("« \(user.text) »")
                             .font(.system(.subheadline, design: .rounded))
                             .italic()
-                            .foregroundStyle(FluenceColor.secondary.opacity(0.7))
+                            .foregroundStyle(FluenceColor.secondary)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
+                            .padding(.horizontal, 32)
                             .transition(.opacity)
                     }
                     
+                    if let notice = coordinator.notice {
+                        Text(notice)
+                            .font(.caption)
+                            .foregroundStyle(FluenceColor.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
+                    }
+                    
                     controls
-                        .padding(.bottom, 30)
+                        .padding(.bottom, 16)
                 }
             }
-            .animation(.easeInOut(duration: 0.8), value: coordinator.caption)
+        }
+        .navigationTitle("Fluence")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    ForEach(LanguageRegistry.all) { lang in
+                        Button {
+                            coordinator.selectLanguage(lang.id)
+                        } label: {
+                            HStack {
+                                Text(lang.settingsTitle)
+                                if coordinator.language.id == lang.id {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(coordinator.language.name)
+                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                            .foregroundStyle(FluenceColor.ink)
+                        Image(systemName: "chevron.down")
+                            .font(.caption2.bold())
+                            .foregroundStyle(FluenceColor.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(FluenceColor.accent.opacity(0.1), in: Capsule())
+                }
+            }
+            
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    coordinator.showSettings = true
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(FluenceColor.ink)
+                }
+            }
         }
         .sheet(isPresented: $typing) { TypedReplyView(coordinator: coordinator) }
         .sheet(item: $transcript) { session in
@@ -179,55 +230,83 @@ struct TalkView: View {
         for segment in CaptionWords.segments(coordinator.caption, languageID: coordinator.language.id) {
             var part = AttributedString(segment.text)
             if coordinator.assistantPassage != nil, let word = segment.lookup {
-                var components = URLComponents(); components.scheme = "fluence-word"; components.host = "lookup"
+                var components = URLComponents()
+                components.scheme = "fluence-word"
+                components.host = "lookup"
                 components.queryItems = [URLQueryItem(name: "word", value: word)]
                 part.link = components.url
             }
-            part.foregroundColor = FluenceColor.ink; result.append(part)
+            part.foregroundColor = FluenceColor.ink
+            result.append(part)
         }
         return result
     }
 
     private var controls: some View {
-        HStack(spacing: 40) {
-            // Typing mode toggle
-            Button { typing = true } label: {
-                Image(systemName: "keyboard")
-                    .font(.system(size: 22))
-                    .foregroundStyle(FluenceColor.secondary)
+        HStack(spacing: 44) {
+            // Typing mode button
+            Button {
+                typing = true
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(FluenceColor.ink.opacity(0.06))
+                        .frame(width: 52, height: 52)
+                    Image(systemName: "keyboard")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(FluenceColor.ink)
+                }
             }
+            .buttonStyle(.plain)
             
-            // Primary Action (Mic / Start)
+            // Big Central Mic Action Button
             Button {
                 if coordinator.state == .active { coordinator.toggleMute() }
                 else if !coordinator.isRunning { coordinator.start() }
             } label: {
                 ZStack {
                     Circle()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: 84, height: 84)
+                        .fill(
+                            LinearGradient(
+                                colors: coordinator.state == .active && !coordinator.isMuted ?
+                                    [FluenceColor.accent, Color(red: 0.5, green: 0.35, blue: 0.95)] :
+                                    [FluenceColor.accent.opacity(0.85), FluenceColor.accent],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 76, height: 76)
+                        .shadow(color: FluenceColor.accent.opacity(0.3), radius: 8, y: 4)
                     
                     if coordinator.state == .connecting || coordinator.state == .closing {
-                        ProgressView().tint(FluenceColor.accent)
+                        ProgressView()
+                            .tint(.white)
                     } else {
-                        Image(systemName: coordinator.isMuted && coordinator.state == .active ? "mic.slash" : "mic")
-                            .font(.system(size: 30, weight: .medium))
-                            .foregroundStyle(coordinator.state == .active && !coordinator.isMuted ? FluenceColor.accent : FluenceColor.ink)
+                        Image(systemName: coordinator.isMuted && coordinator.state == .active ? "mic.slash.fill" : "mic.fill")
+                            .font(.system(size: 30, weight: .semibold))
+                            .foregroundStyle(.white)
                             .contentTransition(.symbolEffect(.replace))
                     }
                 }
             }
             .buttonStyle(.plain)
             
-            // End / Transcript
+            // End conversation / Transcript button
             Button {
                 if coordinator.isRunning { coordinator.end() }
                 else { transcript = coordinator.session }
             } label: {
-                Image(systemName: coordinator.isRunning ? "xmark.circle" : "text.bubble")
-                    .font(.system(size: 22))
-                    .foregroundStyle(FluenceColor.secondary)
+                ZStack {
+                    Circle()
+                        .fill(FluenceColor.ink.opacity(0.06))
+                        .frame(width: 52, height: 52)
+                    Image(systemName: coordinator.isRunning ? "xmark" : "text.bubble")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(coordinator.isRunning ? .red : FluenceColor.ink)
+                }
             }
+            .buttonStyle(.plain)
+            .disabled(coordinator.session == nil && !coordinator.isRunning)
         }
     }
 }
@@ -246,10 +325,10 @@ struct LookupView: View {
                 Text(item.sentence).font(.title3).foregroundStyle(FluenceColor.secondary)
                 if let explanation { Text(explanation).font(.body).textSelection(.enabled) }
                 else if let error { Text(error).foregroundStyle(FluenceColor.secondary) }
-                else { ProgressView("Finding the meaning…") }
+                else { ProgressView("Recherche de la définition…") }
                 Spacer()
             }.padding(28).frame(maxWidth: .infinity, alignment: .leading).background(FluenceColor.cream)
-                .navigationTitle("A little meaning").navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("Signification").navigationBarTitleDisplayMode(.inline)
         }.presentationDetents([.medium, .large])
             .task { do { explanation = try await coordinator.lookup(word: item.word, sentence: item.sentence) } catch { self.error = error.localizedDescription } }
     }
@@ -266,14 +345,14 @@ struct TypedReplyView: View {
             ScrollViewReader { proxy in
             ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Say it your way.").font(.system(.title, design: .rounded, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
-                TextField("Reply in \(coordinator.language.name) or another language", text: $text, axis: .vertical).lineLimit(3...6).focused($focused).padding(18).background(.white, in: RoundedRectangle(cornerRadius: 22)).accessibilityIdentifier("typed-reply-input")
+                Text("Répondre par écrit").font(.system(.title, design: .rounded, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
+                TextField("Répondez en \(coordinator.language.name) ou en français", text: $text, axis: .vertical).lineLimit(3...6).focused($focused).padding(18).background(.white, in: RoundedRectangle(cornerRadius: 22)).accessibilityIdentifier("typed-reply-input")
                     .onChange(of: text) { _, _ in coordinator.noteTypingActivity() }
                 if let error = coordinator.typedReplyError {
                     Text(error).font(.footnote).foregroundStyle(FluenceColor.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("typed-reply-error")
                 }
                 Button { sending = true; Task { let ok = await coordinator.sendTyped(text); sending = false; if ok { dismiss() } } } label: {
-                    HStack { Text(sending ? "Sending…" : "Send reply").fixedSize(horizontal: false, vertical: true); Spacer(); Image(systemName: "arrow.up") }.padding(18).background(FluenceColor.orange, in: Capsule())
+                    HStack { Text(sending ? "Envoi…" : "Envoyer la réponse").fixedSize(horizontal: false, vertical: true); Spacer(); Image(systemName: "arrow.up") }.padding(18).background(FluenceColor.orange, in: Capsule())
                 }.disabled(sending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty).accessibilityIdentifier("typed-reply-send").id("typed-reply-send")
                 Spacer()
             }.padding(26).frame(maxWidth: .infinity, alignment: .leading).foregroundStyle(FluenceColor.ink)
@@ -282,7 +361,7 @@ struct TypedReplyView: View {
                     if error != nil { withAnimation { proxy.scrollTo("typed-reply-send", anchor: .bottom) } }
                 }
             }
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } } }
         }.presentationDetents([.medium, .large]).onAppear { coordinator.typedReplyError = nil; coordinator.noteTypingActivity(); focused = true }
     }
 }

@@ -55,39 +55,39 @@ struct FluenceAura: View {
             let e = reduceMotion ? 0 : min(1, max(0, energy))
             
             ZStack {
-                // Subtle edge glow only
-                RoundedRectangle(cornerRadius: 40)
+                // Subtle edge glow on the screen perimeter
+                RoundedRectangle(cornerRadius: 32)
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.6 + e * 0.4),
-                                Color(red: 0.8, green: 0.4, blue: 1.0).opacity(0.5 + e * 0.3),
-                                Color(red: 1.0, green: 0.6, blue: 0.4).opacity(0.4 + e * 0.2),
-                                Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.6 + e * 0.4)
+                                Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.5 + e * 0.5),
+                                Color(red: 0.85, green: 0.45, blue: 0.95).opacity(0.4 + e * 0.4),
+                                Color(red: 1.0, green: 0.55, blue: 0.35).opacity(0.4 + e * 0.4),
+                                Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.5 + e * 0.5)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: listening ? 8 : 2
+                        lineWidth: listening ? 6 : 2
                     )
-                    .blur(radius: listening ? 12 : 4)
-                    .opacity(active ? 0.8 : 0.2)
-                    .padding(4)
+                    .blur(radius: listening ? 10 : 3)
+                    .opacity(active ? 0.7 : 0.15)
+                    .padding(2)
                 
-                // Very faint breathing background
+                // Very faint breathing radial gradient in background
                 Circle()
                     .fill(
                         RadialGradient(
                             colors: [
-                                Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.05 + e * 0.05),
+                                Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.04 + e * 0.04),
                                 .clear
                             ],
                             center: .center,
                             startRadius: 0,
-                            endRadius: 400
+                            endRadius: 350
                         )
                     )
-                    .scaleEffect(1.0 + sin(phase) * 0.1)
+                    .scaleEffect(1.0 + sin(phase) * 0.05)
             }
             .ignoresSafeArea()
             .accessibilityHidden(true)
@@ -98,30 +98,13 @@ struct FluenceAura: View {
 struct WhisperText: View {
     var text: AttributedString
     var isLarge: Bool = false
-    @State private var blurRadius: CGFloat = 10
-    @State private var opacity: Double = 0
     
     var body: some View {
         Text(text)
-            .font(.system(size: isLarge ? 32 : 18, weight: .medium, design: .rounded))
+            .font(.system(size: isLarge ? 32 : 18, weight: isLarge ? .bold : .medium, design: .rounded))
             .multilineTextAlignment(.center)
-            .blur(radius: blurRadius)
-            .opacity(opacity)
-            .onAppear {
-                withAnimation(.easeOut(duration: 1.5)) {
-                    blurRadius = 0
-                    opacity = 1.0
-                }
-            }
-            .onChange(of: String(text.characters)) { _, _ in
-                // Re-trigger effect on text change
-                blurRadius = 8
-                opacity = 0.2
-                withAnimation(.easeOut(duration: 1.2)) {
-                    blurRadius = 0
-                    opacity = 1.0
-                }
-            }
+            .foregroundStyle(isLarge ? FluenceColor.ink : FluenceColor.secondary)
+            .animation(.easeInOut(duration: 0.3), value: String(text.characters))
     }
 }
 
