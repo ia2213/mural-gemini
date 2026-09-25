@@ -496,9 +496,11 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Terminé") { dismiss() }
                         .fontWeight(.semibold)
+                        .foregroundStyle(FluenceColor.accent)
                 }
             }
         }
+        .presentationDragIndicator(.visible)
         .fileExporter(isPresented: $exporting, document: backup, contentType: .json, defaultFilename: "Fluence-learning-backup") { result in
             if case .failure(let error) = result { message = error.localizedDescription }
         }

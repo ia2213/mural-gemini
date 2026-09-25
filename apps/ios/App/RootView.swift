@@ -8,6 +8,14 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
+    private var colorScheme: ColorScheme? {
+        switch coordinator.store.preferences.appearance {
+        case "dark": return .dark
+        case "light": return .light
+        default: return nil
+        }
+    }
+    
     init(store: LearningStore) {
         let coordinator = ConversationCoordinator(store: store)
         #if DEBUG && targetEnvironment(simulator)
@@ -61,18 +69,29 @@ struct RootView: View {
             .tag(3)
         }
         .tint(FluenceColor.accent)
+        .preferredColorScheme(colorScheme)
         .overlay {
-            FluenceAura(
-                energy: max(coordinator.outputLevel, coordinator.inputLevel),
-                listening: coordinator.state == .active && !coordinator.isMuted,
-                active: coordinator.state != .closing
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            if !coordinator.showSettings && !coordinator.showAIConsent && !onboarding {
+                FluenceAura(
+                    energy: max(coordinator.outputLevel, coordinator.inputLevel),
+                    listening: coordinator.state == .active && !coordinator.isMuted,
+                    active: coordinator.state != .closing
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .transition(.opacity)
+            }
         }
-        .sheet(isPresented: $coordinator.showSettings) { SettingsView(coordinator: coordinator) }
+        .animation(.easeInOut(duration: 0.2), value: coordinator.showSettings)
+        .sheet(isPresented: $coordinator.showSettings) {
+            SettingsView(coordinator: coordinator)
+                .preferredColorScheme(colorScheme)
+                .tint(FluenceColor.accent)
+        }
         .sheet(isPresented: $coordinator.showAIConsent, onDismiss: { coordinator.resumeAfterAIConsent() }) {
             AIConsentView(agree: { coordinator.acceptAIConsent() }, decline: { coordinator.declineAIConsent() })
+                .preferredColorScheme(colorScheme)
+                .tint(FluenceColor.accent)
         }
         .fullScreenCover(isPresented: $onboarding) { OnboardingView(coordinator: coordinator) { coordinator.store.updatePreferences { $0.hasOnboarded = true }; onboarding = false } }
         .alert("Information", isPresented: Binding(get: { coordinator.error != nil || coordinator.store.error != nil }, set: { if !$0 { coordinator.error = nil; coordinator.store.error = nil } })) {
