@@ -253,6 +253,7 @@ public struct Preferences: Codable, Sendable {
     public var selectedVoiceIdentifier: String = ""
     public var ttsEngine: String = "ios"
     public var correctionLevel: String = "medium"
+    public var cefrLevel: String = "B2"
     public init() {}
 }
 

@@ -105,25 +105,56 @@ struct TalkView: View {
             )
             
             VStack(spacing: 0) {
-                // Top status or active theme pill
-                if let themeTitle = coordinator.selectedTheme?.title {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                            .font(.caption2)
-                        Text(themeTitle)
-                            .font(.system(.caption, design: .rounded, weight: .semibold))
+                // Top Header: CEFR Level Badge, Theme / Status, and Settings
+                HStack {
+                    Button {
+                        coordinator.showSettings = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(coordinator.language.flag)
+                            Text(coordinator.store.learner.levelLabel)
+                                .font(.system(.caption, design: .rounded, weight: .bold))
+                        }
+                        .foregroundStyle(FluenceColor.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(FluenceColor.accent.opacity(0.12), in: Capsule())
                     }
-                    .foregroundStyle(FluenceColor.accent)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(FluenceColor.accent.opacity(0.12), in: Capsule())
-                    .padding(.top, 12)
-                } else {
-                    Text(coordinator.status)
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundStyle(FluenceColor.secondary)
-                        .padding(.top, 12)
+                    
+                    Spacer()
+                    
+                    if let themeTitle = coordinator.selectedTheme?.title {
+                        HStack(spacing: 5) {
+                            Image(systemName: "sparkles")
+                                .font(.caption2)
+                            Text(themeTitle)
+                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(FluenceColor.ink)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.08), in: Capsule())
+                    } else {
+                        Text(coordinator.status)
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundStyle(FluenceColor.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Button {
+                        coordinator.showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(FluenceColor.secondary)
+                            .padding(8)
+                            .background(Color.white.opacity(0.06), in: Circle())
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
                 
                 Spacer(minLength: 20)
                 

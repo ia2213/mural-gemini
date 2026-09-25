@@ -26,7 +26,21 @@ public struct LearnerState: Sendable {
     public var nextGoal: String
     public var capabilities: [String]
     public var words: [WordState]
-    public var levelLabel: String { observationCount < 4 ? "Getting to know you" : "Finding your pace" }
+    public var levelLabel: String {
+        let levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        return levels[min(5, max(0, challenge))]
+    }
+    public var fullLevelName: String {
+        let descriptions = [
+            "A1 · Débutant",
+            "A2 · Élémentaire",
+            "B1 · Intermédiaire",
+            "B2 · Avancé",
+            "C1 · Autonome / Médical",
+            "C2 · Bilingue / Expert"
+        ]
+        return descriptions[min(5, max(0, challenge))]
+    }
 }
 
 public enum LearningEngine {
@@ -63,9 +77,11 @@ public enum LearningEngine {
         return validated
     }
 
-    public static func project(_ sessions: [SessionRecord], languageID: String = LanguageRegistry.defaultID, hiddenWords: [String] = [], now: Date = .now) -> LearnerState {
-        var level = 0, count = 0, successes = 0
-        var nextGoal = "Start with a greeting and one small question. Adjust from what the learner actually says."
+    public static func project(_ sessions: [SessionRecord], languageID: String = LanguageRegistry.defaultID, hiddenWords: [String] = [], userBaseCEFR: String = "B2", now: Date = .now) -> LearnerState {
+        let levelMap = ["A1": 0, "A2": 1, "B1": 2, "B2": 3, "C1": 4, "C2": 5]
+        var level = levelMap[userBaseCEFR.uppercased()] ?? 3
+        var count = 0, successes = 0
+        var nextGoal = "Pratique orale continue et progression de niveau."
         var capabilityEvidence: [String: Set<String>] = [:]
         var events: [String: [(WordProposal, Date, String)]] = [:]
         let calendar = Calendar(identifier: .gregorian)
@@ -75,11 +91,16 @@ public enum LearningEngine {
                 guard !seen.contains(raw.passageID), let a = validate(raw, session: session) else { continue }
                 seen.insert(raw.passageID)
                 count += 1
-                if a.outcome == .breakdown { level = max(0, level - 1); successes = 0 }
-                else if a.outcome == .success {
+                if a.outcome == .breakdown {
+                    successes = max(0, successes - 1)
+                } else if a.outcome == .success {
                     successes += 1
-                    if successes >= 2 { level = min(5, max(level, min(level + 1, a.suggestedLevel))); successes = 0 }
-                } else { successes = 0 }
+                    // After 3 successful observations demonstrating mastery, promote to next CEFR level!
+                    if successes >= 3 {
+                        level = min(5, level + 1)
+                        successes = 0
+                    }
+                }
                 if !a.nextGoal.isEmpty { nextGoal = a.nextGoal }
                 if a.outcome == .success && !a.capability.isEmpty {
                     capabilityEvidence[a.capability, default: []].insert("\(calendar.startOfDay(for: a.createdAt))|\(a.context)")

@@ -312,6 +312,18 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
                     
+                    Picker(selection: Binding(get: { store.preferences.cefrLevel }, set: { val in store.updatePreferences { $0.cefrLevel = val } })) {
+                        Text("A1 · Débutant").tag("A1")
+                        Text("A2 · Élémentaire").tag("A2")
+                        Text("B1 · Intermédiaire").tag("B1")
+                        Text("B2 · Avancé (Recommandé)").tag("B2")
+                        Text("C1 · Autonome / Médical").tag("C1")
+                        Text("C2 · Bilingue / Expert").tag("C2")
+                    } label: {
+                        Label("Niveau de départ (CECRL)", systemImage: "chart.bar.fill")
+                    }
+                    .pickerStyle(.menu)
+                    
                     Toggle(isOn: Binding(get: { store.preferences.meaningVisible }, set: { value in
                         if value != store.preferences.meaningVisible { coordinator.toggleMeaning() }
                     })) {
