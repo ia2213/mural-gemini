@@ -61,6 +61,15 @@ struct RootView: View {
             .tag(3)
         }
         .tint(FluenceColor.accent)
+        .overlay {
+            FluenceAura(
+                energy: max(coordinator.outputLevel, coordinator.inputLevel),
+                listening: coordinator.state == .active && !coordinator.isMuted,
+                active: coordinator.state != .closing
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+        }
         .sheet(isPresented: $coordinator.showSettings) { SettingsView(coordinator: coordinator) }
         .sheet(isPresented: $coordinator.showAIConsent, onDismiss: { coordinator.resumeAfterAIConsent() }) {
             AIConsentView(agree: { coordinator.acceptAIConsent() }, decline: { coordinator.declineAIConsent() })
@@ -96,13 +105,6 @@ struct TalkView: View {
     var body: some View {
         ZStack {
             FluenceColor.background.ignoresSafeArea()
-            
-            // Subtle glowing perimeter aura
-            FluenceAura(
-                energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45),
-                listening: coordinator.state == .active && !coordinator.isMuted,
-                active: coordinator.state != .closing
-            )
             
             VStack(spacing: 0) {
                 Spacer(minLength: 20)

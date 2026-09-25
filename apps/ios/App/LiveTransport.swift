@@ -201,23 +201,30 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
             var speechDetected = false
             var speechDurationCount = 0
             var silenceStart: Date? = nil
+            var synthPhase: Double = 0
             
             while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(100))
+                try? await Task.sleep(for: .milliseconds(40))
                 guard let self, self.started, !self.isMuted, !self.isProcessingSpeech else { continue }
                 
-                // Do not process audio while the phone speaker is playing TTS
+                // When TTS is speaking, emit lively output energy levels
                 if self.synthesizer.isSpeaking {
                     speechDetected = false
                     speechDurationCount = 0
                     silenceStart = nil
+                    synthPhase += 0.25
+                    let outputLevel = 0.55 + 0.30 * sin(synthPhase) + Double.random(in: -0.1...0.1)
+                    self.onLevels?(0, max(0.2, min(1.0, outputLevel)))
                     continue
                 }
+                
                 guard let rec = self.recorder, rec.isRecording else { continue }
                 
                 rec.updateMeters()
                 let power = rec.averagePower(forChannel: 0)
-                let level = max(0.0, min(1.0, Double(power + 50) / 50.0))
+                // Normalize power from -48dB to -10dB into a rich 0.0...1.0 responsive level
+                let rawNorm = max(0.0, min(1.0, Double(power + 48) / 38.0))
+                let level = pow(rawNorm, 1.2)
                 self.onLevels?(level, 0)
                 
                 // VAD Threshold: -48 dB ensures soft speech, breathing pauses, and natural speech rhythm are captured

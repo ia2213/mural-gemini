@@ -46,22 +46,28 @@ struct FluenceAura: View {
     var body: some View {
         GeometryReader { geo in
             let isPad = min(geo.size.width, geo.size.height) > 500
-            let cornerRadius: CGFloat = isPad ? 32 : 55
+            let cornerRadius: CGFloat = isPad ? 28 : 54
             
             TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
                 let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                let speed: Double = listening ? 55 : 35
-                let rotation = Angle.degrees((t * speed).truncatingRemainder(dividingBy: 360))
-                let pulse = sin(t * 3.0) * 0.08
+                let clampedEnergy = reduceMotion ? 0.3 : min(1.0, max(0.0, energy))
+                let dynamicSpeed: Double = (listening ? 50 : 30) + clampedEnergy * 60
+                let rotation = Angle.degrees((t * dynamicSpeed).truncatingRemainder(dividingBy: 360))
                 
-                // Vibrant Apple Intelligence / Siri Glowing Color Palette
+                // Voice Reactive Pulse Modulation
+                let voicePulse = sin(t * 4.0) * (0.05 + clampedEnergy * 0.15)
+                let bloomWidth: CGFloat = (listening ? 24 : 14) + CGFloat(clampedEnergy * 20)
+                let coreWidth: CGFloat = (listening ? 10 : 6) + CGFloat(clampedEnergy * 8)
+                let beamWidth: CGFloat = 3.5 + CGFloat(clampedEnergy * 4)
+                
+                // Intense Apple Intelligence Glowing Colors
                 let siriColors: [Color] = [
-                    Color(red: 0.05, green: 0.55, blue: 1.00), // Vibrant Electric Blue
-                    Color(red: 0.00, green: 0.95, blue: 1.00), // Siri Neon Cyan
-                    Color(red: 0.70, green: 0.15, blue: 1.00), // Deep Neon Violet
-                    Color(red: 1.00, green: 0.20, blue: 0.65), // Hot Apple Pink / Magenta
-                    Color(red: 1.00, green: 0.55, blue: 0.10), // Radiant Amber / Coral
-                    Color(red: 0.00, green: 0.95, blue: 1.00), // Neon Cyan accent
+                    Color(red: 0.05, green: 0.55, blue: 1.00), // Electric Siri Blue
+                    Color(red: 0.00, green: 0.98, blue: 0.95), // Ultra Neon Cyan
+                    Color(red: 0.68, green: 0.15, blue: 1.00), // Hot Violet
+                    Color(red: 1.00, green: 0.18, blue: 0.65), // Vivid Apple Pink / Magenta
+                    Color(red: 1.00, green: 0.55, blue: 0.05), // Radiant Amber
+                    Color(red: 0.00, green: 0.98, blue: 0.95), // Ultra Neon Cyan
                     Color(red: 0.05, green: 0.55, blue: 1.00)  // Seamless loop
                 ]
                 
@@ -78,30 +84,31 @@ struct FluenceAura: View {
                 )
                 
                 ZStack {
-                    // 1. Broad Atmospheric Bloom (Soft & Deep Glow)
+                    // 1. Voice Reactive Atmospheric Bloom (Massive neon emission)
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(gradient, lineWidth: listening ? 32 : 20)
-                        .blur(radius: listening ? 32 : 20)
-                        .opacity(listening ? 0.95 : 0.75 + pulse)
+                        .strokeBorder(gradient, lineWidth: bloomWidth)
+                        .blur(radius: (listening ? 24 : 14) + CGFloat(clampedEnergy * 18))
+                        .opacity(min(1.0, 0.75 + clampedEnergy * 0.25 + voicePulse))
                         .blendMode(.plusLighter)
                     
-                    // 2. Mid Luminous Core
+                    // 2. Mid Intense Radiance
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(reverseGradient, lineWidth: listening ? 14 : 9)
-                        .blur(radius: listening ? 12 : 8)
-                        .opacity(listening ? 1.0 : 0.85)
+                        .strokeBorder(reverseGradient, lineWidth: coreWidth)
+                        .blur(radius: (listening ? 10 : 6) + CGFloat(clampedEnergy * 6))
+                        .opacity(min(1.0, 0.85 + clampedEnergy * 0.15))
+                        .blendMode(.plusLighter)
                     
-                    // 3. Sharp Vibrant Light Beam (Glued right along physical bezel)
+                    // 3. Crisp Vibrant Edge Beam (Tight flush fit to screen bezel)
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(gradient, lineWidth: listening ? 5.5 : 3.5)
-                        .blur(radius: 2.5)
+                        .strokeBorder(gradient, lineWidth: beamWidth)
+                        .blur(radius: 1.5)
                         .opacity(1.0)
                     
-                    // 4. Ultra-Crisp Highlight Rim
+                    // 4. Ultra-Bright Glass Highlight
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(
-                            Color.white.opacity(listening ? 0.65 : 0.40),
-                            lineWidth: listening ? 1.5 : 1.0
+                            Color.white.opacity(0.40 + clampedEnergy * 0.50),
+                            lineWidth: 1.2 + CGFloat(clampedEnergy * 1.5)
                         )
                         .blur(radius: 0.5)
                         .blendMode(.plusLighter)
