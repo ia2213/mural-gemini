@@ -51,9 +51,7 @@ struct FluenceAura: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
             let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-            let rotation = Angle.degrees((t * 40).truncatingRemainder(dividingBy: 360))
-            let e = reduceMotion ? 0.3 : min(1.0, max(0.0, energy))
-            let pulseScale = 1.0 + sin(t * 2.5) * 0.02
+            let rotation = Angle.degrees((t * 35).truncatingRemainder(dividingBy: 360))
             
             let auraColors: [Color] = [
                 Color(red: 0.15, green: 0.45, blue: 0.98), // Electric Royal Blue
@@ -66,48 +64,32 @@ struct FluenceAura: View {
             
             ZStack {
                 // Layer 1: Wide Diffuse Atmospheric Edge Glow (Siri / Gemini Style)
-                RoundedRectangle(cornerRadius: 38, style: .continuous)
+                RoundedRectangle(cornerRadius: 50, style: .continuous)
                     .stroke(
                         AngularGradient(
                             gradient: Gradient(colors: auraColors),
                             center: .center,
                             angle: rotation
                         ),
-                        lineWidth: listening ? 18 : 10
+                        lineWidth: listening ? 14 : 7
                     )
-                    .blur(radius: listening ? 24 : 14)
-                    .opacity(listening ? 0.95 : 0.65)
+                    .blur(radius: listening ? 18 : 10)
+                    .opacity(listening ? 0.90 : 0.60)
                 
-                // Layer 2: Core Vibrant Light Rim
-                RoundedRectangle(cornerRadius: 34, style: .continuous)
+                // Layer 2: Crisp Vibrant Border
+                RoundedRectangle(cornerRadius: 48, style: .continuous)
                     .stroke(
                         AngularGradient(
                             gradient: Gradient(colors: auraColors),
                             center: .center,
                             angle: rotation + .degrees(180)
                         ),
-                        lineWidth: listening ? 6 : 3.5
+                        lineWidth: listening ? 3.5 : 2.0
                     )
-                    .blur(radius: listening ? 4 : 2)
+                    .blur(radius: listening ? 2 : 1)
                     .opacity(listening ? 1.0 : 0.85)
-                
-                // Layer 3: Faint Ambient Center Field during active speech/energy
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                Color(red: 0.15, green: 0.45, blue: 0.98).opacity(0.06 + e * 0.12),
-                                Color(red: 0.65, green: 0.25, blue: 0.95).opacity(0.04 + e * 0.08),
-                                .clear
-                            ],
-                            center: .center,
-                            startRadius: 20,
-                            endRadius: 360
-                        )
-                    )
-                    .scaleEffect(pulseScale)
             }
-            .padding(1)
+            .padding(4)
             .ignoresSafeArea()
             .accessibilityHidden(true)
         }

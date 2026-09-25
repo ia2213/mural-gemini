@@ -156,7 +156,7 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         try? session.setActive(true)
         ownsAudioActivation = true
         
-        let startPrompt = "Initialisation de la session : Salue brièvement l'élève et lance immédiatement un sujet ou une question de réflexion captivante et stimulante au niveau ciblé (\(languageCode)), sans AUCUNE question banale du style 'comment vas-tu' ou 'qu'as-tu fait'."
+        let startPrompt = "Dis bonjour simplement en allemand avec une petite phrase de 3 à 5 mots et pose une première question ultra simple et accessible pour débutant de niveau zéro (ex: 'Hallo! Wie heißt du?'). Sois chaleureux et très court."
         let initialResult = try await api.respond(instructions: instructions, input: startPrompt, model: preferences.groqModel, preferences: preferences)
         guard attempt == token else { throw CancellationError() }
         let sessionID = UUID().uuidString

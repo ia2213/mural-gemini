@@ -105,57 +105,6 @@ struct TalkView: View {
             )
             
             VStack(spacing: 0) {
-                // Top Header: CEFR Level Badge, Theme / Status, and Settings
-                HStack {
-                    Button {
-                        coordinator.showSettings = true
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text(coordinator.language.flag)
-                            Text(coordinator.store.learner.levelLabel)
-                                .font(.system(.caption, design: .rounded, weight: .bold))
-                        }
-                        .foregroundStyle(FluenceColor.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(FluenceColor.accent.opacity(0.12), in: Capsule())
-                    }
-                    
-                    Spacer()
-                    
-                    if let themeTitle = coordinator.selectedTheme?.title {
-                        HStack(spacing: 5) {
-                            Image(systemName: "sparkles")
-                                .font(.caption2)
-                            Text(themeTitle)
-                                .font(.system(.caption, design: .rounded, weight: .semibold))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(FluenceColor.ink)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
-                        .background(Color.white.opacity(0.08), in: Capsule())
-                    } else {
-                        Text(coordinator.status)
-                            .font(.system(.caption, design: .rounded))
-                            .foregroundStyle(FluenceColor.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Button {
-                        coordinator.showSettings = true
-                    } label: {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 15))
-                            .foregroundStyle(FluenceColor.secondary)
-                            .padding(8)
-                            .background(Color.white.opacity(0.06), in: Circle())
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                
                 Spacer(minLength: 20)
                 
                 // Central High-Contrast Text Area
@@ -207,7 +156,6 @@ struct TalkView: View {
                 }
             }
         }
-        .navigationTitle("Fluence")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -217,7 +165,7 @@ struct TalkView: View {
                             coordinator.selectLanguage(lang.id)
                         } label: {
                             HStack {
-                                Text(lang.settingsTitle)
+                                Text("\(lang.flag) \(lang.settingsTitle)")
                                 if coordinator.language.id == lang.id {
                                     Image(systemName: "checkmark")
                                 }
@@ -225,17 +173,40 @@ struct TalkView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
+                        Text(coordinator.language.flag)
                         Text(coordinator.language.name)
                             .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                            .foregroundStyle(FluenceColor.ink)
+                        Text("· \(coordinator.store.learner.levelLabel)")
+                            .font(.system(.caption, design: .rounded, weight: .bold))
+                            .foregroundStyle(FluenceColor.accent)
                         Image(systemName: "chevron.down")
-                            .font(.caption2.bold())
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(FluenceColor.secondary)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(FluenceColor.accent.opacity(0.1), in: Capsule())
+                    .background(FluenceColor.accent.opacity(0.12), in: Capsule())
+                }
+            }
+            
+            ToolbarItem(placement: .principal) {
+                if let themeTitle = coordinator.selectedTheme?.title {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.caption2)
+                        Text(themeTitle)
+                            .font(.system(.caption, design: .rounded, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(FluenceColor.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(FluenceColor.accent.opacity(0.10), in: Capsule())
+                } else {
+                    Text("Fluence")
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(FluenceColor.ink)
                 }
             }
             
@@ -243,9 +214,11 @@ struct TalkView: View {
                 Button {
                     coordinator.showSettings = true
                 } label: {
-                    Image(systemName: "slider.horizontal.3")
+                    Image(systemName: "gearshape.fill")
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(FluenceColor.ink)
+                        .padding(6)
+                        .background(Color.white.opacity(0.06), in: Circle())
                 }
             }
         }

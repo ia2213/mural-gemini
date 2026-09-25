@@ -184,12 +184,12 @@ struct StudyHubView: View {
         let existing = fsrsStore.loadItems(for: "de")
         if existing.isEmpty {
             let seeds = [
-                FSRSItem(term: "obwohl", meaning: "bien que (subordonnée avec verbe à la fin)", example: "Ich lerne Deutsch, obwohl es schwierig ist.", contextCategory: "Grammaire", level: "B2", languageID: "de", stability: 0.4, difficulty: 4.5),
-                FSRSItem(term: "sich freuen auf (+ Akk)", meaning: "se réjouir de / attendre avec impatience", example: "Ich freue mich auf die Prüfung.", contextCategory: "Vocabulaire", level: "B2", languageID: "de", stability: 0.5, difficulty: 5.0),
-                FSRSItem(term: "Es kommt darauf an", meaning: "Ça dépend", example: "Es kommt auf den Patienten an.", contextCategory: "Expression", level: "B2", languageID: "de", stability: 0.6, difficulty: 4.0),
-                FSRSItem(term: "die Behandlung", meaning: "le traitement médical / la prise en charge", example: "Die Behandlung war erfolgreich.", contextCategory: "Médical", level: "B2", languageID: "de", stability: 0.4, difficulty: 4.8),
-                FSRSItem(term: "trotzdem", meaning: "néanmoins / quand même (inversion sujet-verbe)", example: "Er war müde, trotzdem arbeitete er weiter.", contextCategory: "Grammaire", level: "B2", languageID: "de", stability: 0.5, difficulty: 5.2),
-                FSRSItem(term: "abhängen von (+ Dat)", meaning: "dépendre de", example: "Das hängt vom Befund ab.", contextCategory: "Expression", level: "B2", languageID: "de", stability: 0.5, difficulty: 4.5)
+                FSRSItem(term: "Hallo", meaning: "bonjour / salut", example: "Hallo! Wie geht es dir?", contextCategory: "Salutations", level: "A1", languageID: "de", stability: 1.0, difficulty: 2.0),
+                FSRSItem(term: "Danke", meaning: "merci", example: "Danke schön!", contextCategory: "Politesse", level: "A1", languageID: "de", stability: 1.0, difficulty: 2.0),
+                FSRSItem(term: "Bitte", meaning: "s'il te plaît / de rien", example: "Bitte sehr!", contextCategory: "Politesse", level: "A1", languageID: "de", stability: 1.0, difficulty: 2.0),
+                FSRSItem(term: "Ich heiße...", meaning: "je m'appelle...", example: "Ich heiße Marc.", contextCategory: "Présentation", level: "A1", languageID: "de", stability: 0.8, difficulty: 2.5),
+                FSRSItem(term: "Ich lerne Deutsch", meaning: "j'apprends l'allemand", example: "Ich lerne Deutsch mit Fluence.", contextCategory: "Quotidien", level: "A1", languageID: "de", stability: 0.6, difficulty: 3.0),
+                FSRSItem(term: "Guten Tag", meaning: "bonjour (formel)", example: "Guten Tag, wie geht es Ihnen?", contextCategory: "Salutations", level: "A1", languageID: "de", stability: 1.0, difficulty: 2.2)
             ]
             fsrsStore.saveItems(seeds)
         }
