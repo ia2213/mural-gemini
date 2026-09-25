@@ -254,6 +254,7 @@ public struct Preferences: Codable, Sendable {
     public var ttsEngine: String = "ios"
     public var correctionLevel: String = "medium"
     public var cefrLevel: String = "A1"
+    public var appearance: String = "dark"
     public init() {}
 }
 

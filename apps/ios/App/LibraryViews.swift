@@ -301,6 +301,20 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // MARK: 0. APPARENCE & THÈME
+                Section {
+                    Picker(selection: Binding(get: { store.preferences.appearance }, set: { val in store.updatePreferences { $0.appearance = val } })) {
+                        Text("Automatique (Système)").tag("system")
+                        Text("Sombre").tag("dark")
+                        Text("Clair").tag("light")
+                    } label: {
+                        Label("Thème d'affichage", systemImage: "circle.lefthalf.filled")
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text("Apparence")
+                }
+                
                 // MARK: 1. APPRENTISSAGE
                 Section {
                     Picker(selection: Binding(get: { coordinator.language.id }, set: { coordinator.selectLanguage($0) })) {
