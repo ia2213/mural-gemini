@@ -60,30 +60,25 @@ struct FluenceAura: View {
     var body: some View {
         GeometryReader { geo in
             let isPad = min(geo.size.width, geo.size.height) > 500
-            let topInset = geo.safeAreaInsets.top
-            // Precise physical device screen corner radius detection
-            let cornerRadius: CGFloat = {
-                if isPad { return 24 }
-                if topInset > 50 { return 54 } // Dynamic Island models (iPhone 14/15/16 Pro)
-                if topInset > 30 { return 47 } // Notch models (iPhone X/11/12/13/14)
-                return 18 // Standard / SE
-            }()
+            let cornerRadius: CGFloat = isPad ? 22 : 44
             
             TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
                 let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
                 let clampedEnergy = reduceMotion ? 0.2 : min(1.0, max(0.0, energy))
-                let dynamicSpeed: Double = (listening ? 35 : 20) + clampedEnergy * 30
-                let rotation = Angle.degrees((t * dynamicSpeed).truncatingRemainder(dividingBy: 360))
+                // Calming, organic slow fluid wave motion (10-20 RPM)
+                let organicSpeed: Double = 10 + clampedEnergy * 15
+                let rotation = Angle.degrees((t * organicSpeed).truncatingRemainder(dividingBy: 360))
+                let gentleBreathing = sin(t * 1.6) * 0.05
                 
-                // Gentle, elegant Apple Intelligence glow colors (softened, not aggressive)
+                // Refined, subtle Apple Intelligence pastel palette
                 let siriColors: [Color] = [
-                    Color(red: 0.20, green: 0.55, blue: 0.95), // Soft Electric Blue
-                    Color(red: 0.10, green: 0.85, blue: 0.90), // Soft Siri Cyan
-                    Color(red: 0.65, green: 0.30, blue: 0.95), // Soft Violet
-                    Color(red: 0.95, green: 0.35, blue: 0.65), // Soft Apple Rose
-                    Color(red: 0.95, green: 0.60, blue: 0.25), // Warm Amber
-                    Color(red: 0.10, green: 0.85, blue: 0.90), // Soft Cyan
-                    Color(red: 0.20, green: 0.55, blue: 0.95)  // Loop
+                    Color(red: 0.22, green: 0.58, blue: 0.96), // Soft Siri Blue
+                    Color(red: 0.12, green: 0.86, blue: 0.88), // Soft Cyan
+                    Color(red: 0.62, green: 0.35, blue: 0.95), // Soft Violet
+                    Color(red: 0.94, green: 0.38, blue: 0.62), // Soft Pink
+                    Color(red: 0.95, green: 0.62, blue: 0.26), // Warm Amber
+                    Color(red: 0.12, green: 0.86, blue: 0.88), // Soft Cyan
+                    Color(red: 0.22, green: 0.58, blue: 0.96)  // Loop
                 ]
                 
                 let gradient = AngularGradient(
@@ -98,29 +93,29 @@ struct FluenceAura: View {
                     angle: rotation + .degrees(180)
                 )
                 
-                let bloomWidth: CGFloat = (listening ? 16 : 10) + CGFloat(clampedEnergy * 10)
-                let coreWidth: CGFloat = (listening ? 6 : 4) + CGFloat(clampedEnergy * 4)
-                let beamWidth: CGFloat = 2.5 + CGFloat(clampedEnergy * 1.5)
+                let bloomWidth: CGFloat = (listening ? 12 : 8) + CGFloat(clampedEnergy * 8)
+                let coreWidth: CGFloat = (listening ? 4.5 : 3.0) + CGFloat(clampedEnergy * 3)
                 
                 ZStack {
-                    // 1. Soft Atmospheric Bloom (Deep, gentle and diffuse)
+                    // 1. Soft Ambient Inward Bloom (Framed cleanly inside screen bezel)
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(gradient, lineWidth: bloomWidth)
-                        .blur(radius: (listening ? 18 : 10) + CGFloat(clampedEnergy * 8))
-                        .opacity(min(0.65, 0.40 + clampedEnergy * 0.25))
+                        .stroke(gradient, lineWidth: bloomWidth)
+                        .blur(radius: (listening ? 14 : 8) + CGFloat(clampedEnergy * 6))
+                        .opacity(min(0.55, 0.30 + clampedEnergy * 0.20 + gentleBreathing))
                     
-                    // 2. Mid Luminous Contour
+                    // 2. Mid Fluid Luminous Contour
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(reverseGradient, lineWidth: coreWidth)
-                        .blur(radius: (listening ? 6 : 3) + CGFloat(clampedEnergy * 3))
-                        .opacity(min(0.75, 0.50 + clampedEnergy * 0.25))
+                        .stroke(reverseGradient, lineWidth: coreWidth)
+                        .blur(radius: (listening ? 4 : 2) + CGFloat(clampedEnergy * 2))
+                        .opacity(min(0.65, 0.40 + clampedEnergy * 0.20))
                     
-                    // 3. Delicate Crisp Perimeter
+                    // 3. Delicate Visible Corner & Border Line
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(gradient, lineWidth: beamWidth)
-                        .blur(radius: 0.8)
-                        .opacity(0.85)
+                        .stroke(gradient, lineWidth: 1.6 + CGFloat(clampedEnergy * 0.8))
+                        .blur(radius: 0.5)
+                        .opacity(0.75)
                 }
+                .padding(5) // Inset by 5pt so the 4 rounded corners and Notch framing are clearly visible on screen
                 .frame(width: geo.size.width, height: geo.size.height)
             }
         }

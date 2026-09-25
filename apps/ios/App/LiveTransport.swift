@@ -202,19 +202,20 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
             var speechDurationCount = 0
             var silenceStart: Date? = nil
             var synthPhase: Double = 0
+            var smoothedUserLevel: Double = 0
             
             while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(40))
+                try? await Task.sleep(for: .milliseconds(50))
                 guard let self, self.started, !self.isMuted, !self.isProcessingSpeech else { continue }
                 
-                // When TTS is speaking, emit lively output energy levels
+                // When TTS is speaking, emit smooth, gentle, organic vocal envelope
                 if self.synthesizer.isSpeaking {
                     speechDetected = false
                     speechDurationCount = 0
                     silenceStart = nil
-                    synthPhase += 0.25
-                    let outputLevel = 0.55 + 0.30 * sin(synthPhase) + Double.random(in: -0.1...0.1)
-                    self.onLevels?(0, max(0.2, min(1.0, outputLevel)))
+                    synthPhase += 0.10
+                    let outputLevel = 0.40 + 0.20 * sin(synthPhase) + 0.10 * sin(synthPhase * 2.3)
+                    self.onLevels?(0, max(0.15, min(0.75, outputLevel)))
                     continue
                 }
                 
@@ -222,10 +223,11 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 
                 rec.updateMeters()
                 let power = rec.averagePower(forChannel: 0)
-                // Normalize power from -48dB to -10dB into a rich 0.0...1.0 responsive level
                 let rawNorm = max(0.0, min(1.0, Double(power + 48) / 38.0))
-                let level = pow(rawNorm, 1.2)
-                self.onLevels?(level, 0)
+                let instantaneousLevel = pow(rawNorm, 1.2)
+                // Smooth with exponential moving average for organic breathing dynamics
+                smoothedUserLevel = smoothedUserLevel * 0.75 + instantaneousLevel * 0.25
+                self.onLevels?(smoothedUserLevel, 0)
                 
                 // VAD Threshold: -48 dB ensures soft speech, breathing pauses, and natural speech rhythm are captured
                 if power > -48 {
