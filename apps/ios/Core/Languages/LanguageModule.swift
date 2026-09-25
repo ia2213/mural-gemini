@@ -23,6 +23,25 @@ public struct LanguageModule: Identifiable, Sendable {
     public var defaultTitle: String { "A little \(name)" }
     public var talkTitle: String { "A little everyday \(name)" }
     public var settingsTitle: String { "\(name) · \(variety)" }
+    public var flag: String {
+        switch id {
+        case "de": return "🇩🇪"
+        case "fr": return "🇫🇷"
+        case "ro": return "🇷🇴"
+        case "en-US": return "🇺🇸"
+        case "en-GB": return "🇬🇧"
+        case "es": return "🇪🇸"
+        case "it": return "🇮🇹"
+        case "ar": return "🇸🇦"
+        case "he": return "🇮🇱"
+        case "ja": return "🇯🇵"
+        case "ru": return "🇷🇺"
+        case "pt": return "🇵🇹"
+        case "zh": return "🇨🇳"
+        case "no": return "🇳🇴"
+        default: return "🌐"
+        }
+    }
 }
 
 public enum LanguageRegistry {
