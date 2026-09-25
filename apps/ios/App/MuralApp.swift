@@ -11,14 +11,16 @@ import SwiftUI
         WindowGroup {
             if let store {
                 RootView(store: store)
-                    .preferredColorScheme(.light)
+                    .preferredColorScheme(.dark)
+                    .background(Color.black)
                     .task {
                         _ = await NotificationManager.shared.requestAuthorization()
                     }
             }
             else {
                 ContentUnavailableView("Let’s try again", systemImage: "externaldrive.badge.exclamationmark", description: Text(startupError ?? "The learning record is unavailable."))
-                    .preferredColorScheme(.light)
+                    .preferredColorScheme(.dark)
+                    .background(Color.black)
             }
         }
     }

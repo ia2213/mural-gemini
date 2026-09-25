@@ -1,19 +1,14 @@
 import SwiftUI
 
 enum FluenceColor {
-    static let background = Color(UIColor { trait in
-        return trait.userInterfaceStyle == .dark ? UIColor(red: 0.08, green: 0.11, blue: 0.16, alpha: 1.0) : UIColor(red: 0.99, green: 0.98, blue: 0.96, alpha: 1.0)
-    })
-    static let ink = Color(UIColor { trait in
-        return trait.userInterfaceStyle == .dark ? UIColor(white: 0.96, alpha: 1.0) : UIColor(red: 0.11, green: 0.13, blue: 0.16, alpha: 1.0)
-    })
-    static let secondary = Color(UIColor { trait in
-        return trait.userInterfaceStyle == .dark ? UIColor(white: 0.65, alpha: 1.0) : UIColor(white: 0.45, alpha: 1.0)
-    })
+    static let background = Color.black
+    static let surface = Color(red: 0.08, green: 0.11, blue: 0.16)
+    static let ink = Color(white: 0.96)
+    static let secondary = Color(white: 0.65)
     static let accent = Color(red: 0.35, green: 0.45, blue: 0.95)
     
     // Legacy mapping to avoid breaking other views immediately
-    static let cream = background
+    static let cream = surface
     static let orange = accent
     static let peach = Color(red: 0.9, green: 0.7, blue: 0.9)
     static let lilac = Color(red: 0.6, green: 0.5, blue: 0.9)
