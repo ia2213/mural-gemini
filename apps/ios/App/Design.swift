@@ -49,50 +49,74 @@ struct FluenceAura: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
-            let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-            let rotation = Angle.degrees((t * 35).truncatingRemainder(dividingBy: 360))
+        GeometryReader { geo in
+            let isPad = min(geo.size.width, geo.size.height) > 500
+            let cornerRadius: CGFloat = isPad ? 32 : 55
             
-            let auraColors: [Color] = [
-                Color(red: 0.15, green: 0.45, blue: 0.98), // Electric Royal Blue
-                Color(red: 0.02, green: 0.75, blue: 0.95), // Siri Cyan
-                Color(red: 0.65, green: 0.25, blue: 0.95), // Gemini Neon Purple
-                Color(red: 0.98, green: 0.35, blue: 0.65), // Rose Magenta
-                Color(red: 0.98, green: 0.55, blue: 0.20), // Sunset Amber
-                Color(red: 0.15, green: 0.45, blue: 0.98)  // Loop back
-            ]
-            
-            ZStack {
-                // Layer 1: Wide Diffuse Atmospheric Edge Glow (Siri / Gemini Style)
-                RoundedRectangle(cornerRadius: 50, style: .continuous)
-                    .stroke(
-                        AngularGradient(
-                            gradient: Gradient(colors: auraColors),
-                            center: .center,
-                            angle: rotation
-                        ),
-                        lineWidth: listening ? 14 : 7
-                    )
-                    .blur(radius: listening ? 18 : 10)
-                    .opacity(listening ? 0.90 : 0.60)
+            TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
+                let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
+                let speed: Double = listening ? 55 : 35
+                let rotation = Angle.degrees((t * speed).truncatingRemainder(dividingBy: 360))
+                let pulse = sin(t * 3.0) * 0.08
                 
-                // Layer 2: Crisp Vibrant Border
-                RoundedRectangle(cornerRadius: 48, style: .continuous)
-                    .stroke(
-                        AngularGradient(
-                            gradient: Gradient(colors: auraColors),
-                            center: .center,
-                            angle: rotation + .degrees(180)
-                        ),
-                        lineWidth: listening ? 3.5 : 2.0
-                    )
-                    .blur(radius: listening ? 2 : 1)
-                    .opacity(listening ? 1.0 : 0.85)
+                // Vibrant Apple Intelligence / Siri Glowing Color Palette
+                let siriColors: [Color] = [
+                    Color(red: 0.05, green: 0.55, blue: 1.00), // Vibrant Electric Blue
+                    Color(red: 0.00, green: 0.95, blue: 1.00), // Siri Neon Cyan
+                    Color(red: 0.70, green: 0.15, blue: 1.00), // Deep Neon Violet
+                    Color(red: 1.00, green: 0.20, blue: 0.65), // Hot Apple Pink / Magenta
+                    Color(red: 1.00, green: 0.55, blue: 0.10), // Radiant Amber / Coral
+                    Color(red: 0.00, green: 0.95, blue: 1.00), // Neon Cyan accent
+                    Color(red: 0.05, green: 0.55, blue: 1.00)  // Seamless loop
+                ]
+                
+                let gradient = AngularGradient(
+                    gradient: Gradient(colors: siriColors),
+                    center: .center,
+                    angle: rotation
+                )
+                
+                let reverseGradient = AngularGradient(
+                    gradient: Gradient(colors: siriColors.reversed()),
+                    center: .center,
+                    angle: rotation + .degrees(180)
+                )
+                
+                ZStack {
+                    // 1. Broad Atmospheric Bloom (Soft & Deep Glow)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(gradient, lineWidth: listening ? 32 : 20)
+                        .blur(radius: listening ? 32 : 20)
+                        .opacity(listening ? 0.95 : 0.75 + pulse)
+                        .blendMode(.plusLighter)
+                    
+                    // 2. Mid Luminous Core
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(reverseGradient, lineWidth: listening ? 14 : 9)
+                        .blur(radius: listening ? 12 : 8)
+                        .opacity(listening ? 1.0 : 0.85)
+                    
+                    // 3. Sharp Vibrant Light Beam (Glued right along physical bezel)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(gradient, lineWidth: listening ? 5.5 : 3.5)
+                        .blur(radius: 2.5)
+                        .opacity(1.0)
+                    
+                    // 4. Ultra-Crisp Highlight Rim
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(
+                            Color.white.opacity(listening ? 0.65 : 0.40),
+                            lineWidth: listening ? 1.5 : 1.0
+                        )
+                        .blur(radius: 0.5)
+                        .blendMode(.plusLighter)
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
             }
-            .padding(4)
-            .ignoresSafeArea()
-            .accessibilityHidden(true)
         }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
