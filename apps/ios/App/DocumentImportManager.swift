@@ -409,11 +409,19 @@ final class AnkiGoogleDriveManager {
             FSRSStoreManager.shared.saveItem(fsrsItem)
         }
         
-        var importSession = SessionRecord(learningLanguageID: languageID)
+        var importSession = SessionRecord(languageID: languageID, themeID: nil, title: "Import Anki / Drive (\(url.lastPathComponent))")
         importSession.endReason = "Import Anki / Google Drive (\(url.lastPathComponent))"
         let frag = Fragment(speaker: .assistant, text: "Importation Anki : \(importedItems.count) mots enregistrés.", startMS: 0, endMS: 1000)
         importSession.append(frag)
-        let assessment = Assessment(targetLanguage: languageID, wordProposals: proposals)
+        let assessment = Assessment(
+            passageID: frag.id,
+            revisionKey: "1",
+            outcome: .success,
+            suggestedLevel: 1,
+            nextGoal: "Pratique orale",
+            capability: "Vocabulaire Anki",
+            words: proposals
+        )
         importSession.assessments.append(assessment)
         store.save(importSession)
         
