@@ -255,6 +255,7 @@ public struct Preferences: Codable, Sendable {
     public var correctionLevel: String = "medium"
     public var cefrLevel: String = "A1"
     public var appearance: String = "dark"
+    public var pedagogicalMode: String = "teacher" // "teacher" (Professeur particulier guidé) ou "conversation" (Discussion libre)
     public init() {}
 }
 

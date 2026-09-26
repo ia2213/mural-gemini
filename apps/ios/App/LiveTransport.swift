@@ -156,7 +156,14 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         try? session.setActive(true)
         ownsAudioActivation = true
         
-        let startPrompt = "Dis bonjour simplement en allemand avec une petite phrase de 3 à 5 mots et pose une première question ultra simple et accessible pour débutant de niveau zéro (ex: 'Hallo! Wie heißt du?'). Sois chaleureux et très court."
+        let startPrompt = """
+        Démarre la séance en tant que Professeur Fluence.
+        Consignes impératives :
+        - Parle en allemand avec une phrase courte et claire adaptée au niveau de l'élève.
+        - INTERDICTION ABSOLUE de répéter 'Wie geht's?' ou 'Wie heißt du?' si l'élève a déjà discuté.
+        - Si c'est une continuation ou nouvelle leçon, annonce directement le mini-thème ou la notion du jour et pose ta première consigne ou question d'apprentissage.
+        - Reste concis, chaleureux et pédagogique.
+        """
         let initialResult = try await api.respond(instructions: instructions, input: startPrompt, model: preferences.groqModel, preferences: preferences)
         guard attempt == token else { throw CancellationError() }
         let sessionID = UUID().uuidString

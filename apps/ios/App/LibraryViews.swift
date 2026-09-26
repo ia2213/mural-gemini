@@ -315,8 +315,16 @@ struct SettingsView: View {
                     Text("Apparence")
                 }
                 
-                // MARK: 1. APPRENTISSAGE
+                // MARK: 1. APPRENTISSAGE & PÉDAGOGIE
                 Section {
+                    Picker(selection: Binding(get: { store.preferences.pedagogicalMode }, set: { val in store.updatePreferences { $0.pedagogicalMode = val } })) {
+                        Text("👨🏫 Professeur Particulier (Guidé)").tag("teacher")
+                        Text("💬 Discussion Libre (Immersion)").tag("conversation")
+                    } label: {
+                        Label("Mode d'apprentissage", systemImage: "graduationcap.fill")
+                    }
+                    .pickerStyle(.menu)
+                    
                     Picker(selection: Binding(get: { coordinator.language.id }, set: { coordinator.selectLanguage($0) })) {
                         ForEach(LanguageRegistry.all) { language in
                             Text(language.settingsTitle).tag(language.id)

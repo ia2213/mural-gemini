@@ -139,10 +139,25 @@ import MuralCore
         session = record; store.save(record)
         let generation = record.id
         let learner = store.learner
-        // Each new conversation starts fresh; learned vocabulary, recent topics and difficulty still carry forward.
+        
+        // Build rich memory of recent conversations
+        var memoryEntries: [String] = []
+        let pastSessions = store.learningSessions.suffix(5)
+        for (idx, past) in pastSessions.enumerated() {
+            let userTurns = past.passages.filter { $0.speaker == .user }.map(\.text).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            let assistantTurns = past.passages.filter { $0.speaker == .assistant }.map(\.text).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            if !userTurns.isEmpty || !assistantTurns.isEmpty {
+                let uSnippet = userTurns.prefix(2).joined(separator: " | ")
+                let aSnippet = assistantTurns.prefix(1).joined(separator: " | ")
+                memoryEntries.append("• Séance \(idx + 1) [\(past.title)]: Sujet: \"\(past.title)\". Extraits récents: Élève: \"\(uSnippet.prefix(100))\" / Prof: \"\(aSnippet.prefix(100))\".")
+            }
+        }
+        let conversationalMemory = memoryEntries.isEmpty ? "Nouvel élève démarrant l'apprentissage." : memoryEntries.joined(separator: "\n")
+        
+        // Each new conversation starts fresh with full memory injected into instructions
         let history: [[String: Any]] = []
         let recentSessionTitles = store.learningSessions.suffix(4).compactMap { $0.title }
-        let cefr = store.learner.levelLabel.isEmpty ? "B2" : store.learner.levelLabel
+        let cefr = store.learner.levelLabel.isEmpty ? "A1" : store.learner.levelLabel
         let baseInstructions = TeachingPolicy.voice(
             language: language,
             learner: learner,
@@ -151,7 +166,9 @@ import MuralCore
             meaningLanguage: store.preferences.meaningLanguage,
             correctionLevel: store.preferences.correctionLevel,
             cefrLevel: cefr,
-            recentTopics: recentSessionTitles
+            recentTopics: recentSessionTitles,
+            pedagogicalMode: store.preferences.pedagogicalMode,
+            conversationalMemory: conversationalMemory
         )
         let instructions = FSRSPromptPolicy.buildVoiceConversationPrompt(basePolicyPrompt: baseInstructions, languageID: language.id, level: cefr)
         connectionTask = Task { [weak self] in
