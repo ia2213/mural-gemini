@@ -15,7 +15,9 @@ import MuralCore
     private(set) var isMuted = false
     private let meanings: MeaningController
     private let finalAssessments: FinalAssessmentQueue
-    var meaning: String { meanings.text }
+    var meaning: String {
+        meanings.text.replacingOccurrences(of: #"\s*\[FSRS_REVIEW:.*?\]"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
     var translating: Bool { meanings.isLoading }
     var meaningError: String? { meanings.error }
     private(set) var working = false
@@ -95,10 +97,6 @@ import MuralCore
     var userPassage: Passage? { session?.passages.last(where: { $0.speaker == .user }) }
     var caption: String {
         let raw = assistantPassage?.text ?? language.greeting
-        return raw.replacingOccurrences(of: #"\s*\[FSRS_REVIEW:.*?\]"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    var meaning: String {
-        let raw = assistantPassage.flatMap { session?.translations[$0.id] } ?? ""
         return raw.replacingOccurrences(of: #"\s*\[FSRS_REVIEW:.*?\]"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
     }
     var status: String {
