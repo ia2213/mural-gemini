@@ -110,16 +110,25 @@ struct GoogleDriveWebView: UIViewRepresentable {
     @Binding var canGoBack: Bool
     @Binding var canGoForward: Bool
     @Binding var isLoading: Bool
-    var onEvaluate: ((WKWebView) -> Void)?
+    @Binding var webViewRef: WKWebView?
     
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
+        config.allowsInlineMediaPlayback = true
+        
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
-        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+        // Desktop Safari User-Agent prevents iOS Universal Links from handing off to the native Drive app
+        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
+        
         context.coordinator.webView = webView
-        let req = URLRequest(url: initialURL)
+        DispatchQueue.main.async {
+            self.webViewRef = webView
+        }
+        
+        var req = URLRequest(url: initialURL)
+        req.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
         webView.load(req)
         return webView
     }
@@ -140,6 +149,23 @@ struct GoogleDriveWebView: UIViewRepresentable {
             self.parent = parent
         }
         
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.cancel)
+                return
+            }
+            
+            let scheme = url.scheme?.lowercased() ?? ""
+            // Block all custom URL schemes (googledrive://, etc.) to force staying inside the in-app browser
+            if scheme != "http" && scheme != "https" && scheme != "about" {
+                decisionHandler(.cancel)
+                return
+            }
+            
+            // Allow all web requests inside WKWebView
+            decisionHandler(.allow)
+        }
+        
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             DispatchQueue.main.async { self.parent.isLoading = true }
         }
@@ -153,6 +179,14 @@ struct GoogleDriveWebView: UIViewRepresentable {
                     self.parent.currentURLString = url.absoluteString
                 }
             }
+        }
+        
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            DispatchQueue.main.async { self.parent.isLoading = false }
+        }
+        
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            DispatchQueue.main.async { self.parent.isLoading = false }
         }
     }
 }
@@ -240,11 +274,12 @@ struct GoogleDriveBrowserSheet: View {
                             
                             // Web View Frame
                             GoogleDriveWebView(
-                                initialURL: URL(string: "https://drive.google.com")!,
+                                initialURL: URL(string: "https://accounts.google.com/ServiceLogin?service=wise&passive=true&continue=https%3A%2F%2Fdrive.google.com%2Fdrive%2Fmy-drive")!,
                                 currentURLString: $currentURLString,
                                 canGoBack: $canGoBack,
                                 canGoForward: $canGoForward,
-                                isLoading: $isLoading
+                                isLoading: $isLoading,
+                                webViewRef: $webViewRef
                             )
                             
                             // Bottom Action Bar: Import Current File
@@ -403,18 +438,45 @@ struct GoogleDriveBrowserSheet: View {
     }
     
     private func importCurrentWebDocument() {
-        let urlString = currentURLString
         isDownloading = true
-        Task {
-            do {
-                let count = try await service.importFromPublicLink(urlString: urlString, store: coordinator.store, targetLanguageID: coordinator.language.id)
-                isDownloading = false
-                alertMessage = "\(count) mots importés avec succès depuis Google Drive !"
-                showAlert = true
-            } catch {
-                isDownloading = false
-                alertMessage = "Sélectionnez un fichier ou document dans votre Drive, puis cliquez sur Importer."
-                showAlert = true
+        guard let webView = webViewRef else {
+            let urlString = currentURLString
+            Task {
+                do {
+                    let count = try await service.importFromPublicLink(urlString: urlString, store: coordinator.store, targetLanguageID: coordinator.language.id)
+                    await MainActor.run {
+                        isDownloading = false
+                        alertMessage = "\(count) mots importés avec succès depuis Google Drive !"
+                        showAlert = true
+                    }
+                } catch {
+                    await MainActor.run {
+                        isDownloading = false
+                        alertMessage = "Sélectionnez un fichier ou document dans votre Drive, puis appuyez sur Importer."
+                        showAlert = true
+                    }
+                }
+            }
+            return
+        }
+        
+        webView.evaluateJavaScript("window.location.href") { result, _ in
+            let urlString = (result as? String) ?? currentURLString
+            Task {
+                do {
+                    let count = try await service.importFromPublicLink(urlString: urlString, store: coordinator.store, targetLanguageID: coordinator.language.id)
+                    await MainActor.run {
+                        isDownloading = false
+                        alertMessage = "\(count) mots importés avec succès depuis Google Drive !"
+                        showAlert = true
+                    }
+                } catch {
+                    await MainActor.run {
+                        isDownloading = false
+                        alertMessage = "Pour importer : ouvrez un fichier ou un document dans Drive, puis appuyez sur Importer."
+                        showAlert = true
+                    }
+                }
             }
         }
     }
