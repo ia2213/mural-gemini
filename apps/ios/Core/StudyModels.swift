@@ -524,3 +524,159 @@ public final class StudyStoreManager: @unchecked Sendable {
         }
     }
 }
+
+// MARK: - Pre-Built German Curriculum (A1 to B2)
+public struct DefaultGermanCurriculum {
+    public static func seedLessons() -> [AssimilLesson] {
+        [
+            // LESSON 1 (A1)
+            AssimilLesson(
+                lessonNumber: 1,
+                title: "Premiers contacts et salutations",
+                targetLanguageID: "de",
+                nativeLanguageID: "fr",
+                rawExtractedText: "Guten Tag! Wie heißen Sie? Ich heiße Marc.",
+                dialogue: [
+                    AssimilLine(lineIndex: 0, speaker: "Anna", targetText: "Guten Tag! Wie heißen Sie?", phonetic: "Gou-ten Tak! Vi haï-ssen zi?", nativeTranslation: "Bonjour ! Comment vous appelez-vous ?"),
+                    AssimilLine(lineIndex: 1, speaker: "Marc", targetText: "Guten Tag! Ich heiße Marc. Und Sie?", phonetic: "Gou-ten Tak! Ikh haï-sse Marc. Ound zi?", nativeTranslation: "Bonjour ! Je m'appelle Marc. Et vous ?"),
+                    AssimilLine(lineIndex: 2, speaker: "Anna", targetText: "Ich bin Anna. Freut mich, Sie kennenzulernen!", phonetic: "Ikh bin Anna. Froït mikh, zi ken-nen-tsou-ler-nen!", nativeTranslation: "Je suis Anna. Enchantée de faire votre connaissance !"),
+                    AssimilLine(lineIndex: 3, speaker: "Marc", targetText: "Gleichfalls! Sprechen Sie Französisch?", phonetic: "Glaïkh-fals! Chpre-khen zi fran-tsœ-zich?", nativeTranslation: "De même ! Parlez-vous français ?"),
+                    AssimilLine(lineIndex: 4, speaker: "Anna", targetText: "Ein bisschen, aber ich lerne lieber Deutsch mit Ihnen.", nativeTranslation: "Un peu, mais je préfère apprendre l'allemand avec vous.")
+                ],
+                grammarNotes: [
+                    "« Sie » avec majuscule est la formule de politesse (vouvoiement).",
+                    "Le verbe se place toujours en deuxième position dans une phrase déclarative principale.",
+                    "« Freut mich » est la formule courante pour dire « enchanté(e) »."
+                ],
+                exercises: [
+                    AssimilExercise(title: "Mise en pratique orale", instructions: "Traduisez ou répondez en allemand à haute voix.", items: [
+                        AssimilExerciseItem(itemIndex: 0, prompt: "Comment dites-vous « Bonjour, je m'appelle Marc » ?", expectedAnswer: "Guten Tag, ich heiße Marc.", explanation: "Le verbe « heiße » s'accorde avec « ich »."),
+                        AssimilExerciseItem(itemIndex: 1, prompt: "Comment demandez-vous poliment « Parlez-vous allemand ? »", expectedAnswer: "Sprechen Sie Deutsch?", explanation: "Inversion verbe-sujet pour la question fermée.")
+                    ])
+                ],
+                level: "A1"
+            ),
+            
+            // LESSON 2 (A1)
+            AssimilLesson(
+                lessonNumber: 2,
+                title: "Commander au café et au restaurant",
+                targetLanguageID: "de",
+                nativeLanguageID: "fr",
+                rawExtractedText: "Ich möchte bitte einen Kaffee und ein Wasser.",
+                dialogue: [
+                    AssimilLine(lineIndex: 0, speaker: "Kellner", targetText: "Guten Abend! Was möchten Sie bestellen?", nativeTranslation: "Bonsoir ! Que désirez-vous commander ?"),
+                    AssimilLine(lineIndex: 1, speaker: "Marc", targetText: "Ich möchte bitte einen Kaffee und ein Glas Wasser.", nativeTranslation: "J'aimerais s'il vous plaît un café et un verre d'eau."),
+                    AssimilLine(lineIndex: 2, speaker: "Kellner", targetText: "Mit Milch und Zucker?", nativeTranslation: "Avec du lait et du sucre ?"),
+                    AssimilLine(lineIndex: 3, speaker: "Marc", targetText: "Nur mit ein wenig Milch, danke.", nativeTranslation: "Seulement avec un peu de lait, merci."),
+                    AssimilLine(lineIndex: 4, speaker: "Marc", targetText: "Wir möchten bitte bezahlen. Zusammen oder getrennt?", nativeTranslation: "Nous aimerions payer s'il vous plaît. Ensemble ou séparément ?")
+                ],
+                grammarNotes: [
+                    "« Ich möchte » (j'aimerais) est la formule polie indispensable pour commander.",
+                    "L'accusatif masculin : « einen Kaffee » (der Kaffee ➔ einen Kaffee).",
+                    "« Zusammen oder getrennt? » est la question rituelle en Allemagne pour payer."
+                ],
+                level: "A1"
+            ),
+            
+            // LESSON 3 (A2)
+            AssimilLesson(
+                lessonNumber: 3,
+                title: "Raconter sa journée et le passé (Perfekt)",
+                targetLanguageID: "de",
+                nativeLanguageID: "fr",
+                rawExtractedText: "Heute habe ich viel gearbeitet und Deutsch gelernt.",
+                dialogue: [
+                    AssimilLine(lineIndex: 0, speaker: "Anna", targetText: "Wie war dein Tag heute, Marc?", nativeTranslation: "Comment était ta journée aujourd'hui, Marc ?"),
+                    AssimilLine(lineIndex: 1, speaker: "Marc", targetText: "Sehr intensiv! Ich bin früh aufgestanden und habe den ganzen Tag gelernt.", nativeTranslation: "Très intense ! Je me suis levé tôt et j'ai étudié toute la journée."),
+                    AssimilLine(lineIndex: 2, speaker: "Anna", targetText: "Hast du auch den Deutschkurs wiederholt?", nativeTranslation: "As-tu aussi révisé le cours d'allemand ?"),
+                    AssimilLine(lineIndex: 3, speaker: "Marc", targetText: "Ja, ich habe neue Vokabeln mit Fluence geübt.", nativeTranslation: "Oui, j'ai exercé de nouveaux mots de vocabulaire avec Fluence.")
+                ],
+                grammarNotes: [
+                    "Le parfait (Perfekt) se forme avec haben/sein + participe passé à la fin de la phrase.",
+                    "Les verbes de mouvement ou de changement d'état utilisent « sein » (ich bin aufgestanden).",
+                    "Le participe passé des verbes faibles commence par « ge- » et finit par « -t » (gearbeitet, gelernt)."
+                ],
+                level: "A2"
+            ),
+            
+            // LESSON 4 (B1)
+            AssimilLesson(
+                lessonNumber: 4,
+                title: "Exprimer son opinion et justifier son choix",
+                targetLanguageID: "de",
+                nativeLanguageID: "fr",
+                rawExtractedText: "Meiner Meinung nach ist kontinuierliche Übung der Schlüssel zum Erfolg.",
+                dialogue: [
+                    AssimilLine(lineIndex: 0, speaker: "Anna", targetText: "Was hältst du von täglichem Sprechtraining?", nativeTranslation: "Que penses-tu de l'entraînement oral quotidien ?"),
+                    AssimilLine(lineIndex: 1, speaker: "Marc", targetText: "Meiner Meinung nach ist das die effektivste Methode, weil man die Hemmungen abbaut.", nativeTranslation: "À mon avis, c'est la méthode la plus efficace, parce qu'on élimine les blocages."),
+                    AssimilLine(lineIndex: 2, speaker: "Anna", targetText: "Da stimme ich dir vollkommen zu. Man muss einfach anfangen zu sprechen.", nativeTranslation: "Je suis entièrement d'accord avec toi. Il faut simplement commencer à parler.")
+                ],
+                grammarNotes: [
+                    "« Meiner Meinung nach » (à mon avis) entraîne l'inversion verbe-sujet.",
+                    "La conjonction subordonnée « weil » rejette le verbe conjugué tout à la fin de la proposition."
+                ],
+                level: "B1"
+            ),
+            
+            // LESSON 5 (B2 Médical)
+            AssimilLesson(
+                lessonNumber: 5,
+                title: "Communication médicale & Anamnèse patient (Assistenzarzt)",
+                targetLanguageID: "de",
+                nativeLanguageID: "fr",
+                rawExtractedText: "Guten Tag, Herr Weber. Ich bin der Assistenzarzt. Was führt Sie zu uns?",
+                dialogue: [
+                    AssimilLine(lineIndex: 0, speaker: "Arzt", targetText: "Guten Tag, Herr Weber. Ich bin der zuständige Assistenzarzt. Was führt Sie zu uns?", nativeTranslation: "Bonjour Monsieur Weber. Je suis l'interne responsable. Qu'est-ce qui vous amène chez nous ?"),
+                    AssimilLine(lineIndex: 1, speaker: "Patient", targetText: "Ich habe seit gestern starke stechende Kopfschmerzen und Schwindelgefühl.", nativeTranslation: "J'ai depuis hier de violents maux de tête lancinants et des vertiges."),
+                    AssimilLine(lineIndex: 2, speaker: "Arzt", targetText: "Können Sie die Schmerzen auf einer Skala von eins bis zehn beschreiben?", nativeTranslation: "Pouvez-vous décrire la douleur sur une échelle de un à dix ?"),
+                    AssimilLine(lineIndex: 3, speaker: "Patient", targetText: "Etwa bei sieben. Besonders bei Licht wird es schlimmer.", nativeTranslation: "Environ sept. C'est particulièrement pire avec la lumière."),
+                    AssimilLine(lineIndex: 4, speaker: "Arzt", targetText: "Verstehe. Wir werden eine neurologische Untersuchung durchführen und die Vitalparameter überprüfen.", nativeTranslation: "Je comprends. Nous allons réaliser un examen neurologique et vérifier les paramètres vitaux.")
+                ],
+                grammarNotes: [
+                    "Vocabulaire médical B2 : stechende Schmerzen (douleurs lancinantes), Schwindelgefühl (vertiges), Vitalparameter (paramètres vitaux).",
+                    "Le vouvoiement et l'empathie professionnelle : « Verstehe. Wir werden... ».",
+                    "Structure de l'anamnèse clinique en Allemagne / Suisse / Autriche."
+                ],
+                level: "B2"
+            )
+        ]
+    }
+    
+    public static func seedVocabulary() -> [FSRSItem] {
+        [
+            // A1 Vocab
+            FSRSItem(term: "Hallo", meaning: "bonjour / salut", example: "Hallo! Wie geht es dir?", contextCategory: "Salutations", level: "A1", languageID: "de"),
+            FSRSItem(term: "Guten Tag", meaning: "bonjour (formel)", example: "Guten Tag, wie heißen Sie?", contextCategory: "Salutations", level: "A1", languageID: "de"),
+            FSRSItem(term: "Danke schön", meaning: "merci beaucoup", example: "Danke schön für Ihre Hilfe.", contextCategory: "Politesse", level: "A1", languageID: "de"),
+            FSRSItem(term: "Bitte sehr", meaning: "je vous en prie / de rien", example: "Bitte sehr, gern geschehen!", contextCategory: "Politesse", level: "A1", languageID: "de"),
+            FSRSItem(term: "Ich heiße...", meaning: "je m'appelle...", example: "Ich heiße Marc.", contextCategory: "Présentation", level: "A1", languageID: "de"),
+            FSRSItem(term: "Ich lerne Deutsch", meaning: "j'apprends l'allemand", example: "Ich lerne Deutsch mit Freude.", contextCategory: "Quotidien", level: "A1", languageID: "de"),
+            FSRSItem(term: "der Kaffee", meaning: "le café", example: "Ich möchte einen Kaffee trinken.", contextCategory: "Restaurant", level: "A1", languageID: "de"),
+            FSRSItem(term: "das Wasser", meaning: "l'eau", example: "Ein Glas Wasser, bitte.", contextCategory: "Restaurant", level: "A1", languageID: "de"),
+            FSRSItem(term: "die Rechnung", meaning: "l'addition / la facture", example: "Die Rechnung, bitte!", contextCategory: "Restaurant", level: "A1", languageID: "de"),
+            FSRSItem(term: "Sprechen Sie Französisch?", meaning: "parlez-vous français ?", example: "Entschuldigung, sprechen Sie Französisch?", contextCategory: "Communication", level: "A1", languageID: "de"),
+            
+            // A2 Vocab
+            FSRSItem(term: "aufstehen", meaning: "se lever", example: "Ich bin um 7 Uhr aufgestanden.", contextCategory: "Routine", level: "A2", languageID: "de"),
+            FSRSItem(term: "arbeiten", meaning: "travailler", example: "Er hat heute viel gearbeitet.", contextCategory: "Travail", level: "A2", languageID: "de"),
+            FSRSItem(term: "der Termin", meaning: "le rendez-vous", example: "Ich habe einen Termin beim Arzt.", contextCategory: "Santé", level: "A2", languageID: "de"),
+            FSRSItem(term: "die Wohnung", meaning: "l'appartement", example: "Die Wohnung hat drei Zimmer.", contextCategory: "Logement", level: "A2", languageID: "de"),
+            FSRSItem(term: "der Bahnhof", meaning: "la gare", example: "Wo ist der Hauptbahnhof?", contextCategory: "Transport", level: "A2", languageID: "de"),
+            
+            // B1 Vocab
+            FSRSItem(term: "meiner Meinung nach", meaning: "à mon avis", example: "Meiner Meinung nach ist das wichtig.", contextCategory: "Opinion", level: "B1", languageID: "de"),
+            FSRSItem(term: "zustimmen", meaning: "être d'accord / approuver", example: "Ich stimme dir vollkommen zu.", contextCategory: "Débat", level: "B1", languageID: "de"),
+            FSRSItem(term: "die Erfahrung", meaning: "l'expérience", example: "Ich habe viel klinische Erfahrung.", contextCategory: "Professionnel", level: "B1", languageID: "de"),
+            FSRSItem(term: "die Bewerbung", meaning: "la candidature", example: "Ich schicke meine Bewerbung als Assistenzarzt.", contextCategory: "Emploi", level: "B1", languageID: "de"),
+            
+            // B2 Médical Vocab
+            FSRSItem(term: "der Assistenzarzt", meaning: "médecin assistant / interne", example: "Ich bewerbe mich als Assistenzarzt für Neurochirurgie.", contextCategory: "Médecine", level: "B2", languageID: "de"),
+            FSRSItem(term: "die Anamnese", meaning: "l'anamnèse (histoire médicale du patient)", example: "Wir erheben die Anamnese des Patienten.", contextCategory: "Médecine", level: "B2", languageID: "de"),
+            FSRSItem(term: "die Kopfschmerzen", meaning: "maux de tête / céphalées", example: "Der Patient klagt über starke Kopfschmerzen.", contextCategory: "Symptômes", level: "B2", languageID: "de"),
+            FSRSItem(term: "das Schwindelgefühl", meaning: "sensation de vertige", example: "Haben Sie auch Schwindelgefühl?", contextCategory: "Symptômes", level: "B2", languageID: "de"),
+            FSRSItem(term: "die Untersuchung", meaning: "l'examen clinique / exploration", example: "Die körperliche Untersuchung ist unauffällig.", contextCategory: "Clinique", level: "B2", languageID: "de"),
+            FSRSItem(term: "die Behandlung", meaning: "le traitement / la prise en charge", example: "Die Behandlung schlägt gut an.", contextCategory: "Thérapeutique", level: "B2", languageID: "de")
+        ]
+    }
+}

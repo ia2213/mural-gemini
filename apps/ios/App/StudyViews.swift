@@ -175,22 +175,23 @@ struct StudyHubView: View {
     }
     
     private func reloadContent() {
-        lessons = storeManager.loadLessons()
+        var loadedLessons = storeManager.loadLessons()
+        if loadedLessons.isEmpty {
+            let defaultLessons = DefaultGermanCurriculum.seedLessons()
+            for lesson in defaultLessons {
+                storeManager.saveLesson(lesson)
+            }
+            loadedLessons = defaultLessons
+        }
+        lessons = loadedLessons
         documents = storeManager.loadDocuments()
         fsrsDueItems = fsrsStore.getDueItems(for: coordinator.language.id)
     }
     
     private func seedFSRSIfNeeded() {
         let existing = fsrsStore.loadItems(for: "de")
-        if existing.isEmpty {
-            let seeds = [
-                FSRSItem(term: "Hallo", meaning: "bonjour / salut", example: "Hallo! Wie geht es dir?", contextCategory: "Salutations", level: "A1", languageID: "de", stability: 1.0, difficulty: 2.0),
-                FSRSItem(term: "Danke", meaning: "merci", example: "Danke schön!", contextCategory: "Politesse", level: "A1", languageID: "de", stability: 1.0, difficulty: 2.0),
-                FSRSItem(term: "Bitte", meaning: "s'il te plaît / de rien", example: "Bitte sehr!", contextCategory: "Politesse", level: "A1", languageID: "de", stability: 1.0, difficulty: 2.0),
-                FSRSItem(term: "Ich heiße...", meaning: "je m'appelle...", example: "Ich heiße Marc.", contextCategory: "Présentation", level: "A1", languageID: "de", stability: 0.8, difficulty: 2.5),
-                FSRSItem(term: "Ich lerne Deutsch", meaning: "j'apprends l'allemand", example: "Ich lerne Deutsch mit Fluence.", contextCategory: "Quotidien", level: "A1", languageID: "de", stability: 0.6, difficulty: 3.0),
-                FSRSItem(term: "Guten Tag", meaning: "bonjour (formel)", example: "Guten Tag, wie geht es Ihnen?", contextCategory: "Salutations", level: "A1", languageID: "de", stability: 1.0, difficulty: 2.2)
-            ]
+        if existing.isEmpty || existing.count < 10 {
+            let seeds = DefaultGermanCurriculum.seedVocabulary()
             fsrsStore.saveItems(seeds)
         }
     }
