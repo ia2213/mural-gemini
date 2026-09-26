@@ -52,6 +52,13 @@ struct Brand: View {
 }
 
 // MARK: - Organic Glass Container Modifier
+struct SoftGlass: ViewModifier {
+    var tint: Color = .white.opacity(0.45)
+    func body(content: Content) -> some View {
+        content.background(FluenceColor.surface, in: Capsule())
+    }
+}
+
 struct OrganicGlass: ViewModifier {
     var cornerRadius: CGFloat = 24
     @Environment(\.colorScheme) private var colorScheme
