@@ -776,17 +776,89 @@ final class GoogleDriveDirectService: NSObject, ObservableObject, ASWebAuthentic
         return try await AnkiGoogleDriveManager.shared.importVocabulary(from: tempFile, store: store, languageID: targetLanguageID)
     }
     
-    // MARK: - Import Direct Google Drive Link (Public or Shared)
+    // MARK: - Import Direct Google Drive Link (Folder or File)
     func importFromPublicLink(urlString: String, store: LearningStore, targetLanguageID: String = "de") async throws -> Int {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // CASE A: Google Drive FOLDER link
+        if trimmed.contains("/folders/") {
+            var folderId = ""
+            if let match = trimmed.range(of: #"/folders/([a-zA-Z0-9_-]+)"#, options: .regularExpression) {
+                folderId = String(trimmed[match]).replacingOccurrences(of: "/folders/", with: "")
+            }
+            guard !folderId.isEmpty else { throw DocumentImportError.cannotOpenFolder }
+            
+            guard let folderWebURL = URL(string: "https://drive.google.com/drive/folders/\(folderId)") else {
+                throw DocumentImportError.cannotOpenFolder
+            }
+            
+            var request = URLRequest(url: folderWebURL)
+            request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15", forHTTPHeaderField: "User-Agent")
+            
+            let (htmlData, _) = try await URLSession.shared.data(for: request)
+            guard let htmlString = String(data: htmlData, encoding: .utf8) else {
+                throw DocumentImportError.cannotOpenFolder
+            }
+            
+            var discoveredFileIDs = Set<String>()
+            
+            if let regex = try? NSRegularExpression(pattern: #"/file/d/([a-zA-Z0-9_-]{20,})"#, options: []) {
+                let nsString = htmlString as NSString
+                let matches = regex.matches(in: htmlString, options: [], range: NSRange(location: 0, length: nsString.length))
+                for match in matches {
+                    if match.numberOfRanges > 1 {
+                        let fId = nsString.substring(with: match.range(at: 1))
+                        if fId != folderId { discoveredFileIDs.insert(fId) }
+                    }
+                }
+            }
+            
+            if let regex = try? NSRegularExpression(pattern: #"\["([a-zA-Z0-9_-]{25,})""#, options: []) {
+                let nsString = htmlString as NSString
+                let matches = regex.matches(in: htmlString, options: [], range: NSRange(location: 0, length: nsString.length))
+                for match in matches {
+                    if match.numberOfRanges > 1 {
+                        let fId = nsString.substring(with: match.range(at: 1))
+                        if fId != folderId { discoveredFileIDs.insert(fId) }
+                    }
+                }
+            }
+            
+            var totalWords = 0
+            var downloadedFiles: [URL] = []
+            
+            for (index, fId) in discoveredFileIDs.enumerated() {
+                if let dlURL = URL(string: "https://drive.google.com/uc?export=download&id=\(fId)") {
+                    if let (fileData, _) = try? await URLSession.shared.data(from: dlURL), fileData.count > 20 {
+                        let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent("drive_folder_\(folderId)_\(index).txt")
+                        try? fileData.write(to: tempFile)
+                        downloadedFiles.append(tempFile)
+                    }
+                }
+            }
+            
+            if !downloadedFiles.isEmpty {
+                let res = try await AnkiGoogleDriveManager.shared.importBatch(from: downloadedFiles, store: store, languageID: targetLanguageID)
+                totalWords = res.wordsCount
+            }
+            
+            guard totalWords > 0 || !downloadedFiles.isEmpty else {
+                throw DocumentImportError.emptyFolder
+            }
+            
+            return totalWords
+        }
+        
+        // CASE B: Single File Link
         var fileId = ""
-        if let match = urlString.range(of: #"/d/([a-zA-Z0-9_-]+)"#, options: .regularExpression) {
-            let substr = String(urlString[match])
+        if let match = trimmed.range(of: #"/d/([a-zA-Z0-9_-]+)"#, options: .regularExpression) {
+            let substr = String(trimmed[match])
             fileId = substr.replacingOccurrences(of: "/d/", with: "")
-        } else if let match = urlString.range(of: #"id=([a-zA-Z0-9_-]+)"#, options: .regularExpression) {
-            let substr = String(urlString[match])
+        } else if let match = trimmed.range(of: #"id=([a-zA-Z0-9_-]+)"#, options: .regularExpression) {
+            let substr = String(trimmed[match])
             fileId = substr.replacingOccurrences(of: "id=", with: "")
         } else {
-            fileId = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+            fileId = trimmed
         }
         
         guard !fileId.isEmpty else { throw DocumentImportError.cannotOpenFolder }

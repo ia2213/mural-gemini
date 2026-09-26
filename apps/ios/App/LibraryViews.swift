@@ -251,10 +251,8 @@ struct GoogleDriveBrowserSheet: View {
                                     Divider().overlay(FluenceColor.surfaceSecondary)
                                     
                                     VStack(alignment: .leading, spacing: 12) {
-                                        stepRow(number: "1", text: "Ouvrez l'application Google Drive sur votre iPhone.")
-                                        stepRow(number: "2", text: "Touchez les trois points « ••• » à côté de votre fichier (PDF, Anki, TXT, CSV, Docs).")
-                                        stepRow(number: "3", text: "Touchez « Ouvrir dans » ou « Envoyer une copie ».")
-                                        stepRow(number: "4", text: "Sélectionnez « Fluence » dans la liste : l'importation se fait automatiquement !")
+                                        stepRow(number: "1", text: "Pour un fichier ou plusieurs : Ouvrez le dossier dans Drive, restez appuyé pour sélectionner tous les fichiers, touchez « ••• » ➔ « Envoyer une copie » ➔ « Fluence ».")
+                                        stepRow(number: "2", text: "Pour un dossier complet : Touchez « ••• » sur le dossier dans Drive ➔ « Copier le lien » ➔ Collez-le dans l'onglet « 🔗 Lien ».")
                                     }
                                     
                                     Button {
