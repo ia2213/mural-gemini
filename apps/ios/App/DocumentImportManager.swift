@@ -366,13 +366,14 @@ final class AnkiGoogleDriveManager {
             let studyDoc = StudyDocument(
                 id: UUID(),
                 title: url.deletingPathExtension().lastPathComponent,
-                rawText: documentFullText,
-                pageCount: pdfDoc.pageCount,
                 source: "Google Drive / Fichiers",
+                rawContent: documentFullText,
+                pageCount: pdfDoc.pageCount,
+                summary: "Document de \(pdfDoc.pageCount) page(s) avec \(importedItems.count) mots et phrases.",
+                targetLanguageID: languageID,
                 level: StudyLevel.detect(from: filename).rawValue,
-                format: "PDF",
                 folderName: url.deletingLastPathComponent().lastPathComponent,
-                extractedTerms: importedItems.map { $0.term }
+                fileType: "PDF"
             )
             StudyStoreManager.shared.saveDocuments([studyDoc])
         } else {
@@ -392,13 +393,14 @@ final class AnkiGoogleDriveManager {
             let studyDoc = StudyDocument(
                 id: UUID(),
                 title: url.deletingPathExtension().lastPathComponent,
-                rawText: content,
-                pageCount: max(1, content.components(separatedBy: .newlines).count / 40),
                 source: "Google Drive / Fichiers",
+                rawContent: content,
+                pageCount: max(1, content.components(separatedBy: .newlines).count / 40),
+                summary: "Document de cours avec \(importedItems.count) mots et phrases.",
+                targetLanguageID: languageID,
                 level: StudyLevel.detect(from: filename).rawValue,
-                format: ext.uppercased(),
                 folderName: url.deletingLastPathComponent().lastPathComponent,
-                extractedTerms: importedItems.map { $0.term }
+                fileType: ext.uppercased()
             )
             StudyStoreManager.shared.saveDocuments([studyDoc])
         }
