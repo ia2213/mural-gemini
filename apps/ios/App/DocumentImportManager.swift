@@ -325,7 +325,7 @@ final class AnkiGoogleDriveManager {
         }
         
         let ext = url.pathExtension.lowercased()
-        var importedCount = 0
+        var importedItems: [(term: String, meaning: String, example: String)] = []
         
         if ext == "json" {
             let data = try Data(contentsOf: url)
@@ -334,22 +334,9 @@ final class AnkiGoogleDriveManager {
                     let term = item["term"] as? String ?? item["lemma"] as? String ?? item["front"] as? String ?? ""
                     let meaning = item["meaning"] as? String ?? item["back"] as? String ?? ""
                     let example = item["example"] as? String ?? ""
-                    let explanation = item["explanation"] as? String ?? ""
                     
                     if !term.isEmpty && !meaning.isEmpty {
-                        let proposal = WordProposal(
-                            lemma: term.trimmingCharacters(in: .whitespacesAndNewlines),
-                            meaning: meaning.trimmingCharacters(in: .whitespacesAndNewlines),
-                            form: term,
-                            kind: .vocabulary,
-                            confidence: 1.0,
-                            sourceIDs: [url.lastPathComponent],
-                            quote: example.isEmpty ? term : example,
-                            language: languageID
-                        )
-                        store.propose(proposal)
-                        FSRSStoreManager.shared.addOrUpdateItem(term: term, meaning: meaning, languageID: languageID)
-                        importedCount += 1
+                        importedItems.append((term: term.trimmingCharacters(in: .whitespacesAndNewlines), meaning: meaning.trimmingCharacters(in: .whitespacesAndNewlines), example: example.trimmingCharacters(in: .whitespacesAndNewlines)))
                     }
                 }
             }
@@ -387,28 +374,49 @@ final class AnkiGoogleDriveManager {
                     let back = rawBack.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
                     
                     if !front.isEmpty && !back.isEmpty {
-                        let proposal = WordProposal(
-                            lemma: front,
-                            meaning: back,
-                            form: front,
-                            kind: .vocabulary,
-                            confidence: 1.0,
-                            sourceIDs: [url.lastPathComponent],
-                            quote: example.isEmpty ? front : example,
-                            language: languageID
-                        )
-                        store.propose(proposal)
-                        FSRSStoreManager.shared.addOrUpdateItem(term: front, meaning: back, languageID: languageID)
-                        importedCount += 1
+                        importedItems.append((term: front, meaning: back, example: example))
                     }
                 }
             }
         }
         
-        guard importedCount > 0 else {
+        guard !importedItems.isEmpty else {
             throw DocumentImportError.emptyFile
         }
         
-        return importedCount
+        var proposals: [WordProposal] = []
+        for item in importedItems {
+            let proposal = WordProposal(
+                lemma: item.term,
+                meaning: item.meaning,
+                form: item.term,
+                kind: .independent,
+                confidence: 1.0,
+                sourceIDs: [url.lastPathComponent],
+                quote: item.example.isEmpty ? item.term : item.example,
+                language: languageID
+            )
+            proposals.append(proposal)
+            
+            let fsrsItem = FSRSItem(
+                term: item.term,
+                meaning: item.meaning,
+                example: item.example.isEmpty ? nil : item.example,
+                contextCategory: "Anki / Drive",
+                level: "A1",
+                languageID: languageID
+            )
+            FSRSStoreManager.shared.saveItem(fsrsItem)
+        }
+        
+        var importSession = SessionRecord(learningLanguageID: languageID)
+        importSession.endReason = "Import Anki / Google Drive (\(url.lastPathComponent))"
+        let frag = Fragment(speaker: .assistant, text: "Importation Anki : \(importedItems.count) mots enregistrés.", startMS: 0, endMS: 1000)
+        importSession.append(frag)
+        let assessment = Assessment(targetLanguage: languageID, wordProposals: proposals)
+        importSession.assessments.append(assessment)
+        store.save(importSession)
+        
+        return importedItems.count
     }
 }
