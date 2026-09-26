@@ -250,6 +250,11 @@ import MuralCore
         append("instructions", TeachingPolicy.help(language: language))
         notice = "Fluence will make that a little simpler."
     }
+    func replayAudio(_ text: String) {
+        guard !text.isEmpty else { return }
+        transport.speak(text, languageCode: language.id, rate: store.preferences.speechRate, voiceIdentifier: store.preferences.selectedVoiceIdentifier)
+    }
+
     func end(reason: String = "Ended by you") {
         guard state == .active || state == .connecting else { return }
         let wasConnecting = state == .connecting

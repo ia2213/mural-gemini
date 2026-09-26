@@ -161,7 +161,7 @@ struct TalkView: View {
                         }
                         Spacer()
                         Button {
-                            coordinator.speak(coordinator.caption)
+                            coordinator.replayAudio(coordinator.caption)
                         } label: {
                             Image(systemName: "speaker.wave.2.fill")
                                 .font(.system(size: 14))
