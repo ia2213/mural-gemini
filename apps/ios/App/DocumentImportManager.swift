@@ -317,6 +317,7 @@ final class AnkiGoogleDriveManager {
     }
     
     // MARK: - Import from Anki / Drive / CSV / TXT / JSON
+    // MARK: - Import Vocabulary & Sentences from Any File (PDF, TXT, CSV, TSV, JSON, Decks)
     func importVocabulary(from url: URL, store: LearningStore, languageID: String = "de") async throws -> Int {
         let isSecurityScoped = url.startAccessingSecurityScopedResource()
         defer {
@@ -326,7 +327,9 @@ final class AnkiGoogleDriveManager {
         }
         
         let ext = url.pathExtension.lowercased()
+        let filename = url.lastPathComponent
         var importedItems: [(term: String, meaning: String, example: String)] = []
+        var documentFullText = ""
         
         if ext == "json" {
             let data = try Data(contentsOf: url)
@@ -341,8 +344,39 @@ final class AnkiGoogleDriveManager {
                     }
                 }
             }
+        } else if ext == "pdf" {
+            // PDF Document Extraction (Multi-Page Extraction)
+            guard let pdfDoc = PDFDocument(url: url) else {
+                throw DocumentImportError.cannotOpenPDF
+            }
+            
+            var allPagesText: [String] = []
+            for i in 0..<pdfDoc.pageCount {
+                if let page = pdfDoc.page(at: i), let pageString = page.string {
+                    let clean = pageString.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !clean.isEmpty {
+                        allPagesText.append(clean)
+                    }
+                }
+            }
+            documentFullText = allPagesText.joined(separator: "\n\n")
+            importedItems = extractItemsFromText(content: documentFullText, sourceFilename: filename, languageID: languageID)
+            
+            // Save as structured StudyDocument for course study
+            let studyDoc = StudyDocument(
+                id: UUID(),
+                title: url.deletingPathExtension().lastPathComponent,
+                rawText: documentFullText,
+                pageCount: pdfDoc.pageCount,
+                source: "Google Drive / Fichiers",
+                level: StudyLevel.detect(from: filename).rawValue,
+                format: "PDF",
+                folderName: url.deletingLastPathComponent().lastPathComponent,
+                extractedTerms: importedItems.map { $0.term }
+            )
+            StudyStoreManager.shared.saveDocuments([studyDoc])
         } else {
-            // Text / TSV / CSV Parsing
+            // Text / Markdown / TSV / CSV / Course Document
             let content: String
             if let str = try? String(contentsOf: url, encoding: .utf8) {
                 content = str
@@ -351,34 +385,22 @@ final class AnkiGoogleDriveManager {
             } else {
                 throw DocumentImportError.emptyFile
             }
+            documentFullText = content
+            importedItems = extractItemsFromText(content: content, sourceFilename: filename, languageID: languageID)
             
-            let lines = content.components(separatedBy: .newlines)
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
-                
-                // Determine delimiter: Tab, Semicolon, or Comma
-                let delimiter: Character
-                if trimmed.contains("\t") { delimiter = "\t" }
-                else if trimmed.contains(";") { delimiter = ";" }
-                else if trimmed.contains(",") { delimiter = "," }
-                else { continue }
-                
-                let parts = trimmed.split(separator: delimiter, maxSplits: 4, omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                if parts.count >= 2 {
-                    let rawFront = parts[0]
-                    let rawBack = parts[1]
-                    let example = parts.count >= 3 ? parts[2] : ""
-                    
-                    // Strip HTML tags like <b>, <i>, <br>
-                    let front = rawFront.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
-                    let back = rawBack.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
-                    
-                    if !front.isEmpty && !back.isEmpty {
-                        importedItems.append((term: front, meaning: back, example: example))
-                    }
-                }
-            }
+            // Save as structured StudyDocument
+            let studyDoc = StudyDocument(
+                id: UUID(),
+                title: url.deletingPathExtension().lastPathComponent,
+                rawText: content,
+                pageCount: max(1, content.components(separatedBy: .newlines).count / 40),
+                source: "Google Drive / Fichiers",
+                level: StudyLevel.detect(from: filename).rawValue,
+                format: ext.uppercased(),
+                folderName: url.deletingLastPathComponent().lastPathComponent,
+                extractedTerms: importedItems.map { $0.term }
+            )
+            StudyStoreManager.shared.saveDocuments([studyDoc])
         }
         
         guard !importedItems.isEmpty else {
@@ -403,16 +425,16 @@ final class AnkiGoogleDriveManager {
                 term: item.term,
                 meaning: item.meaning,
                 example: item.example.isEmpty ? nil : item.example,
-                contextCategory: "Anki / Drive",
+                contextCategory: filename,
                 level: "A1",
                 languageID: languageID
             )
             FSRSStoreManager.shared.saveItem(fsrsItem)
         }
         
-        var importSession = SessionRecord(languageID: languageID, themeID: nil, title: "Import Anki / Drive (\(url.lastPathComponent))")
-        importSession.endReason = "Import Anki / Google Drive (\(url.lastPathComponent))"
-        let frag = Fragment(speaker: .assistant, text: "Importation Anki : \(importedItems.count) mots enregistrés.", startMS: 0, endMS: 1000)
+        var importSession = SessionRecord(languageID: languageID, themeID: nil, title: "Import (\(filename))")
+        importSession.endReason = "Import Google Drive / Cours (\(importedItems.count) éléments)"
+        let frag = Fragment(speaker: .assistant, text: "Importation : \(importedItems.count) mots, phrases et dialogues enregistrés.", startMS: 0, endMS: 1000)
         importSession.append(frag)
         let assessment = Assessment(
             passageID: frag.id,
@@ -420,13 +442,124 @@ final class AnkiGoogleDriveManager {
             outcome: .success,
             suggestedLevel: 1,
             nextGoal: "Pratique orale",
-            capability: "Vocabulaire Anki",
+            capability: "Vocabulaire et Cours",
             words: proposals
         )
         importSession.assessments.append(assessment)
         store.save(importSession)
         
         return importedItems.count
+    }
+    
+    // MARK: - Comprehensive Text & Document Vocabulary Extractor
+    func extractItemsFromText(content: String, sourceFilename: String, languageID: String = "de") -> [(term: String, meaning: String, example: String)] {
+        var items: [(term: String, meaning: String, example: String)] = []
+        var seenTerms = Set<String>()
+        
+        let lines = content.components(separatedBy: .newlines)
+        
+        for rawLine in lines {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            if line.isEmpty || line.hasPrefix("#") { continue }
+            
+            // 1. Check for explicit delimiters (Tab, Colon, Dash, Semicolon, Equal)
+            var term = ""
+            var meaning = ""
+            var example = ""
+            
+            if line.contains("\t") {
+                let parts = line.components(separatedBy: "\t")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+                if parts.count > 2 { example = parts[2].trimmingCharacters(in: .whitespaces) }
+            } else if line.contains(" - ") {
+                let parts = line.components(separatedBy: " - ")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+            } else if line.contains(" : ") || line.contains(": ") {
+                let parts = line.components(separatedBy: ": ")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+            } else if line.contains(" = ") {
+                let parts = line.components(separatedBy: " = ")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+            } else if line.contains(";") {
+                let parts = line.components(separatedBy: ";")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+            }
+            
+            if !term.isEmpty && term.count > 1 && term.count < 100 {
+                let cleanTerm = term.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleanMeaning = meaning.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !cleanTerm.isEmpty && !seenTerms.contains(cleanTerm.lowercased()) {
+                    seenTerms.insert(cleanTerm.lowercased())
+                    items.append((term: cleanTerm, meaning: cleanMeaning.isEmpty ? "Vocabulaire (\(sourceFilename))" : cleanMeaning, example: example.isEmpty ? cleanTerm : example))
+                    continue
+                }
+            }
+            
+            // 2. Extract Dialogue Lines (e.g. "A: Hallo", "Anna: Wie geht es dir?", "„Ich lerne Deutsch“")
+            if line.contains(":") {
+                let parts = line.components(separatedBy: ":")
+                if parts.count == 2 && parts[0].count < 25 && parts[1].count > 3 {
+                    let speaker = parts[0].trimmingCharacters(in: .whitespaces)
+                    let speech = parts[1].trimmingCharacters(in: .whitespaces)
+                    if !speech.isEmpty && !seenTerms.contains(speech.lowercased()) {
+                        seenTerms.insert(speech.lowercased())
+                        items.append((term: speech, meaning: "Dialogue (\(speaker))", example: line))
+                        continue
+                    }
+                }
+            }
+            
+            // 3. Extract Quoted German sentences
+            if let regex = try? NSRegularExpression(pattern: #"[„"«]([^"»”\n]+)[”"»]"#, options: []) {
+                let ns = line as NSString
+                let matches = regex.matches(in: line, options: [], range: NSRange(location: 0, length: ns.length))
+                for m in matches {
+                    if m.numberOfRanges > 1 {
+                        let quote = ns.substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespaces)
+                        if quote.count > 3 && !seenTerms.contains(quote.lowercased()) {
+                            seenTerms.insert(quote.lowercased())
+                            items.append((term: quote, meaning: "Phrase de cours", example: line))
+                        }
+                    }
+                }
+            }
+            
+            // 4. Extract German Nouns with Articles (der/die/das/ein/eine)
+            if let regex = try? NSRegularExpression(pattern: #"\b(der|die|das|ein|eine|den|dem|des)\s+([A-ZÄÖÜ][a-zäöüß]+)\b"#, options: []) {
+                let ns = line as NSString
+                let matches = regex.matches(in: line, options: [], range: NSRange(location: 0, length: ns.length))
+                for m in matches {
+                    let nounPhrase = ns.substring(with: m.range).trimmingCharacters(in: .whitespaces)
+                    if !seenTerms.contains(nounPhrase.lowercased()) {
+                        seenTerms.insert(nounPhrase.lowercased())
+                        items.append((term: nounPhrase, meaning: "Nom & Article", example: line))
+                    }
+                }
+            }
+            
+            // 5. Extract Complete German Sentences from lessons & exercises
+            let sentenceDelimiters = CharacterSet(charactersIn: ".!?")
+            let sentences = line.components(separatedBy: sentenceDelimiters)
+            for s in sentences {
+                let sentence = s.trimmingCharacters(in: .whitespacesAndNewlines)
+                if sentence.count >= 8 && sentence.count <= 120 {
+                    let lower = sentence.lowercased()
+                    let germanMarkers = ["ich", "du", "er", "sie", "es", "wir", "ihr", "ist", "sind", "war", "haben", "hat", "sein", "nicht", "bitte", "danke", "wie", "was", "wo", "warum", "deutsch", "lernen", "kann", "muss", "will", "sehr", "gut", "hallo"]
+                    let hasGermanWord = germanMarkers.contains { lower.contains($0) }
+                    if hasGermanWord && !seenTerms.contains(sentence.lowercased()) {
+                        seenTerms.insert(sentence.lowercased())
+                        items.append((term: sentence, meaning: "Phrase d'exercice / cours", example: line))
+                    }
+                }
+            }
+        }
+        
+        return items
     }
     
     // MARK: - Direct Raw Text / Vocabulary Parser
