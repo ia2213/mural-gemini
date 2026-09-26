@@ -148,80 +148,88 @@ struct TalkView: View {
                 
                 Spacer(minLength: 10)
                 
-                // 1. Main Teacher / AI Dialogue Card
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        HStack(spacing: 6) {
-                            Image(systemName: "graduationcap.fill")
-                                .font(.caption)
-                                .foregroundStyle(FluenceColor.accent)
-                            Text("Professeur Fluence")
-                                .font(.system(.caption, design: .rounded, weight: .bold))
+                // Central Learning Stage (Scrollable to prevent any truncation)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        // 1. Main Teacher / AI Dialogue Card
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "graduationcap.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(FluenceColor.accent)
+                                    Text("Professeur Fluence")
+                                        .font(.system(.caption, design: .rounded, weight: .bold))
+                                        .foregroundStyle(FluenceColor.ink)
+                                }
+                                Spacer()
+                                Button {
+                                    coordinator.replayAudio(coordinator.caption)
+                                } label: {
+                                    Image(systemName: "speaker.wave.2.fill")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(FluenceColor.accent)
+                                        .padding(6)
+                                        .background(FluenceColor.surfaceSecondary, in: Circle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Réécouter la phrase")
+                            }
+                            
+                            // German spoken sentence (Full text display)
+                            Text(linkedCaption)
+                                .font(.system(size: 22, weight: .semibold, design: .rounded))
                                 .foregroundStyle(FluenceColor.ink)
+                                .lineSpacing(4)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .environment(\.openURL, OpenURLAction { url in
+                                    guard url.scheme == "fluence-word", let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let word = components.queryItems?.first?.value else { return .discarded }
+                                    lookup = WordLookup(word: word, sentence: coordinator.caption)
+                                    return .handled
+                                })
+                            
+                            // French Translation Subtitle
+                            if coordinator.store.preferences.meaningVisible {
+                                Divider()
+                                    .background(Color.white.opacity(0.08))
+                                    .padding(.vertical, 2)
+                                
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("🇫🇷")
+                                        .font(.caption)
+                                    Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Traduction en cours…" : "")
+                                        .font(.system(.subheadline, design: .rounded))
+                                        .foregroundStyle(FluenceColor.secondary)
+                                        .lineSpacing(3)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
                         }
-                        Spacer()
-                        Button {
-                            coordinator.replayAudio(coordinator.caption)
-                        } label: {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.system(size: 14))
-                                .foregroundStyle(FluenceColor.accent)
-                                .padding(6)
-                                .background(FluenceColor.surfaceSecondary, in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Réécouter la phrase")
-                    }
-                    
-                    // German spoken sentence
-                    Text(linkedCaption)
-                        .font(.system(size: 24, weight: .semibold, design: .rounded))
-                        .foregroundStyle(FluenceColor.ink)
-                        .lineSpacing(4)
-                        .environment(\.openURL, OpenURLAction { url in
-                            guard url.scheme == "fluence-word", let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let word = components.queryItems?.first?.value else { return .discarded }
-                            lookup = WordLookup(word: word, sentence: coordinator.caption)
-                            return .handled
-                        })
-                    
-                    // French Translation Subtitle
-                    if coordinator.store.preferences.meaningVisible {
-                        Divider()
-                            .background(Color.white.opacity(0.08))
-                            .padding(.vertical, 2)
-                        
-                        HStack(alignment: .top, spacing: 8) {
-                            Text("🇫🇷")
-                                .font(.caption)
-                            Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Traduction en cours…" : "")
-                                .font(.system(.subheadline, design: .rounded))
-                                .foregroundStyle(FluenceColor.secondary)
-                                .lineSpacing(3)
-                        }
-                    }
-                }
-                .padding(20)
-                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .padding(.horizontal, 16)
-                
-                // 2. User Response Bubble (If user spoke)
-                if let user = coordinator.userPassage {
-                    HStack {
-                        Spacer()
-                        HStack(spacing: 8) {
-                            Image(systemName: "person.fill")
-                                .font(.caption2)
-                                .foregroundStyle(FluenceColor.accent)
-                            Text("« \(user.text) »")
-                                .font(.system(.subheadline, design: .rounded))
-                                .foregroundStyle(FluenceColor.ink)
-                        }
+                        .padding(20)
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        
+                        // 2. User Response Bubble (If user spoke)
+                        if let user = coordinator.userPassage {
+                            HStack {
+                                Spacer()
+                                HStack(spacing: 8) {
+                                    Image(systemName: "person.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(FluenceColor.accent)
+                                    Text("« \(user.text) »")
+                                        .font(.system(.subheadline, design: .rounded))
+                                        .foregroundStyle(FluenceColor.ink)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            }
+                            .padding(.horizontal, 20)
+                            .transition(.opacity)
+                        }
                     }
-                    .padding(.horizontal, 20)
-                    .transition(.opacity)
+                    .padding(.vertical, 4)
                 }
                 
                 // 3. Calm Voice Presence Waveform

@@ -310,14 +310,11 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 let result = try await api.respondHistory(instructions: instructions, history: conversationHistory, preferences: preferences)
                 if !result.text.isEmpty {
                     let cleaned = cleanModelText(result.text)
-                    conversationHistory.append(["role": "assistant", "content": cleaned])
-                    let sentences = cleaned.components(separatedBy: CharacterSet(charactersIn: ".!?\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-                    for (index, sentence) in sentences.enumerated() {
-                        guard !closing else { break }
+                    if !cleaned.isEmpty {
+                        conversationHistory.append(["role": "assistant", "content": cleaned])
                         let cStartMS = Int(Date().timeIntervalSince1970 * 1000) % 1000000
-                        let chunk = index == 0 ? sentence : " " + sentence
-                        onEvent?(["type": "session.output_transcript.delta", "delta": chunk, "start_ms": cStartMS, "end_ms": cStartMS + 500, "event_id": UUID().uuidString])
-                        await synthesizer.speakAsync(text: sentence, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
+                        onEvent?(["type": "session.output_transcript.delta", "delta": cleaned, "start_ms": cStartMS, "end_ms": cStartMS + 1000, "event_id": UUID().uuidString])
+                        await synthesizer.speakAsync(text: cleaned, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
                     }
                 }
             }
