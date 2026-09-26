@@ -213,9 +213,11 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                     speechDetected = false
                     speechDurationCount = 0
                     silenceStart = nil
-                    synthPhase += 0.10
-                    let outputLevel = 0.40 + 0.20 * sin(synthPhase) + 0.10 * sin(synthPhase * 2.3)
-                    self.onLevels?(0, max(0.15, min(0.75, outputLevel)))
+                    synthPhase += 0.045
+                    let wave1 = sin(synthPhase)
+                    let wave2 = sin(synthPhase * 1.6 + 0.4)
+                    let outputLevel = 0.35 + 0.22 * (0.65 * wave1 + 0.35 * wave2)
+                    self.onLevels?(0, max(0.12, min(0.68, outputLevel)))
                     continue
                 }
                 
@@ -224,9 +226,13 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 rec.updateMeters()
                 let power = rec.averagePower(forChannel: 0)
                 let rawNorm = max(0.0, min(1.0, Double(power + 48) / 38.0))
-                let instantaneousLevel = pow(rawNorm, 1.2)
-                // Smooth with exponential moving average for organic breathing dynamics
-                smoothedUserLevel = smoothedUserLevel * 0.75 + instantaneousLevel * 0.25
+                let instantaneousLevel = pow(rawNorm, 1.3)
+                // Smooth with organic attack/decay envelope
+                if instantaneousLevel > smoothedUserLevel {
+                    smoothedUserLevel = smoothedUserLevel * 0.55 + instantaneousLevel * 0.45
+                } else {
+                    smoothedUserLevel = smoothedUserLevel * 0.88 + instantaneousLevel * 0.12
+                }
                 self.onLevels?(smoothedUserLevel, 0)
                 
                 // VAD Threshold: -48 dB ensures soft speech, breathing pauses, and natural speech rhythm are captured
