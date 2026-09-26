@@ -25,6 +25,15 @@ import SwiftUI
                     .task {
                         _ = await NotificationManager.shared.requestAuthorization()
                     }
+                    .onOpenURL { url in
+                        Task {
+                            do {
+                                _ = try await AnkiGoogleDriveManager.shared.importVocabulary(from: url, store: store)
+                            } catch {
+                                print("Error opening shared file:", error)
+                            }
+                        }
+                    }
             }
             else {
                 ContentUnavailableView("Let’s try again", systemImage: "externaldrive.badge.exclamationmark", description: Text(startupError ?? "The learning record is unavailable."))

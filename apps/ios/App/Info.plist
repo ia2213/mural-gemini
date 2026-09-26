@@ -92,6 +92,30 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>All Documents and Decks</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.item</string>
+				<string>public.content</string>
+				<string>public.data</string>
+				<string>public.plain-text</string>
+				<string>com.adobe.pdf</string>
+				<string>public.json</string>
+			</array>
+		</dict>
+	</array>
 	<key>FluenceManagedAccountsEnabled</key>
 	<string>$(FLUENCE_MANAGED_ACCOUNTS_ENABLED)</string>
 	<key>FluenceManagedAPIURL</key>

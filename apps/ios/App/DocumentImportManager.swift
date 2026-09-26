@@ -428,6 +428,93 @@ final class AnkiGoogleDriveManager {
         
         return importedItems.count
     }
+    
+    // MARK: - Direct Raw Text / Vocabulary Parser
+    func importRawText(_ text: String, store: LearningStore, languageID: String = "de") -> Int {
+        let lines = text.components(separatedBy: .newlines)
+        var proposals: [WordProposal] = []
+        var count = 0
+        
+        for rawLine in lines {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !line.isEmpty else { continue }
+            
+            var term = ""
+            var meaning = ""
+            var example = ""
+            
+            if line.contains("\t") {
+                let parts = line.components(separatedBy: "\t")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+                if parts.count > 2 { example = parts[2].trimmingCharacters(in: .whitespaces) }
+            } else if line.contains(" - ") {
+                let parts = line.components(separatedBy: " - ")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+            } else if line.contains(" : ") {
+                let parts = line.components(separatedBy: " : ")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+            } else if line.contains(";") {
+                let parts = line.components(separatedBy: ";")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+            } else if line.contains(",") && !line.hasPrefix("{") {
+                let parts = line.components(separatedBy: ",")
+                term = parts[0].trimmingCharacters(in: .whitespaces)
+                if parts.count > 1 { meaning = parts[1].trimmingCharacters(in: .whitespaces) }
+            } else {
+                term = line
+                meaning = "Vocabulaire importé"
+            }
+            
+            guard !term.isEmpty else { continue }
+            
+            let fsrsItem = FSRSItem(
+                term: term,
+                meaning: meaning,
+                example: example.isEmpty ? nil : example,
+                contextCategory: "Texte collé",
+                level: "A1",
+                languageID: languageID
+            )
+            FSRSStoreManager.shared.saveItem(fsrsItem)
+            
+            let proposal = WordProposal(
+                lemma: term,
+                meaning: meaning,
+                form: term,
+                kind: .independent,
+                confidence: 1.0,
+                sourceIDs: ["PastedText"],
+                quote: example.isEmpty ? term : example,
+                language: languageID
+            )
+            proposals.append(proposal)
+            count += 1
+        }
+        
+        if !proposals.isEmpty {
+            var importSession = SessionRecord(languageID: languageID, themeID: nil, title: "Import de texte (\(count) mots)")
+            importSession.endReason = "Import direct de texte"
+            let frag = Fragment(speaker: .assistant, text: "Importation : \(count) mots enregistrés.", startMS: 0, endMS: 1000)
+            importSession.append(frag)
+            let assessment = Assessment(
+                passageID: frag.id,
+                revisionKey: "1",
+                outcome: .success,
+                suggestedLevel: 1,
+                nextGoal: "Pratique orale",
+                capability: "Vocabulaire",
+                words: proposals
+            )
+            importSession.assessments.append(assessment)
+            store.save(importSession)
+        }
+        
+        return count
+    }
 }
 
 // MARK: - Google Drive File Model
