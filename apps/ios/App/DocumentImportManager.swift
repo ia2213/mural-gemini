@@ -245,3 +245,170 @@ public enum DocumentImportError: LocalizedError {
         }
     }
 }
+
+// MARK: - Anki & Google Drive Sync Manager
+@MainActor
+final class AnkiGoogleDriveManager {
+    static let shared = AnkiGoogleDriveManager()
+    
+    // MARK: - Export to Anki TSV (Deck File)
+    func exportToAnkiTSV(words: [WordState], language: String = "Allemand") -> URL? {
+        var lines: [String] = [
+            "#separator:tab",
+            "#html:true",
+            "#tags column:4"
+        ]
+        
+        let tag = "Fluence::\(language.replacingOccurrences(of: " ", with: "_"))"
+        
+        for word in words {
+            let front = word.lemma.replacingOccurrences(of: "\t", with: " ")
+            let back = word.meaning.replacingOccurrences(of: "\t", with: " ")
+            let example = word.example.isEmpty ? "" : "<i>« \(word.example.replacingOccurrences(of: "\t", with: " ")) »</i>"
+            let explanation = word.explanation.isEmpty ? "" : "<br><small>\(word.explanation.replacingOccurrences(of: "\t", with: " "))</small>"
+            
+            let backField = "\(back)\(explanation)\(example.isEmpty ? "" : "<br>" + example)"
+            lines.append("\(front)\t\(backField)\t\(word.example)\t\(tag)")
+        }
+        
+        let content = lines.joined(separator: "\n")
+        let filename = "Fluence_\(language)_Anki_Deck.txt"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        
+        do {
+            try content.write(to: tempURL, atomically: true, encoding: .utf8)
+            return tempURL
+        } catch {
+            print("Failed to write Anki export:", error)
+            return nil
+        }
+    }
+    
+    // MARK: - Export to JSON (Google Drive & Backup)
+    func exportToJSON(words: [WordState], language: String = "Allemand") -> URL? {
+        let exportData: [[String: Any]] = words.map { word in
+            [
+                "term": word.lemma,
+                "meaning": word.meaning,
+                "example": word.example,
+                "explanation": word.explanation,
+                "level": word.label,
+                "independentCount": word.independentCount,
+                "lastSeen": ISO8601DateFormatter().string(from: word.lastSeen),
+                "language": language
+            ]
+        }
+        
+        guard let data = try? JSONSerialization.data(withJSONObject: exportData, options: .prettyPrinted) else {
+            return nil
+        }
+        
+        let filename = "Fluence_\(language)_Vocabulaire_Drive.json"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        
+        do {
+            try data.write(to: tempURL)
+            return tempURL
+        } catch {
+            print("Failed to write JSON export:", error)
+            return nil
+        }
+    }
+    
+    // MARK: - Import from Anki / Drive / CSV / TXT / JSON
+    func importVocabulary(from url: URL, store: LearningStore, languageID: String = "de") async throws -> Int {
+        let isSecurityScoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if isSecurityScoped {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        
+        let ext = url.pathExtension.lowercased()
+        var importedCount = 0
+        
+        if ext == "json" {
+            let data = try Data(contentsOf: url)
+            if let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                for item in array {
+                    let term = item["term"] as? String ?? item["lemma"] as? String ?? item["front"] as? String ?? ""
+                    let meaning = item["meaning"] as? String ?? item["back"] as? String ?? ""
+                    let example = item["example"] as? String ?? ""
+                    let explanation = item["explanation"] as? String ?? ""
+                    
+                    if !term.isEmpty && !meaning.isEmpty {
+                        let proposal = WordProposal(
+                            lemma: term.trimmingCharacters(in: .whitespacesAndNewlines),
+                            meaning: meaning.trimmingCharacters(in: .whitespacesAndNewlines),
+                            form: term,
+                            kind: .vocabulary,
+                            confidence: 1.0,
+                            sourceIDs: [url.lastPathComponent],
+                            quote: example.isEmpty ? term : example,
+                            language: languageID
+                        )
+                        store.propose(proposal)
+                        FSRSStoreManager.shared.addOrUpdateItem(term: term, meaning: meaning, languageID: languageID)
+                        importedCount += 1
+                    }
+                }
+            }
+        } else {
+            // Text / TSV / CSV Parsing
+            let content: String
+            if let str = try? String(contentsOf: url, encoding: .utf8) {
+                content = str
+            } else if let str = try? String(contentsOf: url, encoding: .isoLatin1) {
+                content = str
+            } else {
+                throw DocumentImportError.emptyFile
+            }
+            
+            let lines = content.components(separatedBy: .newlines)
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+                
+                // Determine delimiter: Tab, Semicolon, or Comma
+                let delimiter: Character
+                if trimmed.contains("\t") { delimiter = "\t" }
+                else if trimmed.contains(";") { delimiter = ";" }
+                else if trimmed.contains(",") { delimiter = "," }
+                else { continue }
+                
+                let parts = trimmed.split(separator: delimiter, maxSplits: 4, omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                if parts.count >= 2 {
+                    let rawFront = parts[0]
+                    let rawBack = parts[1]
+                    let example = parts.count >= 3 ? parts[2] : ""
+                    
+                    // Strip HTML tags like <b>, <i>, <br>
+                    let front = rawFront.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+                    let back = rawBack.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    if !front.isEmpty && !back.isEmpty {
+                        let proposal = WordProposal(
+                            lemma: front,
+                            meaning: back,
+                            form: front,
+                            kind: .vocabulary,
+                            confidence: 1.0,
+                            sourceIDs: [url.lastPathComponent],
+                            quote: example.isEmpty ? front : example,
+                            language: languageID
+                        )
+                        store.propose(proposal)
+                        FSRSStoreManager.shared.addOrUpdateItem(term: front, meaning: back, languageID: languageID)
+                        importedCount += 1
+                    }
+                }
+            }
+        }
+        
+        guard importedCount > 0 else {
+            throw DocumentImportError.emptyFile
+        }
+        
+        return importedCount
+    }
+}

@@ -90,22 +90,109 @@ struct CurrentTopicView: View {
     }
 }
 
+struct ActivityViewController: UIViewControllerRepresentable {
+    var activityItems: [Any]
+    var applicationActivities: [UIActivity]? = nil
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
 struct WordsView: View {
     let coordinator: ConversationCoordinator
     @State private var search = ""
     @State private var selected: WordState?
     @State private var sessions = false
+    @State private var importingAnki = false
+    @State private var exportURL: URL?
+    @State private var alertMessage: String?
+    @State private var showAlert = false
+    
     private var learner: LearnerState { coordinator.store.learner }
     private var words: [WordState] { learner.words.filter { search.isEmpty || $0.lemma.localizedCaseInsensitiveContains(search) || $0.meaning.localizedCaseInsensitiveContains(search) } }
+    
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 PageHeading(eyebrow: "Mots et Vocabulaire", title: "Vos mots.", subtitle: "Mots et phrases pour vos futures discussions.")
+                
+                // Anki & Google Drive Sync / Import / Export Bar
+                VStack(spacing: 10) {
+                    HStack(spacing: 12) {
+                        // Import Button
+                        Button {
+                            importingAnki = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "square.and.arrow.down.fill")
+                                    .font(.caption)
+                                Text("Importer (Anki / Drive)")
+                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                            }
+                            .foregroundStyle(FluenceColor.ink)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        
+                        // Export Menu
+                        Menu {
+                            Button {
+                                if let url = AnkiGoogleDriveManager.shared.exportToAnkiTSV(words: words, language: coordinator.language.name) {
+                                    exportURL = url
+                                }
+                            } label: {
+                                Label("Exporter Deck Anki (.txt / .tsv)", systemImage: "rectangle.stack.badge.plus")
+                            }
+                            
+                            Button {
+                                if let url = AnkiGoogleDriveManager.shared.exportToJSON(words: words, language: coordinator.language.name) {
+                                    exportURL = url
+                                }
+                            } label: {
+                                Label("Exporter Sauvegarde Drive (.json)", systemImage: "externaldrive.fill")
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "square.and.arrow.up.fill")
+                                    .font(.caption)
+                                Text("Exporter")
+                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                            }
+                            .foregroundStyle(Color.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(FluenceColor.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                    }
+                    
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.caption2)
+                            .foregroundStyle(FluenceColor.accent)
+                        Text("Compatible Anki (.txt, .tsv, .csv, .apkg) & Google Drive")
+                            .font(.caption2)
+                            .foregroundStyle(FluenceColor.secondary)
+                        Spacer()
+                        Text("\(words.count) mots")
+                            .font(.system(.caption2, design: .rounded, weight: .bold))
+                            .foregroundStyle(FluenceColor.ink)
+                    }
+                    .padding(.horizontal, 4)
+                }
+                .padding(14)
+                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                
                 if words.isEmpty {
                     VStack(alignment: .leading, spacing: 18) {
                         Image(systemName: "leaf").font(.system(size: 34, weight: .light))
                         Text(search.isEmpty ? "Ils pousseront d'ici." : "Aucun mot correspondant.").font(.system(.title2, design: .rounded, weight: .medium))
-                        Text(search.isEmpty ? "Au fil de nos discussions, les mots et expressions utiles apparaîtront ici." : "Essayer un autre mot ou une signification.").font(.subheadline).foregroundStyle(FluenceColor.secondary)
+                        Text(search.isEmpty ? "Au fil de nos discussions, les mots et expressions utiles apparaîtront ici. Vous pouvez aussi importer un paquet Anki ou un fichier depuis Google Drive." : "Essayer un autre mot ou une signification.").font(.subheadline).foregroundStyle(FluenceColor.secondary)
                     }.padding(26).frame(maxWidth: .infinity, alignment: .leading).background(FluenceColor.sage, in: RoundedRectangle(cornerRadius: 28))
                 } else {
                     LazyVStack(spacing: 0) {
@@ -113,19 +200,19 @@ struct WordsView: View {
                             Button { selected = word } label: {
                                 HStack(spacing: 18) {
                                     VStack(alignment: .leading, spacing: 6) {
-                                        Text(word.lemma).font(.system(size: 32, weight: .bold, design: .rounded))
+                                        Text(word.lemma).font(.system(size: 30, weight: .bold, design: .rounded))
                                         Text(word.meaning).font(.title3).foregroundStyle(FluenceColor.secondary)
                                     }
                                     Spacer(minLength: 10)
                                     VStack(alignment: .trailing, spacing: 8) { RecallBars(count: word.bars); Text(word.label).font(.caption2).foregroundStyle(FluenceColor.secondary) }
-                                }.padding(.vertical, 24)
+                                }.padding(.vertical, 20)
                             }.buttonStyle(.plain)
                             Divider().overlay(FluenceColor.peach)
                         }
                     }
                 }
                 HStack { Text("1 · Fragile"); Spacer(); Text("2 · En croissance"); Spacer(); Text("3 · Solide") }.font(.caption).foregroundStyle(FluenceColor.secondary)
-                Text("Les barres estiment votre capacité de mémorisation orale. Le niveau FSRS gère l'espacement.").font(.footnote).foregroundStyle(FluenceColor.secondary)
+                Text("Les barres estiment votre capacité de mémorisation orale. Le moteur FSRS gère l'espacement et la révision.").font(.footnote).foregroundStyle(FluenceColor.secondary)
                 if !learner.capabilities.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Trouver votre voix").font(.system(.title3, design: .rounded, weight: .semibold))
@@ -133,10 +220,40 @@ struct WordsView: View {
                         Text("Observé lors de nos conversations. Estimations non officielles.").font(.footnote).foregroundStyle(FluenceColor.secondary)
                     }.padding(22).background(FluenceColor.butter, in: RoundedRectangle(cornerRadius: 24))
                 }
-            }.padding(26).frame(maxWidth: 1000).frame(maxWidth: .infinity, alignment: .topLeading)
-        }.foregroundStyle(FluenceColor.ink).searchable(text: $search, prompt: "Find a word")
-            .sheet(item: $selected) { word in WordDetailView(word: word, store: coordinator.store) }
-            .sheet(isPresented: $sessions) { SessionHistoryView(store: coordinator.store) }
+            }.padding(22).frame(maxWidth: 1000).frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .foregroundStyle(FluenceColor.ink)
+        .searchable(text: $search, prompt: "Rechercher un mot")
+        .sheet(item: $selected) { word in WordDetailView(word: word, store: coordinator.store) }
+        .sheet(isPresented: $sessions) { SessionHistoryView(store: coordinator.store) }
+        .sheet(isPresented: Binding(get: { exportURL != nil }, set: { if !$0 { exportURL = nil } })) {
+            if let url = exportURL {
+                ActivityViewController(activityItems: [url])
+            }
+        }
+        .fileImporter(isPresented: $importingAnki, allowedContentTypes: [.plainText, .json, .commaSeparatedText, .tabSeparatedText, .item]) { result in
+            switch result {
+            case .success(let url):
+                Task {
+                    do {
+                        let count = try await AnkiGoogleDriveManager.shared.importVocabulary(from: url, store: coordinator.store, languageID: coordinator.language.id)
+                        alertMessage = "\(count) mots importés avec succès dans votre vocabulaire Fluence !"
+                        showAlert = true
+                    } catch {
+                        alertMessage = "Erreur lors de l'importation : \(error.localizedDescription)"
+                        showAlert = true
+                    }
+                }
+            case .failure(let error):
+                alertMessage = "Sélection annulée ou erreur : \(error.localizedDescription)"
+                showAlert = true
+            }
+        }
+        .alert("Importation de vocabulaire", isPresented: $showAlert) {
+            Button("OK", role: .cancel) { alertMessage = nil }
+        } message: {
+            Text(alertMessage ?? "")
+        }
     }
 }
 
