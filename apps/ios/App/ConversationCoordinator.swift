@@ -93,8 +93,14 @@ import MuralCore
     var language: LanguageModule { store.language }
     var assistantPassage: Passage? { session?.passages.last(where: { $0.speaker == .assistant }) }
     var userPassage: Passage? { session?.passages.last(where: { $0.speaker == .user }) }
-    var caption: String { assistantPassage?.text ?? language.greeting }
-    var status: String {
+    var caption: String {
+        let raw = assistantPassage?.text ?? language.greeting
+        return raw.replacingOccurrences(of: #"\s*\[FSRS_REVIEW:.*?\]"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    var meaning: String {
+        let raw = assistantPassage.flatMap { session?.translations[$0.id] } ?? ""
+        return raw.replacingOccurrences(of: #"\s*\[FSRS_REVIEW:.*?\]"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
         if state == .active, let seconds = inactivitySeconds { return "Ending in \(seconds)s\nReply to continue" }
         return switch state {
         case .idle: "Ready when you are"

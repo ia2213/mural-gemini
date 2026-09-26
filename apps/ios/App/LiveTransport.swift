@@ -134,6 +134,12 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
     private var conversationHistory: [[String: String]] = []
     private var preferences = Preferences()
     
+    private func cleanModelText(_ raw: String) -> String {
+        // Strip backend internal review tags: [FSRS_REVIEW: {"term": "...", "rating": 2}]
+        let pattern = #"\s*\[FSRS_REVIEW:.*?\]"#
+        return raw.replacingOccurrences(of: pattern, with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
     func connect(api: APIClient, instructions: String, history: [[String: Any]], languageCode: String = "de-DE", speechRate: Float = 0.50, voiceIdentifier: String = "", preferences: Preferences = Preferences()) async throws {
         disconnect()
         closing = false
@@ -172,9 +178,12 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
         onEvent?(["type": "session.started", "session": ["id": sessionID]])
         
         if !initialResult.text.isEmpty {
-            conversationHistory.append(["role": "assistant", "content": initialResult.text])
-            onEvent?(["type": "session.output_transcript.delta", "delta": initialResult.text, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
-            synthesizer.speak(text: initialResult.text, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
+            let cleaned = cleanModelText(initialResult.text)
+            if !cleaned.isEmpty {
+                conversationHistory.append(["role": "assistant", "content": cleaned])
+                onEvent?(["type": "session.output_transcript.delta", "delta": cleaned, "start_ms": 0, "end_ms": 1000, "event_id": UUID().uuidString])
+                synthesizer.speak(text: cleaned, languageCode: languageCode, rate: speechRate, voiceIdentifier: voiceIdentifier)
+            }
         }
         
         startRecording()
@@ -300,8 +309,9 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 conversationHistory.append(["role": "user", "content": userText])
                 let result = try await api.respondHistory(instructions: instructions, history: conversationHistory, preferences: preferences)
                 if !result.text.isEmpty {
-                    conversationHistory.append(["role": "assistant", "content": result.text])
-                    let sentences = result.text.components(separatedBy: CharacterSet(charactersIn: ".!?\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+                    let cleaned = cleanModelText(result.text)
+                    conversationHistory.append(["role": "assistant", "content": cleaned])
+                    let sentences = cleaned.components(separatedBy: CharacterSet(charactersIn: ".!?\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
                     for (index, sentence) in sentences.enumerated() {
                         guard !closing else { break }
                         let cStartMS = Int(Date().timeIntervalSince1970 * 1000) % 1000000

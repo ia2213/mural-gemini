@@ -112,16 +112,16 @@ struct TalkView: View {
         ZStack {
             FluenceColor.background.ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                // Top Status & Scenario Bar
+            VStack(spacing: 16) {
+                // Top Sub-Header Status Row
                 HStack {
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(coordinator.state == .active ? FluenceColor.emerald : FluenceColor.secondary.opacity(0.40))
+                            .fill(coordinator.state == .active && !coordinator.isMuted ? FluenceColor.emerald : FluenceColor.secondary.opacity(0.40))
                             .frame(width: 8, height: 8)
-                        Text(coordinator.state == .active ? (coordinator.store.preferences.pedagogicalMode == "teacher" ? "Professeur Actif" : "En écoute") : "Prêt")
-                            .font(.system(.caption, design: .rounded, weight: .bold))
-                            .foregroundStyle(coordinator.state == .active ? FluenceColor.emerald : FluenceColor.secondary)
+                        Text(coordinator.state == .active ? (coordinator.isMuted ? "En pause" : "En écoute active") : "Prêt à apprendre")
+                            .font(.system(.caption, design: .rounded, weight: .semibold))
+                            .foregroundStyle(coordinator.state == .active && !coordinator.isMuted ? FluenceColor.emerald : FluenceColor.secondary)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
@@ -143,62 +143,88 @@ struct TalkView: View {
                         .background(FluenceColor.surface, in: Capsule())
                     }
                 }
-                .padding(.horizontal, 22)
-                .padding(.top, 12)
+                .padding(.horizontal, 20)
+                .padding(.top, 6)
                 
-                Spacer(minLength: 20)
+                Spacer(minLength: 10)
                 
-                // Central Conversation Card (Calm, High-Contrast & Legible)
-                VStack(spacing: 18) {
+                // 1. Main Teacher / AI Dialogue Card
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "graduationcap.fill")
+                                .font(.caption)
+                                .foregroundStyle(FluenceColor.accent)
+                            Text("Professeur Fluence")
+                                .font(.system(.caption, design: .rounded, weight: .bold))
+                                .foregroundStyle(FluenceColor.ink)
+                        }
+                        Spacer()
+                        Button {
+                            coordinator.speak(coordinator.caption)
+                        } label: {
+                            Image(systemName: "speaker.wave.2.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(FluenceColor.accent)
+                                .padding(6)
+                                .background(FluenceColor.surfaceSecondary, in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Réécouter la phrase")
+                    }
+                    
+                    // German spoken sentence
                     Text(linkedCaption)
-                        .font(.system(size: coordinator.assistantPassage == nil ? 32 : 24, weight: .bold, design: .rounded))
-                        .multilineTextAlignment(.center)
+                        .font(.system(size: 24, weight: .semibold, design: .rounded))
                         .foregroundStyle(FluenceColor.ink)
-                        .padding(.horizontal, 24)
+                        .lineSpacing(4)
                         .environment(\.openURL, OpenURLAction { url in
                             guard url.scheme == "fluence-word", let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let word = components.queryItems?.first?.value else { return .discarded }
                             lookup = WordLookup(word: word, sentence: coordinator.caption)
                             return .handled
                         })
                     
+                    // French Translation Subtitle
                     if coordinator.store.preferences.meaningVisible {
-                        HStack(spacing: 6) {
-                            Image(systemName: "captions.bubble.fill")
-                                .font(.caption2)
-                                .foregroundStyle(FluenceColor.accent)
-                            Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Compréhension en cours…" : "")
-                                .font(.system(.subheadline, design: .rounded, weight: .medium))
-                                .foregroundStyle(FluenceColor.secondary)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(FluenceColor.surfaceSecondary, in: Capsule())
-                        .padding(.horizontal, 20)
-                    }
-                    
-                    if let user = coordinator.userPassage {
-                        HStack(spacing: 6) {
-                            Image(systemName: "person.fill")
-                                .font(.caption2)
-                                .foregroundStyle(FluenceColor.secondary)
-                            Text("« \(user.text) »")
+                        Divider()
+                            .background(Color.white.opacity(0.08))
+                            .padding(.vertical, 2)
+                        
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("🇫🇷")
+                                .font(.caption)
+                            Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Traduction en cours…" : "")
                                 .font(.system(.subheadline, design: .rounded))
-                                .italic()
                                 .foregroundStyle(FluenceColor.secondary)
-                                .lineLimit(2)
+                                .lineSpacing(3)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(FluenceColor.surface, in: Capsule())
-                        .transition(.opacity)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-                .background(FluenceColor.surface.opacity(0.85), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .padding(.horizontal, 18)
+                .padding(20)
+                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.horizontal, 16)
                 
-                // Subtle Calm Voice Waveform Presence
+                // 2. User Response Bubble (If user spoke)
+                if let user = coordinator.userPassage {
+                    HStack {
+                        Spacer()
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.fill")
+                                .font(.caption2)
+                                .foregroundStyle(FluenceColor.accent)
+                            Text("« \(user.text) »")
+                                .font(.system(.subheadline, design: .rounded))
+                                .foregroundStyle(FluenceColor.ink)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                    .padding(.horizontal, 20)
+                    .transition(.opacity)
+                }
+                
+                // 3. Calm Voice Presence Waveform
                 SoberWaveformView(
                     energy: max(coordinator.outputLevel, coordinator.inputLevel),
                     isListening: coordinator.state == .active && !coordinator.isMuted,
@@ -208,12 +234,12 @@ struct TalkView: View {
                         else if !coordinator.isRunning { coordinator.start() }
                     }
                 )
-                .padding(.top, 16)
+                .padding(.vertical, 6)
                 
-                Spacer(minLength: 20)
+                Spacer(minLength: 10)
                 
-                // Bottom Clean Control Bar
-                HStack(spacing: 32) {
+                // 4. Bottom Control Dock
+                HStack(spacing: 28) {
                     // Keyboard input button
                     Button {
                         typing = true
@@ -221,9 +247,9 @@ struct TalkView: View {
                         ZStack {
                             Circle()
                                 .fill(FluenceColor.surface)
-                                .frame(width: 52, height: 52)
+                                .frame(width: 50, height: 50)
                             Image(systemName: "keyboard")
-                                .font(.system(size: 20, weight: .medium))
+                                .font(.system(size: 19, weight: .medium))
                                 .foregroundStyle(FluenceColor.ink)
                         }
                     }
@@ -236,19 +262,20 @@ struct TalkView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: coordinator.state == .active && !coordinator.isMuted ? "pause.fill" : "mic.fill")
-                                .font(.system(size: 19, weight: .bold))
+                                .font(.system(size: 18, weight: .bold))
                             Text(coordinator.state == .active ? (coordinator.isMuted ? "Reprendre" : "En écoute") : "Parler")
                                 .font(.system(.headline, design: .rounded, weight: .bold))
                         }
                         .foregroundStyle(Color.white)
-                        .padding(.horizontal, 30)
-                        .padding(.vertical, 16)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 15)
                         .background(
                             coordinator.state == .active && !coordinator.isMuted
                                 ? FluenceColor.emerald
                                 : FluenceColor.accent,
                             in: Capsule()
                         )
+                        .shadow(color: FluenceColor.accent.opacity(0.25), radius: 8, y: 3)
                     }
                     .buttonStyle(.plain)
                     
@@ -260,9 +287,9 @@ struct TalkView: View {
                         ZStack {
                             Circle()
                                 .fill(FluenceColor.surface)
-                                .frame(width: 52, height: 52)
+                                .frame(width: 50, height: 50)
                             Image(systemName: coordinator.isRunning ? "stop.fill" : "text.bubble")
-                                .font(.system(size: 19, weight: .medium))
+                                .font(.system(size: 18, weight: .medium))
                                 .foregroundStyle(coordinator.isRunning ? FluenceColor.coral : FluenceColor.ink)
                         }
                     }
@@ -270,8 +297,8 @@ struct TalkView: View {
                     .disabled(coordinator.session == nil && !coordinator.isRunning)
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(FluenceColor.surface.opacity(0.70), in: Capsule())
+                .padding(.vertical, 10)
+                .background(FluenceColor.surface.opacity(0.85), in: Capsule())
                 .padding(.bottom, 16)
             }
         }
