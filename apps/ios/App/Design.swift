@@ -209,53 +209,73 @@ struct FluenceAura: View {
                 let rotation = Angle.degrees((t * organicSpeed).truncatingRemainder(dividingBy: 360))
                 let gentleBreathing = sin(t * 1.5) * 0.04
                 
-                // Authentic Apple Intelligence Siri pastel glow palette
+                // Authentic Siri & Gemini Live vibrant multi-color chromatic spectrum
                 let siriColors: [Color] = [
-                    Color(red: 0.18, green: 0.55, blue: 0.98), // Siri Blue
-                    Color(red: 0.05, green: 0.88, blue: 0.90), // Cyan
-                    Color(red: 0.65, green: 0.30, blue: 0.98), // Violet
-                    Color(red: 0.96, green: 0.32, blue: 0.65), // Apple Rose / Pink
-                    Color(red: 0.96, green: 0.60, blue: 0.22), // Sunset Amber
-                    Color(red: 0.05, green: 0.88, blue: 0.90), // Cyan
-                    Color(red: 0.18, green: 0.55, blue: 0.98)  // Loop
+                    Color(red: 0.05, green: 0.45, blue: 1.00), // Siri Electric Blue
+                    Color(red: 0.00, green: 0.96, blue: 0.88), // Vivid Cyan
+                    Color(red: 0.12, green: 0.95, blue: 0.50), // Gemini Emerald Mint
+                    Color(red: 1.00, green: 0.85, blue: 0.10), // Solar Gold
+                    Color(red: 1.00, green: 0.38, blue: 0.15), // Radiant Coral
+                    Color(red: 1.00, green: 0.12, blue: 0.65), // Hot Neon Magenta
+                    Color(red: 0.62, green: 0.15, blue: 1.00), // Electric Violet
+                    Color(red: 0.05, green: 0.45, blue: 1.00)  // Loop
                 ]
                 
-                let gradient = AngularGradient(
+                let gradient1 = AngularGradient(
                     gradient: Gradient(colors: siriColors),
                     center: .center,
                     angle: rotation
                 )
                 
-                let reverseGradient = AngularGradient(
+                let gradient2 = AngularGradient(
                     gradient: Gradient(colors: siriColors.reversed()),
                     center: .center,
-                    angle: rotation + .degrees(180)
+                    angle: rotation + .degrees(120)
                 )
                 
-                let bloomWidth: CGFloat = (listening ? 15 : 10) + CGFloat(clampedEnergy * 8)
+                let gradient3 = AngularGradient(
+                    gradient: Gradient(colors: siriColors),
+                    center: .center,
+                    angle: -rotation + .degrees(240)
+                )
+                
+                let bloomWidth: CGFloat = (listening ? 24 : 16) + CGFloat(clampedEnergy * 14)
+                let midWidth: CGFloat = (listening ? 12 : 7.5) + CGFloat(clampedEnergy * 7)
                 let coreWidth: CGFloat = (listening ? 5.5 : 3.5) + CGFloat(clampedEnergy * 3.5)
-                let rimWidth: CGFloat = 2.0 + CGFloat(clampedEnergy * 1.0)
+                let rimWidth: CGFloat = 2.4 + CGFloat(clampedEnergy * 1.2)
                 
                 ZStack {
-                    // 1. Broad Atmospheric Diffuse Glow (PlusLighter for rich additive light)
+                    // 1. Wide Ambient Multi-color Aura (PlusLighter additive light)
                     deviceShape
-                        .stroke(gradient, style: StrokeStyle(lineWidth: bloomWidth, lineCap: .round, lineJoin: .round))
-                        .blur(radius: (listening ? 16 : 9) + CGFloat(clampedEnergy * 6))
-                        .opacity(min(0.65, 0.40 + clampedEnergy * 0.20 + gentleBreathing))
+                        .stroke(gradient1, style: StrokeStyle(lineWidth: bloomWidth, lineCap: .round, lineJoin: .round))
+                        .blur(radius: (listening ? 24 : 14) + CGFloat(clampedEnergy * 8))
+                        .opacity(min(0.85, 0.50 + clampedEnergy * 0.25 + gentleBreathing))
                         .blendMode(.plusLighter)
                     
-                    // 2. Mid Fluid Luminous Contour
+                    // 2. Counter-rotating Chromatic Ribbon (Produces deep rich color mixing)
                     deviceShape
-                        .stroke(reverseGradient, style: StrokeStyle(lineWidth: coreWidth, lineCap: .round, lineJoin: .round))
-                        .blur(radius: (listening ? 5 : 2.5) + CGFloat(clampedEnergy * 2.5))
-                        .opacity(min(0.75, 0.50 + clampedEnergy * 0.20))
+                        .stroke(gradient2, style: StrokeStyle(lineWidth: midWidth, lineCap: .round, lineJoin: .round))
+                        .blur(radius: (listening ? 9 : 5) + CGFloat(clampedEnergy * 4))
+                        .opacity(min(0.90, 0.60 + clampedEnergy * 0.25))
                         .blendMode(.plusLighter)
                     
-                    // 3. Crisp Inner Edge Beam (Perfect flush fit along bezel, notch and corners)
+                    // 3. Dynamic High-Density Core
                     deviceShape
-                        .stroke(gradient, style: StrokeStyle(lineWidth: rimWidth, lineCap: .round, lineJoin: .round))
-                        .blur(radius: 0.6)
+                        .stroke(gradient3, style: StrokeStyle(lineWidth: coreWidth, lineCap: .round, lineJoin: .round))
+                        .blur(radius: 2.5 + CGFloat(clampedEnergy * 1.5))
                         .opacity(0.85)
+                    
+                    // 4. Razor Sharp Multi-color Glass Beam (Glued to bezel & notch)
+                    deviceShape
+                        .stroke(gradient1, style: StrokeStyle(lineWidth: rimWidth, lineCap: .round, lineJoin: .round))
+                        .blur(radius: 0.5)
+                        .opacity(0.98)
+                    
+                    // 5. Specular Apple Glass Highlight
+                    deviceShape
+                        .stroke(Color.white.opacity(0.35 + clampedEnergy * 0.35), style: StrokeStyle(lineWidth: 1.0, lineCap: .round, lineJoin: .round))
+                        .blur(radius: 0.3)
+                        .blendMode(.plusLighter)
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
             }
