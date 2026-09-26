@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import PDFKit
 import UniformTypeIdentifiers
+import AuthenticationServices
 import MuralCore
 
 @MainActor
@@ -426,5 +427,256 @@ final class AnkiGoogleDriveManager {
         store.save(importSession)
         
         return importedItems.count
+    }
+}
+
+// MARK: - Google Drive File Model
+public struct GoogleDriveFile: Identifiable, Codable, Sendable {
+    public var id: String
+    public var name: String
+    public var mimeType: String
+    public var size: String?
+    public var modifiedTime: String?
+    
+    public var isFolder: Bool {
+        mimeType == "application/vnd.google-apps.folder"
+    }
+    
+    public var iconName: String {
+        if isFolder { return "folder.fill" }
+        if mimeType.contains("pdf") { return "doc.richtext.fill" }
+        if mimeType.contains("spreadsheet") || mimeType.contains("csv") { return "tablecells.fill" }
+        if mimeType.contains("text") || mimeType.contains("json") { return "doc.text.fill" }
+        if mimeType.contains("image") { return "photo.fill" }
+        return "doc.fill"
+    }
+}
+
+// MARK: - Google Drive Direct API Service
+@MainActor
+final class GoogleDriveDirectService: NSObject, ObservableObject, ASWebAuthenticationPresentationContextProviding {
+    static let shared = GoogleDriveDirectService()
+    
+    @Published var isAuthenticated = false
+    @Published var userEmail: String?
+    @Published var files: [GoogleDriveFile] = []
+    @Published var isLoading = false
+    @Published var currentFolderID = "root"
+    @Published var folderBreadcrumbs: [(id: String, name: String)] = [("root", "Mon Drive")]
+    @Published var errorMessage: String?
+    
+    private let tokenKey = "FluenceGoogleDriveAccessToken"
+    private let emailKey = "FluenceGoogleDriveUserEmail"
+    private var accessToken: String?
+    
+    // Google OAuth Config
+    private let clientId = "1055745422479-h0knfqn93sgh2gq0k12r6923j15d3i0b.apps.googleusercontent.com"
+    private let redirectUri = "com.googleusercontent.apps.1055745422479-h0knfqn93sgh2gq0k12r6923j15d3i0b:/oauth2redirect"
+    private let callbackScheme = "com.googleusercontent.apps.1055745422479-h0knfqn93sgh2gq0k12r6923j15d3i0b"
+    
+    override init() {
+        super.init()
+        if let token = UserDefaults.standard.string(forKey: tokenKey), !token.isEmpty {
+            self.accessToken = token
+            self.userEmail = UserDefaults.standard.string(forKey: emailKey)
+            self.isAuthenticated = true
+        }
+    }
+    
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        guard let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+              let window = windowScene.windows.first(where: { $0.isKeyWindow }) else {
+            return ASPresentationAnchor()
+        }
+        return window
+    }
+    
+    // MARK: - OAuth 2.0 Sign-In
+    func signIn() async throws {
+        let scopes = [
+            "https://www.googleapis.com/auth/drive.readonly",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile"
+        ].joined(separator: " ")
+        
+        guard let encodedScopes = scopes.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let encodedRedirect = redirectUri.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let authURL = URL(string: "https://accounts.google.com/o/oauth2/v2/auth?client_id=\(clientId)&redirect_uri=\(encodedRedirect)&response_type=token&scope=\(encodedScopes)&prompt=consent") else {
+            throw DocumentImportError.cannotOpenFolder
+        }
+        
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: self.callbackScheme) { callbackURL, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let callbackURL = callbackURL else {
+                    continuation.resume(throwing: DocumentImportError.cannotOpenFolder)
+                    return
+                }
+                
+                // Parse access_token from URL fragment
+                let fragment = callbackURL.fragment ?? callbackURL.query ?? ""
+                let params = fragment.components(separatedBy: "&").reduce(into: [String: String]()) { dict, item in
+                    let pair = item.components(separatedBy: "=")
+                    if pair.count == 2 {
+                        dict[pair[0]] = pair[1].removingPercentEncoding
+                    }
+                }
+                
+                if let token = params["access_token"], !token.isEmpty {
+                    self.accessToken = token
+                    UserDefaults.standard.set(token, forKey: self.tokenKey)
+                    self.isAuthenticated = true
+                    
+                    Task { @MainActor in
+                        await self.fetchUserInfo()
+                        try? await self.fetchFiles(folderId: "root")
+                    }
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: DocumentImportError.cannotOpenFolder)
+                }
+            }
+            
+            session.presentationContextProvider = self
+            session.prefersEphemeralWebBrowserSession = false
+            session.start()
+        }
+    }
+    
+    func signOut() {
+        self.accessToken = nil
+        self.userEmail = nil
+        self.isAuthenticated = false
+        self.files = []
+        UserDefaults.standard.removeObject(forKey: tokenKey)
+        UserDefaults.standard.removeObject(forKey: emailKey)
+    }
+    
+    // MARK: - Fetch User Profile Email
+    private func fetchUserInfo() async {
+        guard let token = accessToken, let url = URL(string: "https://www.googleapis.com/oauth2/v2/userinfo") else { return }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        if let (data, _) = try? await URLSession.shared.data(for: request),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let email = obj["email"] as? String {
+            self.userEmail = email
+            UserDefaults.standard.set(email, forKey: emailKey)
+        }
+    }
+    
+    // MARK: - Fetch Files & Folders in Drive
+    func fetchFiles(folderId: String = "root", search: String = "") async throws {
+        guard let token = accessToken else { throw DocumentImportError.cannotOpenFolder }
+        self.isLoading = true
+        defer { self.isLoading = false }
+        
+        var query = "trashed = false"
+        if !search.isEmpty {
+            query += " and name contains '\(search.replacingOccurrences(of: "'", with: "\\'"))'"
+        } else {
+            query += " and '\(folderId)' in parents"
+        }
+        
+        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://www.googleapis.com/drive/v3/files?q=\(encodedQuery)&fields=files(id,name,mimeType,size,modifiedTime)&orderBy=folder,name&pageSize=100") else {
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            signOut()
+            throw DocumentImportError.cannotOpenFolder
+        }
+        
+        if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let items = obj["files"] as? [[String: Any]] {
+            self.files = items.compactMap { dict in
+                guard let id = dict["id"] as? String, let name = dict["name"] as? String, let mime = dict["mimeType"] as? String else { return nil }
+                let size = dict["size"] as? String
+                let mod = dict["modifiedTime"] as? String
+                return GoogleDriveFile(id: id, name: name, mimeType: mime, size: size, modifiedTime: mod)
+            }
+            self.currentFolderID = folderId
+        }
+    }
+    
+    // MARK: - Navigate Folder
+    func openFolder(id: String, name: String) async {
+        folderBreadcrumbs.append((id: id, name: name))
+        try? await fetchFiles(folderId: id)
+    }
+    
+    func navigateBackToBreadcrumb(index: Int) async {
+        guard index < folderBreadcrumbs.count else { return }
+        folderBreadcrumbs = Array(folderBreadcrumbs.prefix(index + 1))
+        if let last = folderBreadcrumbs.last {
+            try? await fetchFiles(folderId: last.id)
+        }
+    }
+    
+    // MARK: - Download File & Import to Fluence
+    func downloadAndImport(file: GoogleDriveFile, store: LearningStore, targetLanguageID: String = "de") async throws -> Int {
+        guard let token = accessToken else { throw DocumentImportError.cannotOpenFolder }
+        self.isLoading = true
+        defer { self.isLoading = false }
+        
+        let downloadURLString: String
+        if file.mimeType.contains("google-apps.document") {
+            downloadURLString = "https://www.googleapis.com/drive/v3/files/\(file.id)/export?mimeType=text/plain"
+        } else if file.mimeType.contains("google-apps.spreadsheet") {
+            downloadURLString = "https://www.googleapis.com/drive/v3/files/\(file.id)/export?mimeType=text/csv"
+        } else {
+            downloadURLString = "https://www.googleapis.com/drive/v3/files/\(file.id)?alt=media"
+        }
+        
+        guard let url = URL(string: downloadURLString) else { throw DocumentImportError.cannotOpenFolder }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw DocumentImportError.cannotOpenFolder
+        }
+        
+        let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(file.name)
+        try data.write(to: tempFile)
+        
+        return try await AnkiGoogleDriveManager.shared.importVocabulary(from: tempFile, store: store, languageID: targetLanguageID)
+    }
+    
+    // MARK: - Import Direct Google Drive Link (Public or Shared)
+    func importFromPublicLink(urlString: String, store: LearningStore, targetLanguageID: String = "de") async throws -> Int {
+        var fileId = ""
+        if let match = urlString.range(of: #"/d/([a-zA-Z0-9_-]+)"#, options: .regularExpression) {
+            let substr = String(urlString[match])
+            fileId = substr.replacingOccurrences(of: "/d/", with: "")
+        } else if let match = urlString.range(of: #"id=([a-zA-Z0-9_-]+)"#, options: .regularExpression) {
+            let substr = String(urlString[match])
+            fileId = substr.replacingOccurrences(of: "id=", with: "")
+        } else {
+            fileId = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        guard !fileId.isEmpty else { throw DocumentImportError.cannotOpenFolder }
+        
+        let downloadURL = "https://drive.google.com/uc?export=download&id=\(fileId)"
+        guard let url = URL(string: downloadURL) else { throw DocumentImportError.cannotOpenFolder }
+        
+        let (data, _) = try await URLSession.shared.data(from: url)
+        guard data.count > 10 else { throw DocumentImportError.emptyFile }
+        
+        let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent("drive_import_\(fileId).txt")
+        try data.write(to: tempFile)
+        
+        return try await AnkiGoogleDriveManager.shared.importVocabulary(from: tempFile, store: store, languageID: targetLanguageID)
     }
 }
