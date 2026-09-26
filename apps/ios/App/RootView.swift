@@ -126,15 +126,61 @@ struct TalkView: View {
             FluenceColor.background.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                Spacer(minLength: 20)
+                // Top Status & Scenario Card
+                HStack {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(coordinator.state == .active ? FluenceColor.emerald : FluenceColor.secondary.opacity(0.5))
+                            .frame(width: 8, height: 8)
+                        Text(coordinator.state == .active ? (coordinator.store.preferences.pedagogicalMode == "teacher" ? "Professeur Actif" : "Symbiote Connecté") : "En attente")
+                            .font(.system(.caption, design: .rounded, weight: .bold))
+                            .foregroundStyle(coordinator.state == .active ? FluenceColor.emerald : FluenceColor.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(FluenceColor.surface, in: Capsule())
+                    
+                    Spacer()
+                    
+                    if let theme = coordinator.selectedTheme {
+                        HStack(spacing: 5) {
+                            Image(systemName: "sparkles")
+                                .font(.caption2)
+                            Text(theme.title)
+                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(FluenceColor.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(FluenceColor.surface, in: Capsule())
+                    }
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 10)
                 
-                // Central High-Contrast Text Area
-                VStack(spacing: 20) {
+                Spacer(minLength: 10)
+                
+                // Central Symbiote Organism Entity
+                SymbioteCoreView(
+                    energy: max(coordinator.outputLevel, coordinator.inputLevel),
+                    isListening: coordinator.state == .active && !coordinator.isMuted,
+                    isSpeaking: coordinator.outputLevel > 0.06,
+                    isThinking: coordinator.state == .connecting,
+                    onTap: {
+                        if coordinator.state == .active { coordinator.toggleMute() }
+                        else if !coordinator.isRunning { coordinator.start() }
+                    }
+                )
+                .padding(.vertical, 12)
+                
+                // Spoken Dialogue & Pedagogical Learning Card
+                VStack(spacing: 14) {
                     Text(linkedCaption)
-                        .font(.system(size: coordinator.assistantPassage == nil ? 38 : 26, weight: .bold, design: .rounded))
+                        .font(.system(size: coordinator.assistantPassage == nil ? 32 : 24, weight: .bold, design: .rounded))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(FluenceColor.ink)
-                        .padding(.horizontal, 28)
+                        .padding(.horizontal, 24)
                         .environment(\.openURL, OpenURLAction { url in
                             guard url.scheme == "fluence-word", let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let word = components.queryItems?.first?.value else { return .discarded }
                             lookup = WordLookup(word: word, sentence: coordinator.caption)
@@ -142,39 +188,108 @@ struct TalkView: View {
                         })
                     
                     if coordinator.store.preferences.meaningVisible {
-                        Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Traduction en cours…" : "")
-                            .font(.system(.title3, design: .rounded))
-                            .foregroundStyle(FluenceColor.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
+                        HStack(spacing: 6) {
+                            Image(systemName: "captions.bubble.fill")
+                                .font(.caption2)
+                                .foregroundStyle(FluenceColor.accent)
+                            Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Compréhension en cours…" : "")
+                                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                .foregroundStyle(FluenceColor.secondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(FluenceColor.surface, in: Capsule())
+                        .padding(.horizontal, 20)
                     }
-                }
-                
-                Spacer(minLength: 20)
-                
-                // Bottom User Feedback & Primary Controls
-                VStack(spacing: 20) {
+                    
                     if let user = coordinator.userPassage {
-                        Text("« \(user.text) »")
-                            .font(.system(.subheadline, design: .rounded))
-                            .italic()
-                            .foregroundStyle(FluenceColor.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-                            .transition(.opacity)
+                        HStack(spacing: 6) {
+                            Image(systemName: "person.fill")
+                                .font(.caption2)
+                                .foregroundStyle(FluenceColor.secondary)
+                            Text("« \(user.text) »")
+                                .font(.system(.subheadline, design: .rounded))
+                                .italic()
+                                .foregroundStyle(FluenceColor.secondary)
+                                .lineLimit(2)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(FluenceColor.surfaceSecondary, in: Capsule())
+                        .transition(.opacity)
                     }
-                    
-                    if let notice = coordinator.notice {
-                        Text(notice)
-                            .font(.caption)
-                            .foregroundStyle(FluenceColor.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                    }
-                    
-                    controls
-                        .padding(.bottom, 16)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                
+                Spacer(minLength: 10)
+                
+                // Bottom Floating Control Dock
+                HStack(spacing: 28) {
+                    // Keyboard input button
+                    Button {
+                        typing = true
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(FluenceColor.surface)
+                                .frame(width: 50, height: 50)
+                            Image(systemName: "keyboard")
+                                .font(.system(size: 19, weight: .medium))
+                                .foregroundStyle(FluenceColor.ink)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    
+                    // Main Symbiotic Voice Trigger Button
+                    Button {
+                        if coordinator.state == .active { coordinator.toggleMute() }
+                        else if !coordinator.isRunning { coordinator.start() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: coordinator.state == .active && !coordinator.isMuted ? "waveform" : "mic.fill")
+                                .font(.system(size: 20, weight: .bold))
+                            Text(coordinator.state == .active ? (coordinator.isMuted ? "Reprendre" : "Écoute...") : "Parler")
+                                .font(.system(.headline, design: .rounded, weight: .bold))
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: coordinator.state == .active && !coordinator.isMuted
+                                    ? [FluenceColor.accent, Color(red: 0.20, green: 0.85, blue: 0.65)]
+                                    : [FluenceColor.accent, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .shadow(color: FluenceColor.accent.opacity(0.35), radius: 12, y: 6)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    // Transcript / End button
+                    Button {
+                        if coordinator.isRunning { coordinator.end() }
+                        else { transcript = coordinator.session }
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(FluenceColor.surface)
+                                .frame(width: 50, height: 50)
+                            Image(systemName: coordinator.isRunning ? "stop.fill" : "text.bubble")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(coordinator.isRunning ? .red : FluenceColor.ink)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(coordinator.session == nil && !coordinator.isRunning)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(FluenceColor.surface.opacity(0.60), in: Capsule())
+                .padding(.bottom, 12)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -205,28 +320,19 @@ struct TalkView: View {
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(FluenceColor.secondary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(FluenceColor.accent.opacity(0.12), in: Capsule())
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(FluenceColor.surface, in: Capsule())
                 }
             }
             
             ToolbarItem(placement: .principal) {
-                if let themeTitle = coordinator.selectedTheme?.title {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles")
-                            .font(.caption2)
-                        Text(themeTitle)
-                            .font(.system(.caption, design: .rounded, weight: .semibold))
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(FluenceColor.accent)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(FluenceColor.accent.opacity(0.10), in: Capsule())
-                } else {
+                HStack(spacing: 5) {
+                    Image(systemName: "sparkles")
+                        .font(.caption2)
+                        .foregroundStyle(FluenceColor.accent)
                     Text("Fluence")
-                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundStyle(FluenceColor.ink)
                 }
             }
@@ -236,10 +342,10 @@ struct TalkView: View {
                     coordinator.showSettings = true
                 } label: {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 17, weight: .medium))
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(FluenceColor.ink)
-                        .padding(6)
-                        .background(Color.white.opacity(0.06), in: Circle())
+                        .padding(8)
+                        .background(FluenceColor.surface, in: Circle())
                 }
             }
         }
@@ -265,74 +371,6 @@ struct TalkView: View {
             result.append(part)
         }
         return result
-    }
-
-    private var controls: some View {
-        HStack(spacing: 44) {
-            // Typing mode button
-            Button {
-                typing = true
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(FluenceColor.ink.opacity(0.06))
-                        .frame(width: 52, height: 52)
-                    Image(systemName: "keyboard")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(FluenceColor.ink)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            // Big Central Mic Action Button
-            Button {
-                if coordinator.state == .active { coordinator.toggleMute() }
-                else if !coordinator.isRunning { coordinator.start() }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: coordinator.state == .active && !coordinator.isMuted ?
-                                    [FluenceColor.accent, Color(red: 0.5, green: 0.35, blue: 0.95)] :
-                                    [FluenceColor.accent.opacity(0.85), FluenceColor.accent],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 76, height: 76)
-                        .shadow(color: FluenceColor.accent.opacity(0.3), radius: 8, y: 4)
-                    
-                    if coordinator.state == .connecting || coordinator.state == .closing {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: coordinator.isMuted && coordinator.state == .active ? "mic.slash.fill" : "mic.fill")
-                            .font(.system(size: 30, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .contentTransition(.symbolEffect(.replace))
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-            
-            // End conversation / Transcript button
-            Button {
-                if coordinator.isRunning { coordinator.end() }
-                else { transcript = coordinator.session }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(FluenceColor.ink.opacity(0.06))
-                        .frame(width: 52, height: 52)
-                    Image(systemName: coordinator.isRunning ? "xmark" : "text.bubble")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(coordinator.isRunning ? .red : FluenceColor.ink)
-                }
-            }
-            .buttonStyle(.plain)
-            .disabled(coordinator.session == nil && !coordinator.isRunning)
-        }
     }
 }
 
