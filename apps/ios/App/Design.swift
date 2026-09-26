@@ -50,144 +50,6 @@ struct SoftGlass: ViewModifier {
     }
 }
 
-struct DeviceBezelContour: Shape {
-    var topInset: CGFloat
-    var isPad: Bool
-    
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let w = rect.width
-        let h = rect.height
-        
-        let cornerRadius: CGFloat = {
-            if isPad { return 24 }
-            if topInset > 50 { return 54 } // Dynamic Island models
-            if topInset >= 44 { return 47 } // Notch models
-            return 18 // Standard / SE
-        }()
-        
-        // 1. Physical Hardware Notch Contour (iPhone X, XS, 11, 12, 13, 14)
-        if topInset >= 44 && topInset < 54 && !isPad {
-            let isNarrowNotch = topInset >= 47 // iPhone 13/14
-            let notchW: CGFloat = isNarrowNotch ? min(166, w * 0.42) : min(210, w * 0.54)
-            let notchH: CGFloat = isNarrowNotch ? 33 : 30
-            let notchCorner: CGFloat = 10
-            let notchEarRadius: CGFloat = 10
-            
-            let notchLeft = (w - notchW) / 2
-            let notchRight = (w + notchW) / 2
-            
-            // Top Left corner to left ear
-            path.move(to: CGPoint(x: cornerRadius, y: 0))
-            path.addLine(to: CGPoint(x: notchLeft - notchEarRadius, y: 0))
-            
-            // Curve down into left of notch
-            path.addCurve(
-                to: CGPoint(x: notchLeft, y: notchEarRadius),
-                control1: CGPoint(x: notchLeft - notchEarRadius * 0.45, y: 0),
-                control2: CGPoint(x: notchLeft, y: notchEarRadius * 0.45)
-            )
-            
-            // Line down notch left edge
-            path.addLine(to: CGPoint(x: notchLeft, y: notchH - notchCorner))
-            
-            // Bottom-left notch corner
-            path.addCurve(
-                to: CGPoint(x: notchLeft + notchCorner, y: notchH),
-                control1: CGPoint(x: notchLeft, y: notchH - notchCorner * 0.45),
-                control2: CGPoint(x: notchLeft + notchCorner * 0.45, y: notchH)
-            )
-            
-            // Across notch bottom
-            path.addLine(to: CGPoint(x: notchRight - notchCorner, y: notchH))
-            
-            // Bottom-right notch corner
-            path.addCurve(
-                to: CGPoint(x: notchRight, y: notchH - notchCorner),
-                control1: CGPoint(x: notchRight - notchCorner * 0.45, y: notchH),
-                control2: CGPoint(x: notchRight, y: notchH - notchCorner * 0.45)
-            )
-            
-            // Line up notch right edge
-            path.addLine(to: CGPoint(x: notchRight, y: notchEarRadius))
-            
-            // Curve out of right of notch back to top edge
-            path.addCurve(
-                to: CGPoint(x: notchRight + notchEarRadius, y: 0),
-                control1: CGPoint(x: notchRight, y: notchEarRadius * 0.45),
-                control2: CGPoint(x: notchRight + notchEarRadius * 0.45, y: 0)
-            )
-            
-            // Line to top-right corner
-            path.addLine(to: CGPoint(x: w - cornerRadius, y: 0))
-            
-        } else {
-            // Smooth top edge
-            path.move(to: CGPoint(x: cornerRadius, y: 0))
-            path.addLine(to: CGPoint(x: w - cornerRadius, y: 0))
-        }
-        
-        // Top-Right Corner
-        path.addArc(
-            center: CGPoint(x: w - cornerRadius, y: cornerRadius),
-            radius: cornerRadius,
-            startAngle: .degrees(-90),
-            endAngle: .degrees(0),
-            clockwise: false
-        )
-        
-        // Right Edge
-        path.addLine(to: CGPoint(x: w, y: h - cornerRadius))
-        
-        // Bottom-Right Corner
-        path.addArc(
-            center: CGPoint(x: w - cornerRadius, y: h - cornerRadius),
-            radius: cornerRadius,
-            startAngle: .degrees(0),
-            endAngle: .degrees(90),
-            clockwise: false
-        )
-        
-        // Bottom Edge
-        path.addLine(to: CGPoint(x: cornerRadius, y: h))
-        
-        // Bottom-Left Corner
-        path.addArc(
-            center: CGPoint(x: cornerRadius, y: h - cornerRadius),
-            radius: cornerRadius,
-            startAngle: .degrees(90),
-            endAngle: .degrees(180),
-            clockwise: false
-        )
-        
-        // Left Edge
-        path.addLine(to: CGPoint(x: 0, y: cornerRadius))
-        
-        // Top-Left Corner
-        path.addArc(
-            center: CGPoint(x: cornerRadius, y: cornerRadius),
-            radius: cornerRadius,
-            startAngle: .degrees(180),
-            endAngle: .degrees(270),
-            clockwise: false
-        )
-        
-        path.closeSubpath()
-        
-        // 2. Dynamic Island Pill Contour (iPhone 14/15/16 Pro series)
-        if topInset > 50 && !isPad {
-            let pillW: CGFloat = 126
-            let pillH: CGFloat = 37
-            let pillTop: CGFloat = 11
-            let pillX = (w - pillW) / 2
-            let pillRect = CGRect(x: pillX, y: pillTop, width: pillW, height: pillH)
-            path.addRoundedRect(in: pillRect, cornerSize: CGSize(width: pillH / 2, height: pillH / 2))
-        }
-        
-        return path
-    }
-}
-
 struct FluenceAura: View {
     var energy: Double = 0
     var listening = false
@@ -198,83 +60,89 @@ struct FluenceAura: View {
     var body: some View {
         GeometryReader { geo in
             let isPad = min(geo.size.width, geo.size.height) > 500
-            let topInset = geo.safeAreaInsets.top
-            let deviceShape = DeviceBezelContour(topInset: topInset, isPad: isPad)
+            // Exact continuous squircle radius matching iPhone 12/13/14/15/16 OLED glass (48-55pt) & iPad (28pt)
+            let cornerRadius: CGFloat = isPad ? 28 : (geo.safeAreaInsets.top > 50 ? 55 : (geo.safeAreaInsets.top > 20 ? 48 : 22))
             
             TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
                 let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                let clampedEnergy = reduceMotion ? 0.15 : min(1.0, max(0.0, energy))
-                // Smooth organic wave (12-24 RPM)
-                let organicSpeed: Double = 12 + clampedEnergy * 18
-                let rotation = Angle.degrees((t * organicSpeed).truncatingRemainder(dividingBy: 360))
-                let gentleBreathing = sin(t * 1.5) * 0.04
+                let clampedEnergy = reduceMotion ? 0.20 : min(1.0, max(0.0, energy))
                 
-                // Authentic Siri & Gemini Live vibrant multi-color chromatic spectrum
+                // Dynamic multi-color sweep speed
+                let speed: Double = (listening ? 35 : 20) + clampedEnergy * 35
+                let rotation = Angle.degrees((t * speed).truncatingRemainder(dividingBy: 360))
+                let breathing = sin(t * 2.0) * 0.05
+                
+                // Authentic Apple Intelligence Siri & Gemini Live vibrant 8-Color Spectrum
                 let siriColors: [Color] = [
-                    Color(red: 0.05, green: 0.45, blue: 1.00), // Siri Electric Blue
-                    Color(red: 0.00, green: 0.96, blue: 0.88), // Vivid Cyan
-                    Color(red: 0.12, green: 0.95, blue: 0.50), // Gemini Emerald Mint
-                    Color(red: 1.00, green: 0.85, blue: 0.10), // Solar Gold
-                    Color(red: 1.00, green: 0.38, blue: 0.15), // Radiant Coral
-                    Color(red: 1.00, green: 0.12, blue: 0.65), // Hot Neon Magenta
-                    Color(red: 0.62, green: 0.15, blue: 1.00), // Electric Violet
-                    Color(red: 0.05, green: 0.45, blue: 1.00)  // Loop
+                    Color(red: 0.05, green: 0.50, blue: 1.00), // Siri Electric Blue
+                    Color(red: 0.00, green: 0.98, blue: 0.92), // Neon Cyan
+                    Color(red: 0.10, green: 0.98, blue: 0.55), // Gemini Vivid Mint
+                    Color(red: 1.00, green: 0.88, blue: 0.08), // Solar Gold
+                    Color(red: 1.00, green: 0.40, blue: 0.10), // Radiant Coral
+                    Color(red: 1.00, green: 0.10, blue: 0.65), // Hot Apple Pink / Magenta
+                    Color(red: 0.68, green: 0.12, blue: 1.00), // Electric Purple / Violet
+                    Color(red: 0.00, green: 0.98, blue: 0.92), // Neon Cyan
+                    Color(red: 0.05, green: 0.50, blue: 1.00)  // Loop
                 ]
                 
-                let gradient1 = AngularGradient(
+                let gradientForward = AngularGradient(
                     gradient: Gradient(colors: siriColors),
                     center: .center,
                     angle: rotation
                 )
                 
-                let gradient2 = AngularGradient(
+                let gradientReverse = AngularGradient(
                     gradient: Gradient(colors: siriColors.reversed()),
                     center: .center,
-                    angle: rotation + .degrees(120)
+                    angle: rotation + .degrees(140)
                 )
                 
-                let gradient3 = AngularGradient(
+                let gradientCross = AngularGradient(
                     gradient: Gradient(colors: siriColors),
                     center: .center,
-                    angle: -rotation + .degrees(240)
+                    angle: -rotation + .degrees(260)
                 )
                 
-                let bloomWidth: CGFloat = (listening ? 24 : 16) + CGFloat(clampedEnergy * 14)
-                let midWidth: CGFloat = (listening ? 12 : 7.5) + CGFloat(clampedEnergy * 7)
-                let coreWidth: CGFloat = (listening ? 5.5 : 3.5) + CGFloat(clampedEnergy * 3.5)
-                let rimWidth: CGFloat = 2.4 + CGFloat(clampedEnergy * 1.2)
+                let wideBloomWidth: CGFloat = (listening ? 38 : 26) + CGFloat(clampedEnergy * 20)
+                let midGlowWidth: CGFloat = (listening ? 20 : 13) + CGFloat(clampedEnergy * 12)
+                let coreBeamWidth: CGFloat = (listening ? 7.5 : 5.0) + CGFloat(clampedEnergy * 5.0)
+                let rimWidth: CGFloat = 3.0 + CGFloat(clampedEnergy * 1.5)
                 
                 ZStack {
-                    // 1. Wide Ambient Multi-color Aura (PlusLighter additive light)
-                    deviceShape
-                        .stroke(gradient1, style: StrokeStyle(lineWidth: bloomWidth, lineCap: .round, lineJoin: .round))
-                        .blur(radius: (listening ? 24 : 14) + CGFloat(clampedEnergy * 8))
-                        .opacity(min(0.85, 0.50 + clampedEnergy * 0.25 + gentleBreathing))
+                    // 1. Broad Atmospheric Inward Neon Bleed (Thick Siri & Gemini glow flooding the perimeter)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(gradientForward, lineWidth: wideBloomWidth)
+                        .blur(radius: (listening ? 28 : 18) + CGFloat(clampedEnergy * 10))
+                        .opacity(min(1.0, 0.75 + clampedEnergy * 0.25 + breathing))
                         .blendMode(.plusLighter)
                     
-                    // 2. Counter-rotating Chromatic Ribbon (Produces deep rich color mixing)
-                    deviceShape
-                        .stroke(gradient2, style: StrokeStyle(lineWidth: midWidth, lineCap: .round, lineJoin: .round))
-                        .blur(radius: (listening ? 9 : 5) + CGFloat(clampedEnergy * 4))
-                        .opacity(min(0.90, 0.60 + clampedEnergy * 0.25))
+                    // 2. High-Intensity Mid Chromatic Ribbon
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(gradientReverse, lineWidth: midGlowWidth)
+                        .blur(radius: (listening ? 10 : 6) + CGFloat(clampedEnergy * 5))
+                        .opacity(min(1.0, 0.85 + clampedEnergy * 0.15))
                         .blendMode(.plusLighter)
                     
-                    // 3. Dynamic High-Density Core
-                    deviceShape
-                        .stroke(gradient3, style: StrokeStyle(lineWidth: coreWidth, lineCap: .round, lineJoin: .round))
-                        .blur(radius: 2.5 + CGFloat(clampedEnergy * 1.5))
-                        .opacity(0.85)
+                    // 3. Dynamic Multi-Hue Cross-Current Core
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(gradientCross, lineWidth: coreBeamWidth)
+                        .blur(radius: 3.0 + CGFloat(clampedEnergy * 2.0))
+                        .opacity(min(1.0, 0.90 + clampedEnergy * 0.10))
+                        .blendMode(.plusLighter)
                     
-                    // 4. Razor Sharp Multi-color Glass Beam (Glued to bezel & notch)
-                    deviceShape
-                        .stroke(gradient1, style: StrokeStyle(lineWidth: rimWidth, lineCap: .round, lineJoin: .round))
+                    // 4. Sharp Crisp Edge Beam (Glued flush to physical bezel & screen corners)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(gradientForward, lineWidth: rimWidth)
                         .blur(radius: 0.5)
-                        .opacity(0.98)
+                        .opacity(1.0)
                     
-                    // 5. Specular Apple Glass Highlight
-                    deviceShape
-                        .stroke(Color.white.opacity(0.35 + clampedEnergy * 0.35), style: StrokeStyle(lineWidth: 1.0, lineCap: .round, lineJoin: .round))
-                        .blur(radius: 0.3)
+                    // 5. Apple Crystal Glass Specular Glint
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(
+                            Color.white.opacity(0.40 + clampedEnergy * 0.40),
+                            lineWidth: 1.2 + CGFloat(clampedEnergy * 0.8)
+                        )
+                        .blur(radius: 0.4)
                         .blendMode(.plusLighter)
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
