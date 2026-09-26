@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import UniformTypeIdentifiers
+import WebKit
 import MuralCore
 
 struct ThemesView: View {
@@ -102,11 +103,73 @@ struct ActivityViewController: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
+// MARK: - In-App Google Drive Web View Component
+struct GoogleDriveWebView: UIViewRepresentable {
+    let initialURL: URL
+    @Binding var currentURLString: String
+    @Binding var canGoBack: Bool
+    @Binding var canGoForward: Bool
+    @Binding var isLoading: Bool
+    var onEvaluate: ((WKWebView) -> Void)?
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .default()
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+        context.coordinator.webView = webView
+        let req = URLRequest(url: initialURL)
+        webView.load(req)
+        return webView
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        context.coordinator.parent = self
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        var parent: GoogleDriveWebView
+        weak var webView: WKWebView?
+        
+        init(_ parent: GoogleDriveWebView) {
+            self.parent = parent
+        }
+        
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            DispatchQueue.main.async { self.parent.isLoading = true }
+        }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            DispatchQueue.main.async {
+                self.parent.isLoading = false
+                self.parent.canGoBack = webView.canGoBack
+                self.parent.canGoForward = webView.canGoForward
+                if let url = webView.url {
+                    self.parent.currentURLString = url.absoluteString
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Google Drive Direct Browser Sheet
 struct GoogleDriveBrowserSheet: View {
     let coordinator: ConversationCoordinator
     @ObservedObject private var service = GoogleDriveDirectService.shared
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var mode = 0 // 0: Web Portal, 1: Lien / Fichiers
+    @State private var currentURLString = "https://drive.google.com"
+    @State private var canGoBack = false
+    @State private var canGoForward = false
+    @State private var isLoading = false
+    @State private var webViewRef: WKWebView?
+    
     @State private var driveLink = ""
     @State private var alertMessage: String?
     @State private var showAlert = false
@@ -118,120 +181,185 @@ struct GoogleDriveBrowserSheet: View {
             ZStack {
                 FluenceColor.background.ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Header
-                        VStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(FluenceColor.accent.opacity(0.15))
-                                    .frame(width: 80, height: 80)
-                                Image(systemName: "externaldrive.badge.icloud")
-                                    .font(.system(size: 38))
-                                    .foregroundStyle(FluenceColor.accent)
-                            }
-                            
-                            Text("Google Drive")
-                                .font(.system(.title2, design: .rounded, weight: .bold))
-                                .foregroundStyle(FluenceColor.ink)
-                            
-                            Text("Importez directement vos cours, paquets Anki, listes de vocabulaire et documents depuis votre compte Google Drive.")
-                                .font(.subheadline)
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(FluenceColor.secondary)
-                                .padding(.horizontal, 20)
-                        }
-                        .padding(.top, 16)
-                        
-                        // 1. Primary Option: Native Google Drive Browser
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "folder.fill.badge.plus")
-                                    .foregroundStyle(FluenceColor.accent)
-                                Text("Option 1 · Explorateur Google Drive")
-                                    .font(.system(.caption, design: .rounded, weight: .bold))
-                                    .foregroundStyle(FluenceColor.ink)
-                            }
-                            
-                            Text("Ouvre l'explorateur de fichiers de votre iPhone. Si l'application Google Drive est installée sur votre téléphone, votre Drive apparaît directement dans la liste des emplacements.")
-                                .font(.caption)
-                                .foregroundStyle(FluenceColor.secondary)
-                            
-                            Button {
-                                showNativeFilePicker = true
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: "folder.badge.gearshape")
-                                    Text("Parcourir mon Google Drive")
-                                        .font(.system(.headline, design: .rounded, weight: .bold))
+                VStack(spacing: 0) {
+                    // Mode Picker (Web Portal vs Lien de partage)
+                    Picker("Mode", selection: $mode) {
+                        Text("Mon Drive en Direct").tag(0)
+                        Text("Lien & Fichiers").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(FluenceColor.surface)
+                    
+                    if mode == 0 {
+                        // 1. LIVE GOOGLE DRIVE WEB PORTAL
+                        VStack(spacing: 0) {
+                            // Web Navigation Bar
+                            HStack(spacing: 16) {
+                                Button {
+                                    webViewRef?.goBack()
+                                } label: {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundStyle(canGoBack ? FluenceColor.accent : FluenceColor.secondary.opacity(0.4))
                                 }
-                                .foregroundStyle(Color.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(FluenceColor.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .disabled(!canGoBack)
+                                
+                                Button {
+                                    webViewRef?.goForward()
+                                } label: {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundStyle(canGoForward ? FluenceColor.accent : FluenceColor.secondary.opacity(0.4))
+                                }
+                                .disabled(!canGoForward)
+                                
+                                Button {
+                                    webViewRef?.reload()
+                                } label: {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(FluenceColor.ink)
+                                }
+                                
+                                Spacer()
+                                
+                                if isLoading {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                }
+                                
+                                Text("drive.google.com")
+                                    .font(.system(.caption, design: .rounded, weight: .medium))
+                                    .foregroundStyle(FluenceColor.secondary)
                             }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(18)
-                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .padding(.horizontal, 20)
-                        
-                        // 2. Secondary Option: Direct Google Drive Share Link
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Image(systemName: "link.badge.plus")
-                                    .foregroundStyle(FluenceColor.emerald)
-                                Text("Option 2 · Lien de partage Google Drive")
-                                    .font(.system(.caption, design: .rounded, weight: .bold))
-                                    .foregroundStyle(FluenceColor.ink)
-                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(FluenceColor.surfaceSecondary)
                             
-                            Text("Dans Google Drive, faites « Copier le lien » sur votre fichier ou document de vocabulaire (PDF, TXT, CSV, JSON, Anki) et collez-le ci-dessous.")
-                                .font(.caption)
-                                .foregroundStyle(FluenceColor.secondary)
+                            // Web View Frame
+                            GoogleDriveWebView(
+                                initialURL: URL(string: "https://drive.google.com")!,
+                                currentURLString: $currentURLString,
+                                canGoBack: $canGoBack,
+                                canGoForward: $canGoForward,
+                                isLoading: $isLoading
+                            )
                             
-                            TextField("https://drive.google.com/file/d/...", text: $driveLink)
-                                .font(.subheadline)
-                                .padding(14)
-                                .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                            
-                            Button {
-                                importFromLink()
-                            } label: {
-                                HStack(spacing: 8) {
-                                    if isDownloading {
-                                        ProgressView()
-                                            .tint(FluenceColor.ink)
-                                    } else {
-                                        Image(systemName: "arrow.down.circle.fill")
+                            // Bottom Action Bar: Import Current File
+                            VStack(spacing: 6) {
+                                Button {
+                                    importCurrentWebDocument()
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        if isDownloading {
+                                            ProgressView().tint(.white)
+                                        } else {
+                                            Image(systemName: "arrow.down.circle.fill")
+                                                .font(.system(size: 18, weight: .bold))
+                                        }
+                                        Text(isDownloading ? "Importation en cours…" : "📥 Importer ce document dans Fluence")
+                                            .font(.system(.headline, design: .rounded, weight: .bold))
                                     }
-                                    Text(isDownloading ? "Téléchargement en cours…" : "Télécharger & Importer")
-                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                    .foregroundStyle(Color.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(FluenceColor.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 }
-                                .foregroundStyle(FluenceColor.ink)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .disabled(isDownloading)
+                                
+                                Text("Ouvrez un fichier ou document dans votre Drive ci-dessus, puis touchez Importer.")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(FluenceColor.secondary)
                             }
-                            .buttonStyle(.plain)
-                            .disabled(driveLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isDownloading)
+                            .padding(12)
+                            .background(FluenceColor.surface)
                         }
-                        .padding(18)
-                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .padding(.horizontal, 20)
-                        
-                        // Supported Formats Info
-                        HStack(spacing: 12) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(FluenceColor.emerald)
-                            Text("Prend en charge les paquets Anki (.apkg, .txt), listes de vocabulaire (.csv, .tsv), cours Assimil (.pdf, .txt) et sauvegardes (.json).")
-                                .font(.caption2)
-                                .foregroundStyle(FluenceColor.secondary)
+                    } else {
+                        // 2. LINK & FILES TAB
+                        ScrollView {
+                            VStack(spacing: 20) {
+                                // Direct Link
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Image(systemName: "link.badge.plus")
+                                            .foregroundStyle(FluenceColor.emerald)
+                                        Text("Coller un lien Google Drive")
+                                            .font(.system(.caption, design: .rounded, weight: .bold))
+                                            .foregroundStyle(FluenceColor.ink)
+                                    }
+                                    
+                                    Text("Copiez le lien de votre fichier Google Drive (PDF, cours, Anki, CSV, TXT) et collez-le ici :")
+                                        .font(.caption)
+                                        .foregroundStyle(FluenceColor.secondary)
+                                    
+                                    TextField("https://drive.google.com/file/d/...", text: $driveLink)
+                                        .font(.subheadline)
+                                        .padding(14)
+                                        .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .autocorrectionDisabled()
+                                        .textInputAutocapitalization(.never)
+                                    
+                                    Button {
+                                        importFromLink()
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            if isDownloading {
+                                                ProgressView().tint(FluenceColor.ink)
+                                            } else {
+                                                Image(systemName: "arrow.down.circle.fill")
+                                            }
+                                            Text(isDownloading ? "Téléchargement en cours…" : "Télécharger & Importer")
+                                                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                        }
+                                        .foregroundStyle(FluenceColor.ink)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(driveLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isDownloading)
+                                }
+                                .padding(18)
+                                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .padding(.horizontal, 16)
+                                .padding(.top, 12)
+                                
+                                // Native iOS File Browser
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Image(systemName: "folder.fill.badge.plus")
+                                            .foregroundStyle(FluenceColor.accent)
+                                        Text("Explorateur de Fichiers iOS (avec Google Drive)")
+                                            .font(.system(.caption, design: .rounded, weight: .bold))
+                                            .foregroundStyle(FluenceColor.ink)
+                                    }
+                                    
+                                    Text("Si l'application Google Drive est installée sur votre iPhone, votre Drive apparaît directement dans la liste des emplacements.")
+                                        .font(.caption)
+                                        .foregroundStyle(FluenceColor.secondary)
+                                    
+                                    Button {
+                                        showNativeFilePicker = true
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "folder.badge.gearshape")
+                                            Text("Parcourir via Fichiers iOS")
+                                                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                        }
+                                        .foregroundStyle(Color.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(FluenceColor.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(18)
+                                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .padding(.horizontal, 16)
+                            }
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 20)
                     }
                 }
             }
@@ -249,7 +377,7 @@ struct GoogleDriveBrowserSheet: View {
                     Task {
                         do {
                             let count = try await AnkiGoogleDriveManager.shared.importVocabulary(from: url, store: coordinator.store, languageID: coordinator.language.id)
-                            alertMessage = "\(count) mots importés avec succès depuis votre Google Drive / Fichier !"
+                            alertMessage = "\(count) mots importés avec succès !"
                             showAlert = true
                         } catch {
                             alertMessage = "Erreur lors de l'importation : \(error.localizedDescription)"
@@ -257,7 +385,7 @@ struct GoogleDriveBrowserSheet: View {
                         }
                     }
                 case .failure(let error):
-                    alertMessage = "Sélection annulée ou erreur : \(error.localizedDescription)"
+                    alertMessage = "Sélection annulée : \(error.localizedDescription)"
                     showAlert = true
                 }
             }
@@ -270,6 +398,23 @@ struct GoogleDriveBrowserSheet: View {
                 }
             } message: {
                 Text(alertMessage ?? "")
+            }
+        }
+    }
+    
+    private func importCurrentWebDocument() {
+        let urlString = currentURLString
+        isDownloading = true
+        Task {
+            do {
+                let count = try await service.importFromPublicLink(urlString: urlString, store: coordinator.store, targetLanguageID: coordinator.language.id)
+                isDownloading = false
+                alertMessage = "\(count) mots importés avec succès depuis Google Drive !"
+                showAlert = true
+            } catch {
+                isDownloading = false
+                alertMessage = "Sélectionnez un fichier ou document dans votre Drive, puis cliquez sur Importer."
+                showAlert = true
             }
         }
     }
