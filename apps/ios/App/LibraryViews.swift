@@ -107,238 +107,131 @@ struct GoogleDriveBrowserSheet: View {
     let coordinator: ConversationCoordinator
     @ObservedObject private var service = GoogleDriveDirectService.shared
     @Environment(\.dismiss) private var dismiss
-    @State private var search = ""
     @State private var driveLink = ""
     @State private var alertMessage: String?
     @State private var showAlert = false
-    @State private var importingFileId: String?
+    @State private var isDownloading = false
+    @State private var showNativeFilePicker = false
     
     var body: some View {
         NavigationStack {
             ZStack {
                 FluenceColor.background.ignoresSafeArea()
                 
-                if service.isAuthenticated {
-                    VStack(spacing: 0) {
-                        // User info banner & search
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Header
                         VStack(spacing: 12) {
-                            HStack {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(FluenceColor.accent)
-                                Text(service.userEmail ?? "Google Drive Connecté")
-                                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                    .foregroundStyle(FluenceColor.ink)
-                                Spacer()
-                                Button("Déconnexion") {
-                                    service.signOut()
-                                }
-                                .font(.caption)
-                                .foregroundStyle(FluenceColor.coral)
-                            }
-                            
-                            // Search bar
-                            HStack {
-                                Image(systemName: "magnifyingglass")
-                                    .foregroundStyle(FluenceColor.secondary)
-                                TextField("Rechercher dans Google Drive…", text: $search)
-                                    .font(.subheadline)
-                                    .onSubmit {
-                                        Task { try? await service.fetchFiles(folderId: service.currentFolderID, search: search) }
-                                    }
-                                if !search.isEmpty {
-                                    Button {
-                                        search = ""
-                                        Task { try? await service.fetchFiles(folderId: service.currentFolderID) }
-                                    } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundStyle(FluenceColor.secondary)
-                                    }
-                                }
-                            }
-                            .padding(10)
-                            .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            
-                            // Folder breadcrumbs
-                            if service.folderBreadcrumbs.count > 1 {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 6) {
-                                        ForEach(0..<service.folderBreadcrumbs.count, id: \.self) { idx in
-                                            let crumb = service.folderBreadcrumbs[idx]
-                                            Button {
-                                                Task { await service.navigateBackToBreadcrumb(index: idx) }
-                                            } label: {
-                                                Text(crumb.name)
-                                                    .font(.caption)
-                                                    .foregroundStyle(idx == service.folderBreadcrumbs.count - 1 ? FluenceColor.ink : FluenceColor.accent)
-                                            }
-                                            if idx < service.folderBreadcrumbs.count - 1 {
-                                                Image(systemName: "chevron.right")
-                                                    .font(.caption2)
-                                                    .foregroundStyle(FluenceColor.secondary)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(16)
-                        .background(FluenceColor.surface)
-                        
-                        Divider()
-                        
-                        // Files List
-                        if service.isLoading && service.files.isEmpty {
-                            Spacer()
-                            ProgressView("Chargement de votre Drive…")
-                            Spacer()
-                        } else if service.files.isEmpty {
-                            Spacer()
-                            VStack(spacing: 12) {
-                                Image(systemName: "folder.badge.questionmark")
-                                    .font(.system(size: 40))
-                                    .foregroundStyle(FluenceColor.secondary)
-                                Text("Aucun fichier trouvé dans ce dossier.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(FluenceColor.secondary)
-                            }
-                            Spacer()
-                        } else {
-                            List {
-                                ForEach(service.files) { file in
-                                    Button {
-                                        if file.isFolder {
-                                            Task { await service.openFolder(id: file.id, name: file.name) }
-                                        } else {
-                                            importFile(file)
-                                        }
-                                    } label: {
-                                        HStack(spacing: 14) {
-                                            Image(systemName: file.iconName)
-                                                .font(.title3)
-                                                .foregroundStyle(file.isFolder ? FluenceColor.accent : FluenceColor.ink)
-                                                .frame(width: 28)
-                                            
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(file.name)
-                                                    .font(.system(.body, design: .rounded, weight: .medium))
-                                                    .foregroundStyle(FluenceColor.ink)
-                                                    .lineLimit(1)
-                                                
-                                                HStack(spacing: 8) {
-                                                    if file.isFolder {
-                                                        Text("Dossier")
-                                                    } else {
-                                                        Text("Fichier à importer")
-                                                    }
-                                                }
-                                                .font(.caption2)
-                                                .foregroundStyle(FluenceColor.secondary)
-                                            }
-                                            
-                                            Spacer()
-                                            
-                                            if importingFileId == file.id {
-                                                ProgressView()
-                                            } else if file.isFolder {
-                                                Image(systemName: "chevron.right")
-                                                    .font(.caption)
-                                                    .foregroundStyle(FluenceColor.secondary)
-                                            } else {
-                                                Image(systemName: "arrow.down.circle.fill")
-                                                    .font(.system(size: 20))
-                                                    .foregroundStyle(FluenceColor.accent)
-                                            }
-                                        }
-                                        .padding(.vertical, 4)
-                                    }
-                                }
-                            }
-                            .listStyle(.plain)
-                        }
-                    }
-                } else {
-                    // Not connected view + Link import option
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(FluenceColor.accent.opacity(0.15))
+                                    .frame(width: 80, height: 80)
                                 Image(systemName: "externaldrive.badge.icloud")
-                                    .font(.system(size: 54))
+                                    .font(.system(size: 38))
                                     .foregroundStyle(FluenceColor.accent)
-                                
-                                Text("Google Drive Direct")
-                                    .font(.system(.title2, design: .rounded, weight: .bold))
-                                    .foregroundStyle(FluenceColor.ink)
-                                
-                                Text("Connectez directement votre compte Google Drive pour explorer vos dossiers et importer vos cours, paquets Anki et lexiques en un clic.")
-                                    .font(.subheadline)
-                                    .multilineTextAlignment(.center)
-                                    .foregroundStyle(FluenceColor.secondary)
-                                    .padding(.horizontal, 20)
                             }
-                            .padding(.top, 24)
                             
-                            // 1. Direct OAuth Connect Button
+                            Text("Google Drive")
+                                .font(.system(.title2, design: .rounded, weight: .bold))
+                                .foregroundStyle(FluenceColor.ink)
+                            
+                            Text("Importez directement vos cours, paquets Anki, listes de vocabulaire et documents depuis votre compte Google Drive.")
+                                .font(.subheadline)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(FluenceColor.secondary)
+                                .padding(.horizontal, 20)
+                        }
+                        .padding(.top, 16)
+                        
+                        // 1. Primary Option: Native Google Drive Browser
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "folder.fill.badge.plus")
+                                    .foregroundStyle(FluenceColor.accent)
+                                Text("Option 1 · Explorateur Google Drive")
+                                    .font(.system(.caption, design: .rounded, weight: .bold))
+                                    .foregroundStyle(FluenceColor.ink)
+                            }
+                            
+                            Text("Ouvre l'explorateur de fichiers de votre iPhone. Si l'application Google Drive est installée sur votre téléphone, votre Drive apparaît directement dans la liste des emplacements.")
+                                .font(.caption)
+                                .foregroundStyle(FluenceColor.secondary)
+                            
                             Button {
-                                Task {
-                                    do {
-                                        try await service.signIn()
-                                    } catch {
-                                        alertMessage = "Connexion annulée ou impossible : \(error.localizedDescription)"
-                                        showAlert = true
-                                    }
-                                }
+                                showNativeFilePicker = true
                             } label: {
                                 HStack(spacing: 10) {
-                                    Image(systemName: "person.badge.key.fill")
-                                    Text("Se connecter avec Google")
+                                    Image(systemName: "folder.badge.gearshape")
+                                    Text("Parcourir mon Google Drive")
                                         .font(.system(.headline, design: .rounded, weight: .bold))
                                 }
                                 .foregroundStyle(Color.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
                                 .background(FluenceColor.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .padding(.horizontal, 24)
                             }
-                            
+                            .buttonStyle(.plain)
+                        }
+                        .padding(18)
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.horizontal, 20)
+                        
+                        // 2. Secondary Option: Direct Google Drive Share Link
+                        VStack(alignment: .leading, spacing: 14) {
                             HStack {
-                                Rectangle().fill(Color.white.opacity(0.1)).frame(height: 1)
-                                Text("OU PAR LIEN PARTAGÉ").font(.caption2).foregroundStyle(FluenceColor.secondary)
-                                Rectangle().fill(Color.white.opacity(0.1)).frame(height: 1)
-                            }
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 8)
-                            
-                            // 2. Direct Link Import Option
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Coller un lien Google Drive")
+                                Image(systemName: "link.badge.plus")
+                                    .foregroundStyle(FluenceColor.emerald)
+                                Text("Option 2 · Lien de partage Google Drive")
                                     .font(.system(.caption, design: .rounded, weight: .bold))
                                     .foregroundStyle(FluenceColor.ink)
-                                
-                                TextField("https://drive.google.com/file/d/...", text: $driveLink)
-                                    .font(.subheadline)
-                                    .padding(14)
-                                    .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                
-                                Button {
-                                    importFromLink()
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "arrow.down.doc.fill")
-                                        Text("Télécharger & Importer")
-                                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                                    }
-                                    .foregroundStyle(FluenceColor.ink)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                }
-                                .disabled(driveLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             }
-                            .padding(18)
-                            .background(FluenceColor.surface.opacity(0.60), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .padding(.horizontal, 24)
+                            
+                            Text("Dans Google Drive, faites « Copier le lien » sur votre fichier ou document de vocabulaire (PDF, TXT, CSV, JSON, Anki) et collez-le ci-dessous.")
+                                .font(.caption)
+                                .foregroundStyle(FluenceColor.secondary)
+                            
+                            TextField("https://drive.google.com/file/d/...", text: $driveLink)
+                                .font(.subheadline)
+                                .padding(14)
+                                .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                            
+                            Button {
+                                importFromLink()
+                            } label: {
+                                HStack(spacing: 8) {
+                                    if isDownloading {
+                                        ProgressView()
+                                            .tint(FluenceColor.ink)
+                                    } else {
+                                        Image(systemName: "arrow.down.circle.fill")
+                                    }
+                                    Text(isDownloading ? "Téléchargement en cours…" : "Télécharger & Importer")
+                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                }
+                                .foregroundStyle(FluenceColor.ink)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(FluenceColor.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(driveLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isDownloading)
                         }
+                        .padding(18)
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.horizontal, 20)
+                        
+                        // Supported Formats Info
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(FluenceColor.emerald)
+                            Text("Prend en charge les paquets Anki (.apkg, .txt), listes de vocabulaire (.csv, .tsv), cours Assimil (.pdf, .txt) et sauvegardes (.json).")
+                                .font(.caption2)
+                                .foregroundStyle(FluenceColor.secondary)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 20)
                     }
                 }
             }
@@ -348,36 +241,35 @@ struct GoogleDriveBrowserSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fermer") { dismiss() }
                 }
-                if service.isAuthenticated {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            Task { try? await service.fetchFiles(folderId: service.currentFolderID) }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
+            }
+            .fileImporter(isPresented: $showNativeFilePicker, allowedContentTypes: [.item, .content, .data, .plainText, .pdf, .json, .commaSeparatedText, .tabSeparatedText], allowsMultipleSelection: false) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    Task {
+                        do {
+                            let count = try await AnkiGoogleDriveManager.shared.importVocabulary(from: url, store: coordinator.store, languageID: coordinator.language.id)
+                            alertMessage = "\(count) mots importés avec succès depuis votre Google Drive / Fichier !"
+                            showAlert = true
+                        } catch {
+                            alertMessage = "Erreur lors de l'importation : \(error.localizedDescription)"
+                            showAlert = true
                         }
                     }
+                case .failure(let error):
+                    alertMessage = "Sélection annulée ou erreur : \(error.localizedDescription)"
+                    showAlert = true
                 }
             }
             .alert("Google Drive", isPresented: $showAlert) {
-                Button("OK", role: .cancel) { alertMessage = nil }
+                Button("OK", role: .cancel) {
+                    if alertMessage?.contains("succès") == true {
+                        dismiss()
+                    }
+                    alertMessage = nil
+                }
             } message: {
                 Text(alertMessage ?? "")
-            }
-        }
-    }
-    
-    private func importFile(_ file: GoogleDriveFile) {
-        importingFileId = file.id
-        Task {
-            do {
-                let count = try await service.downloadAndImport(file: file, store: coordinator.store, targetLanguageID: coordinator.language.id)
-                importingFileId = nil
-                alertMessage = "\(count) mots importés avec succès depuis « \(file.name) » !"
-                showAlert = true
-            } catch {
-                importingFileId = nil
-                alertMessage = "Erreur lors de l'importation : \(error.localizedDescription)"
-                showAlert = true
             }
         }
     }
@@ -385,14 +277,17 @@ struct GoogleDriveBrowserSheet: View {
     private func importFromLink() {
         let link = driveLink.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !link.isEmpty else { return }
+        isDownloading = true
         Task {
             do {
                 let count = try await service.importFromPublicLink(urlString: link, store: coordinator.store, targetLanguageID: coordinator.language.id)
+                isDownloading = false
                 driveLink = ""
-                alertMessage = "\(count) mots importés avec succès depuis le lien Google Drive !"
+                alertMessage = "\(count) mots importés avec succès depuis votre lien Google Drive !"
                 showAlert = true
             } catch {
-                alertMessage = "Impossible de télécharger ce lien Google Drive : \(error.localizedDescription)"
+                isDownloading = false
+                alertMessage = "Impossible d'importer ce lien Google Drive : \(error.localizedDescription)"
                 showAlert = true
             }
         }
