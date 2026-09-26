@@ -1,37 +1,34 @@
 import SwiftUI
 
-import SwiftUI
-
 enum FluenceColor {
     static let background = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.03, green: 0.04, blue: 0.06, alpha: 1.0)
-            : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
+            ? UIColor(red: 0.07, green: 0.08, blue: 0.10, alpha: 1.0)
+            : UIColor(red: 0.97, green: 0.98, blue: 0.99, alpha: 1.0)
     })
     static let surface = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.08, green: 0.10, blue: 0.14, alpha: 0.85)
-            : UIColor(white: 1.0, alpha: 0.90)
+            ? UIColor(red: 0.11, green: 0.13, blue: 0.16, alpha: 1.0)
+            : UIColor(white: 1.0, alpha: 1.0)
     })
     static let surfaceSecondary = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.12, green: 0.15, blue: 0.20, alpha: 0.70)
-            : UIColor(red: 0.93, green: 0.94, blue: 0.96, alpha: 0.80)
+            ? UIColor(red: 0.15, green: 0.18, blue: 0.22, alpha: 1.0)
+            : UIColor(red: 0.92, green: 0.94, blue: 0.96, alpha: 1.0)
     })
     static let ink = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.96, green: 0.98, blue: 1.00, alpha: 1.0)
-            : UIColor(red: 0.07, green: 0.09, blue: 0.13, alpha: 1.0)
+            ? UIColor(red: 0.94, green: 0.96, blue: 0.98, alpha: 1.0)
+            : UIColor(red: 0.08, green: 0.10, blue: 0.14, alpha: 1.0)
     })
     static let secondary = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.60, green: 0.66, blue: 0.76, alpha: 1.0)
-            : UIColor(red: 0.40, green: 0.46, blue: 0.54, alpha: 1.0)
+            ? UIColor(red: 0.58, green: 0.64, blue: 0.72, alpha: 1.0)
+            : UIColor(red: 0.42, green: 0.48, blue: 0.56, alpha: 1.0)
     })
-    static let accent = Color(red: 0.38, green: 0.48, blue: 0.98) // Luminous Royal Indigo
-    static let emerald = Color(red: 0.15, green: 0.85, blue: 0.55) // Symbiote Active Mint
-    static let amber = Color(red: 1.00, green: 0.65, blue: 0.20) // Symbiote Solar Amber
-    static let rose = Color(red: 0.98, green: 0.30, blue: 0.60) // Symbiote Hot Rose
+    static let accent = Color(red: 0.36, green: 0.48, blue: 0.92) // Calm Apple Indigo
+    static let emerald = Color(red: 0.20, green: 0.78, blue: 0.50) // Soft Forest Mint
+    static let coral = Color(red: 0.92, green: 0.45, blue: 0.38)
     
     // Legacy mapping to avoid breaking other views immediately
     static let cream = surface
@@ -46,12 +43,12 @@ enum FluenceColor {
 struct Brand: View {
     var body: some View {
         HStack(spacing: 8) {
-            Text("fluence").font(.system(size: 28, weight: .bold, design: .rounded)).tracking(-1.2)
+            Text("fluence").font(.system(size: 26, weight: .bold, design: .rounded)).tracking(-1.0)
         }.foregroundStyle(FluenceColor.ink).accessibilityLabel("Fluence")
     }
 }
 
-// MARK: - Organic Glass Container Modifier
+// MARK: - Sober Glass Card Modifier
 struct SoftGlass: ViewModifier {
     var tint: Color = .white.opacity(0.45)
     func body(content: Content) -> some View {
@@ -60,7 +57,7 @@ struct SoftGlass: ViewModifier {
 }
 
 struct OrganicGlass: ViewModifier {
-    var cornerRadius: CGFloat = 24
+    var cornerRadius: CGFloat = 20
     @Environment(\.colorScheme) private var colorScheme
     
     func body(content: Content) -> some View {
@@ -72,216 +69,80 @@ struct OrganicGlass: ViewModifier {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .stroke(
                                 colorScheme == .dark
-                                    ? Color.white.opacity(0.12)
+                                    ? Color.white.opacity(0.08)
                                     : Color.black.opacity(0.06),
                                 lineWidth: 1
                             )
                     )
-                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.08), radius: 16, x: 0, y: 6)
             }
     }
 }
 
 extension View {
-    func organicGlass(cornerRadius: CGFloat = 24) -> some View {
+    func organicGlass(cornerRadius: CGFloat = 20) -> some View {
         self.modifier(OrganicGlass(cornerRadius: cornerRadius))
     }
 }
 
-// MARK: - LIVING SYMBIOTE CORE (L'Organisme Vivant & Tactile)
-struct SymbioteCoreView: View {
+// MARK: - SOBER & CALM VOICE WAVEFORM PRESENCE (Fin des effets agressifs)
+struct SoberWaveformView: View {
     var energy: Double = 0
     var isListening: Bool = false
     var isSpeaking: Bool = false
-    var isThinking: Bool = false
     var onTap: (() -> Void)? = nil
     
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     
+    private let barCount = 5
+    
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 45, paused: reduceMotion || scenePhase != .active)) { timeline in
             let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
             let rawE = min(1.0, max(0.0, energy))
-            let dynamicE = reduceMotion ? 0.2 : rawE
-            
-            // Living rhythmic pulses
-            let breath = sin(t * 1.8) * 0.08
-            let wave1 = sin(t * 2.4) * 0.12
-            let wave2 = cos(t * 3.1) * 0.10
-            
-            // Base scale modulated by voice energy
-            let baseScale: CGFloat = 1.0 + (isListening ? 0.15 : (isSpeaking ? 0.18 : 0.0)) + CGFloat(dynamicE * 0.28) + CGFloat(breath)
-            
-            // Symbiote Color Spectrum
-            let colors1: [Color] = isListening ? [
-                Color(red: 0.00, green: 0.95, blue: 0.85), // Neon Cyan
-                Color(red: 0.15, green: 0.88, blue: 0.55), // Emerald
-                Color(red: 0.20, green: 0.60, blue: 1.00), // Siri Blue
-                Color(red: 0.00, green: 0.95, blue: 0.85)
-            ] : isSpeaking ? [
-                Color(red: 1.00, green: 0.20, blue: 0.65), // Hot Magenta
-                Color(red: 1.00, green: 0.60, blue: 0.20), // Solar Coral
-                Color(red: 0.65, green: 0.25, blue: 1.00), // Electric Violet
-                Color(red: 0.10, green: 0.55, blue: 1.00), // Blue
-                Color(red: 1.00, green: 0.20, blue: 0.65)
-            ] : [
-                Color(red: 0.25, green: 0.45, blue: 1.00), // Deep Indigo
-                Color(red: 0.60, green: 0.25, blue: 0.95), // Violet
-                Color(red: 0.10, green: 0.85, blue: 0.90), // Soft Cyan
-                Color(red: 0.25, green: 0.45, blue: 1.00)
-            ]
-            
-            let rot1 = Angle.degrees((t * (isListening ? 45 : (isSpeaking ? 55 : 22))).truncatingRemainder(dividingBy: 360))
-            let rot2 = Angle.degrees((-t * (isListening ? 35 : (isSpeaking ? 40 : 18))).truncatingRemainder(dividingBy: 360))
+            let dynamicE = reduceMotion ? 0.15 : rawE
             
             Button {
-                let haptic = UIImpactFeedbackGenerator(style: .medium)
+                let haptic = UIImpactFeedbackGenerator(style: .light)
                 haptic.impactOccurred()
                 onTap?()
             } label: {
-                ZStack {
-                    // 1. Outermost Bioluminescent Atmospheric Aura
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    colors1[0].opacity(0.35 + dynamicE * 0.30),
-                                    colors1[1].opacity(0.18 + dynamicE * 0.18),
-                                    Color.clear
-                                ],
-                                center: .center,
-                                startRadius: 20,
-                                endRadius: 130
+                HStack(spacing: 7) {
+                    ForEach(0..<barCount, id: \.self) { index in
+                        let phase = Double(index) * 0.75
+                        let wave = (isListening || isSpeaking) ? sin(t * 4.5 + phase) : sin(t * 1.8 + phase)
+                        let baseHeight: CGFloat = (isListening || isSpeaking)
+                            ? 14 + CGFloat(abs(wave)) * 16 + CGFloat(dynamicE * 28)
+                            : 8 + CGFloat(abs(wave)) * 8
+                        
+                        Capsule()
+                            .fill(
+                                isListening
+                                    ? FluenceColor.emerald
+                                    : isSpeaking
+                                        ? FluenceColor.accent
+                                        : FluenceColor.secondary.opacity(0.40)
                             )
-                        )
-                        .scaleEffect(baseScale * 1.45)
-                        .blur(radius: 24)
-                        .blendMode(.plusLighter)
-                    
-                    // 2. Symbiote Outer Liquid Membrane (Morphing Organism)
-                    Circle()
-                        .fill(
-                            AngularGradient(gradient: Gradient(colors: colors1), center: .center, angle: rot1)
-                        )
-                        .frame(width: 140, height: 140)
-                        .scaleEffect(x: baseScale * (1.0 + CGFloat(wave1)), y: baseScale * (1.0 - CGFloat(wave2)))
-                        .rotationEffect(rot1)
-                        .blur(radius: 14)
-                        .opacity(0.78 + dynamicE * 0.22)
-                        .blendMode(.plusLighter)
-                    
-                    // 3. Counter-Fluid Inner Cytoplasmic Ring
-                    Circle()
-                        .fill(
-                            AngularGradient(gradient: Gradient(colors: colors1.reversed()), center: .center, angle: rot2)
-                        )
-                        .frame(width: 110, height: 110)
-                        .scaleEffect(x: baseScale * (1.0 - CGFloat(wave2)), y: baseScale * (1.0 + CGFloat(wave1)))
-                        .rotationEffect(rot2)
-                        .blur(radius: 6)
-                        .opacity(0.85 + dynamicE * 0.15)
-                    
-                    // 4. Luminous Symbiotic Nucleus (Intelligent Core)
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    Color.white.opacity(0.95),
-                                    colors1[0].opacity(0.80),
-                                    colors1[1].opacity(0.50),
-                                    Color.clear
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 45
-                            )
-                        )
-                        .frame(width: 70, height: 70)
-                        .scaleEffect(1.0 + CGFloat(dynamicE * 0.35))
-                        .blur(radius: 2.0)
-                    
-                    // 5. Central Living Waveform Icon Indicator
-                    Image(systemName: isListening ? "waveform" : isSpeaking ? "sparkles" : "waveform.circle.fill")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.white)
-                        .shadow(color: Color.black.opacity(0.4), radius: 4)
+                            .frame(width: 5, height: max(6, min(50, baseHeight)))
+                    }
                 }
-                .frame(width: 220, height: 220)
-                .contentShape(Circle())
+                .frame(width: 80, height: 60)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isListening ? "Le symbiote vous écoute" : isSpeaking ? "Le symbiote vous répond" : "Touchez pour parler au symbiote")
+            .accessibilityLabel(isListening ? "Écoute en cours" : isSpeaking ? "Fluence parle" : "Activer la voix")
         }
     }
 }
 
-// MARK: - AMBIENT PERIPHERAL SCREEN GLOW
+// MARK: - FluenceAura (Supprimé pour éliminer tout éblouissement)
 struct FluenceAura: View {
     var energy: Double = 0
     var listening = false
     var active = true
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.scenePhase) private var scenePhase
-
+    
     var body: some View {
-        GeometryReader { geo in
-            let isPad = min(geo.size.width, geo.size.height) > 500
-            let cornerRadius: CGFloat = isPad ? 28 : (geo.safeAreaInsets.top > 50 ? 55 : (geo.safeAreaInsets.top > 20 ? 48 : 22))
-            
-            TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { timeline in
-                let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                let clampedEnergy = reduceMotion ? 0.20 : min(1.0, max(0.0, energy))
-                
-                let speed: Double = (listening ? 35 : 20) + clampedEnergy * 35
-                let rotation = Angle.degrees((t * speed).truncatingRemainder(dividingBy: 360))
-                let breathing = sin(t * 2.0) * 0.05
-                
-                let siriColors: [Color] = [
-                    Color(red: 0.05, green: 0.50, blue: 1.00),
-                    Color(red: 0.00, green: 0.98, blue: 0.92),
-                    Color(red: 0.10, green: 0.98, blue: 0.55),
-                    Color(red: 1.00, green: 0.88, blue: 0.08),
-                    Color(red: 1.00, green: 0.40, blue: 0.10),
-                    Color(red: 1.00, green: 0.10, blue: 0.65),
-                    Color(red: 0.68, green: 0.12, blue: 1.00),
-                    Color(red: 0.00, green: 0.98, blue: 0.92),
-                    Color(red: 0.05, green: 0.50, blue: 1.00)
-                ]
-                
-                let gradientForward = AngularGradient(gradient: Gradient(colors: siriColors), center: .center, angle: rotation)
-                let gradientReverse = AngularGradient(gradient: Gradient(colors: siriColors.reversed()), center: .center, angle: rotation + .degrees(140))
-                let gradientCross = AngularGradient(gradient: Gradient(colors: siriColors), center: .center, angle: -rotation + .degrees(260))
-                
-                let wideBloomWidth: CGFloat = (listening ? 48 : 34) + CGFloat(clampedEnergy * 24)
-                let midGlowWidth: CGFloat = (listening ? 26 : 18) + CGFloat(clampedEnergy * 14)
-                let coreBeamWidth: CGFloat = (listening ? 12 : 8.0) + CGFloat(clampedEnergy * 6.0)
-                
-                ZStack {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(gradientForward, lineWidth: wideBloomWidth)
-                        .blur(radius: (listening ? 32 : 22) + CGFloat(clampedEnergy * 12))
-                        .opacity(min(1.0, 0.80 + clampedEnergy * 0.20 + breathing))
-                        .blendMode(.plusLighter)
-                    
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(gradientReverse, lineWidth: midGlowWidth)
-                        .blur(radius: (listening ? 14 : 9) + CGFloat(clampedEnergy * 6))
-                        .opacity(min(1.0, 0.88 + clampedEnergy * 0.12))
-                        .blendMode(.plusLighter)
-                    
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(gradientCross, lineWidth: coreBeamWidth)
-                        .blur(radius: 6.0 + CGFloat(clampedEnergy * 3.0))
-                        .opacity(min(1.0, 0.92 + clampedEnergy * 0.08))
-                        .blendMode(.plusLighter)
-                }
-                .frame(width: geo.size.width, height: geo.size.height)
-            }
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+        EmptyView()
     }
 }
 
@@ -291,10 +152,10 @@ struct WhisperText: View {
     
     var body: some View {
         Text(text)
-            .font(.system(size: isLarge ? 32 : 18, weight: isLarge ? .bold : .medium, design: .rounded))
+            .font(.system(size: isLarge ? 28 : 17, weight: isLarge ? .bold : .medium, design: .rounded))
             .multilineTextAlignment(.center)
             .foregroundStyle(isLarge ? FluenceColor.ink : FluenceColor.secondary)
-            .animation(.easeInOut(duration: 0.3), value: String(text.characters))
+            .animation(.easeInOut(duration: 0.25), value: String(text.characters))
     }
 }
 
@@ -302,7 +163,7 @@ struct RecallBars: View {
     let count: Int
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(0..<3) { index in Capsule().fill(index < count ? FluenceColor.orange : FluenceColor.peach).frame(width: 18, height: 6) }
+            ForEach(0..<3) { index in Capsule().fill(index < count ? FluenceColor.accent : FluenceColor.secondary.opacity(0.3)).frame(width: 18, height: 5) }
         }.accessibilityLabel("\(count) of 3 recall bars")
     }
 }
@@ -312,9 +173,9 @@ struct PageHeading: View {
     var title: String
     var subtitle: String = ""
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(eyebrow.uppercased()).font(.system(.caption, design: .rounded, weight: .medium)).tracking(1.5).foregroundStyle(FluenceColor.secondary)
-            Text(title).font(.system(.largeTitle, design: .rounded, weight: .semibold)).tracking(-1).foregroundStyle(FluenceColor.ink)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(eyebrow.uppercased()).font(.system(.caption, design: .rounded, weight: .bold)).tracking(1.2).foregroundStyle(FluenceColor.secondary)
+            Text(title).font(.system(.title2, design: .rounded, weight: .bold)).foregroundStyle(FluenceColor.ink)
             if !subtitle.isEmpty { Text(subtitle).font(.subheadline).foregroundStyle(FluenceColor.secondary) }
         }.frame(maxWidth: .infinity, alignment: .leading)
     }

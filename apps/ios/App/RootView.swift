@@ -70,19 +70,6 @@ struct RootView: View {
         }
         .tint(FluenceColor.accent)
         .preferredColorScheme(colorScheme)
-        .overlay {
-            if !coordinator.showSettings && !coordinator.showAIConsent && !onboarding {
-                FluenceAura(
-                    energy: max(coordinator.outputLevel, coordinator.inputLevel),
-                    listening: coordinator.state == .active && !coordinator.isMuted,
-                    active: coordinator.state != .closing
-                )
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-                .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: coordinator.showSettings)
         .sheet(isPresented: $coordinator.showSettings) {
             SettingsView(coordinator: coordinator)
                 .preferredColorScheme(colorScheme)
@@ -126,13 +113,13 @@ struct TalkView: View {
             FluenceColor.background.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Top Status & Scenario Card
+                // Top Status & Scenario Bar
                 HStack {
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(coordinator.state == .active ? FluenceColor.emerald : FluenceColor.secondary.opacity(0.5))
+                            .fill(coordinator.state == .active ? FluenceColor.emerald : FluenceColor.secondary.opacity(0.40))
                             .frame(width: 8, height: 8)
-                        Text(coordinator.state == .active ? (coordinator.store.preferences.pedagogicalMode == "teacher" ? "Professeur Actif" : "Symbiote Connecté") : "En attente")
+                        Text(coordinator.state == .active ? (coordinator.store.preferences.pedagogicalMode == "teacher" ? "Professeur Actif" : "En écoute") : "Prêt")
                             .font(.system(.caption, design: .rounded, weight: .bold))
                             .foregroundStyle(coordinator.state == .active ? FluenceColor.emerald : FluenceColor.secondary)
                     }
@@ -157,25 +144,12 @@ struct TalkView: View {
                     }
                 }
                 .padding(.horizontal, 22)
-                .padding(.top, 10)
+                .padding(.top, 12)
                 
-                Spacer(minLength: 10)
+                Spacer(minLength: 20)
                 
-                // Central Symbiote Organism Entity
-                SymbioteCoreView(
-                    energy: max(coordinator.outputLevel, coordinator.inputLevel),
-                    isListening: coordinator.state == .active && !coordinator.isMuted,
-                    isSpeaking: coordinator.outputLevel > 0.06,
-                    isThinking: coordinator.state == .connecting,
-                    onTap: {
-                        if coordinator.state == .active { coordinator.toggleMute() }
-                        else if !coordinator.isRunning { coordinator.start() }
-                    }
-                )
-                .padding(.vertical, 12)
-                
-                // Spoken Dialogue & Pedagogical Learning Card
-                VStack(spacing: 14) {
+                // Central Conversation Card (Calm, High-Contrast & Legible)
+                VStack(spacing: 18) {
                     Text(linkedCaption)
                         .font(.system(size: coordinator.assistantPassage == nil ? 32 : 24, weight: .bold, design: .rounded))
                         .multilineTextAlignment(.center)
@@ -198,7 +172,7 @@ struct TalkView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(FluenceColor.surface, in: Capsule())
+                        .background(FluenceColor.surfaceSecondary, in: Capsule())
                         .padding(.horizontal, 20)
                     }
                     
@@ -215,17 +189,31 @@ struct TalkView: View {
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
-                        .background(FluenceColor.surfaceSecondary, in: Capsule())
+                        .background(FluenceColor.surface, in: Capsule())
                         .transition(.opacity)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, 24)
+                .background(FluenceColor.surface.opacity(0.85), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .padding(.horizontal, 18)
                 
-                Spacer(minLength: 10)
+                // Subtle Calm Voice Waveform Presence
+                SoberWaveformView(
+                    energy: max(coordinator.outputLevel, coordinator.inputLevel),
+                    isListening: coordinator.state == .active && !coordinator.isMuted,
+                    isSpeaking: coordinator.outputLevel > 0.06,
+                    onTap: {
+                        if coordinator.state == .active { coordinator.toggleMute() }
+                        else if !coordinator.isRunning { coordinator.start() }
+                    }
+                )
+                .padding(.top, 16)
                 
-                // Bottom Floating Control Dock
-                HStack(spacing: 28) {
+                Spacer(minLength: 20)
+                
+                // Bottom Clean Control Bar
+                HStack(spacing: 32) {
                     // Keyboard input button
                     Button {
                         typing = true
@@ -233,39 +221,34 @@ struct TalkView: View {
                         ZStack {
                             Circle()
                                 .fill(FluenceColor.surface)
-                                .frame(width: 50, height: 50)
+                                .frame(width: 52, height: 52)
                             Image(systemName: "keyboard")
-                                .font(.system(size: 19, weight: .medium))
+                                .font(.system(size: 20, weight: .medium))
                                 .foregroundStyle(FluenceColor.ink)
                         }
                     }
                     .buttonStyle(.plain)
                     
-                    // Main Symbiotic Voice Trigger Button
+                    // Main Clean Voice Action Button
                     Button {
                         if coordinator.state == .active { coordinator.toggleMute() }
                         else if !coordinator.isRunning { coordinator.start() }
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: coordinator.state == .active && !coordinator.isMuted ? "waveform" : "mic.fill")
-                                .font(.system(size: 20, weight: .bold))
-                            Text(coordinator.state == .active ? (coordinator.isMuted ? "Reprendre" : "Écoute...") : "Parler")
+                            Image(systemName: coordinator.state == .active && !coordinator.isMuted ? "pause.fill" : "mic.fill")
+                                .font(.system(size: 19, weight: .bold))
+                            Text(coordinator.state == .active ? (coordinator.isMuted ? "Reprendre" : "En écoute") : "Parler")
                                 .font(.system(.headline, design: .rounded, weight: .bold))
                         }
                         .foregroundStyle(Color.white)
-                        .padding(.horizontal, 28)
+                        .padding(.horizontal, 30)
                         .padding(.vertical, 16)
                         .background(
-                            LinearGradient(
-                                colors: coordinator.state == .active && !coordinator.isMuted
-                                    ? [FluenceColor.accent, Color(red: 0.20, green: 0.85, blue: 0.65)]
-                                    : [FluenceColor.accent, Color(red: 0.55, green: 0.35, blue: 0.95)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
+                            coordinator.state == .active && !coordinator.isMuted
+                                ? FluenceColor.emerald
+                                : FluenceColor.accent,
                             in: Capsule()
                         )
-                        .shadow(color: FluenceColor.accent.opacity(0.35), radius: 12, y: 6)
                     }
                     .buttonStyle(.plain)
                     
@@ -277,19 +260,19 @@ struct TalkView: View {
                         ZStack {
                             Circle()
                                 .fill(FluenceColor.surface)
-                                .frame(width: 50, height: 50)
+                                .frame(width: 52, height: 52)
                             Image(systemName: coordinator.isRunning ? "stop.fill" : "text.bubble")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(coordinator.isRunning ? .red : FluenceColor.ink)
+                                .font(.system(size: 19, weight: .medium))
+                                .foregroundStyle(coordinator.isRunning ? FluenceColor.coral : FluenceColor.ink)
                         }
                     }
                     .buttonStyle(.plain)
                     .disabled(coordinator.session == nil && !coordinator.isRunning)
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(FluenceColor.surface.opacity(0.60), in: Capsule())
-                .padding(.bottom, 12)
+                .padding(.vertical, 12)
+                .background(FluenceColor.surface.opacity(0.70), in: Capsule())
+                .padding(.bottom, 16)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -327,14 +310,9 @@ struct TalkView: View {
             }
             
             ToolbarItem(placement: .principal) {
-                HStack(spacing: 5) {
-                    Image(systemName: "sparkles")
-                        .font(.caption2)
-                        .foregroundStyle(FluenceColor.accent)
-                    Text("Fluence")
-                        .font(.system(.headline, design: .rounded, weight: .bold))
-                        .foregroundStyle(FluenceColor.ink)
-                }
+                Text("Fluence")
+                    .font(.system(.headline, design: .rounded, weight: .bold))
+                    .foregroundStyle(FluenceColor.ink)
             }
             
             ToolbarItem(placement: .topBarTrailing) {
