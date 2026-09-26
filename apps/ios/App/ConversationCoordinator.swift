@@ -101,6 +101,7 @@ import MuralCore
         let raw = assistantPassage.flatMap { session?.translations[$0.id] } ?? ""
         return raw.replacingOccurrences(of: #"\s*\[FSRS_REVIEW:.*?\]"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
     }
+    var status: String {
         if state == .active, let seconds = inactivitySeconds { return "Ending in \(seconds)s\nReply to continue" }
         return switch state {
         case .idle: "Ready when you are"
