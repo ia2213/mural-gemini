@@ -3,22 +3,22 @@ import SwiftUI
 enum FluenceColor {
     static let background = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.05, green: 0.07, blue: 0.10, alpha: 1.0)
-            : UIColor(red: 0.97, green: 0.98, blue: 0.99, alpha: 1.0)
+            ? UIColor.black
+            : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
     })
     static let surface = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.09, green: 0.12, blue: 0.17, alpha: 1.0)
+            ? UIColor(red: 0.08, green: 0.08, blue: 0.10, alpha: 1.0)
             : UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
     })
     static let ink = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(white: 0.96, alpha: 1.0)
+            ? UIColor(white: 0.98, alpha: 1.0)
             : UIColor(red: 0.08, green: 0.10, blue: 0.15, alpha: 1.0)
     })
     static let secondary = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.58, green: 0.64, blue: 0.72, alpha: 1.0)
+            ? UIColor(red: 0.55, green: 0.60, blue: 0.68, alpha: 1.0)
             : UIColor(red: 0.42, green: 0.48, blue: 0.56, alpha: 1.0)
     })
     static let accent = Color(red: 0.35, green: 0.45, blue: 0.95) // Soft Apple Indigo
@@ -103,46 +103,30 @@ struct FluenceAura: View {
                     angle: -rotation + .degrees(260)
                 )
                 
-                let wideBloomWidth: CGFloat = (listening ? 38 : 26) + CGFloat(clampedEnergy * 20)
-                let midGlowWidth: CGFloat = (listening ? 20 : 13) + CGFloat(clampedEnergy * 12)
-                let coreBeamWidth: CGFloat = (listening ? 7.5 : 5.0) + CGFloat(clampedEnergy * 5.0)
-                let rimWidth: CGFloat = 3.0 + CGFloat(clampedEnergy * 1.5)
+                let wideBloomWidth: CGFloat = (listening ? 48 : 34) + CGFloat(clampedEnergy * 24)
+                let midGlowWidth: CGFloat = (listening ? 26 : 18) + CGFloat(clampedEnergy * 14)
+                let coreBeamWidth: CGFloat = (listening ? 12 : 8.0) + CGFloat(clampedEnergy * 6.0)
                 
                 ZStack {
-                    // 1. Broad Atmospheric Inward Neon Bleed (Thick Siri & Gemini glow flooding the perimeter)
+                    // 1. Broad Atmospheric Inward Neon Bleed (Thick soft Apple Intelligence glow, NO hard strokes)
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(gradientForward, lineWidth: wideBloomWidth)
-                        .blur(radius: (listening ? 28 : 18) + CGFloat(clampedEnergy * 10))
-                        .opacity(min(1.0, 0.75 + clampedEnergy * 0.25 + breathing))
+                        .blur(radius: (listening ? 32 : 22) + CGFloat(clampedEnergy * 12))
+                        .opacity(min(1.0, 0.80 + clampedEnergy * 0.20 + breathing))
                         .blendMode(.plusLighter)
                     
-                    // 2. High-Intensity Mid Chromatic Ribbon
+                    // 2. High-Intensity Mid Chromatic Ribbon (Fluid multi-color blending)
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(gradientReverse, lineWidth: midGlowWidth)
-                        .blur(radius: (listening ? 10 : 6) + CGFloat(clampedEnergy * 5))
-                        .opacity(min(1.0, 0.85 + clampedEnergy * 0.15))
+                        .blur(radius: (listening ? 14 : 9) + CGFloat(clampedEnergy * 6))
+                        .opacity(min(1.0, 0.88 + clampedEnergy * 0.12))
                         .blendMode(.plusLighter)
                     
-                    // 3. Dynamic Multi-Hue Cross-Current Core
+                    // 3. Luminous Inward Gradient Core (Softened edge without wireframe borders)
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(gradientCross, lineWidth: coreBeamWidth)
-                        .blur(radius: 3.0 + CGFloat(clampedEnergy * 2.0))
-                        .opacity(min(1.0, 0.90 + clampedEnergy * 0.10))
-                        .blendMode(.plusLighter)
-                    
-                    // 4. Sharp Crisp Edge Beam (Glued flush to physical bezel & screen corners)
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(gradientForward, lineWidth: rimWidth)
-                        .blur(radius: 0.5)
-                        .opacity(1.0)
-                    
-                    // 5. Apple Crystal Glass Specular Glint
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(
-                            Color.white.opacity(0.40 + clampedEnergy * 0.40),
-                            lineWidth: 1.2 + CGFloat(clampedEnergy * 0.8)
-                        )
-                        .blur(radius: 0.4)
+                        .blur(radius: 6.0 + CGFloat(clampedEnergy * 3.0))
+                        .opacity(min(1.0, 0.92 + clampedEnergy * 0.08))
                         .blendMode(.plusLighter)
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
