@@ -515,6 +515,42 @@ final class AnkiGoogleDriveManager {
         
         return count
     }
+    
+    // MARK: - Batch / Entire Folder Import (Recursive)
+    func importBatch(from urls: [URL], store: LearningStore, languageID: String = "de") async throws -> (filesCount: Int, wordsCount: Int) {
+        var totalFiles = 0
+        var totalWords = 0
+        
+        for url in urls {
+            let isScoped = url.startAccessingSecurityScopedResource()
+            defer {
+                if isScoped { url.stopAccessingSecurityScopedResource() }
+            }
+            
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
+                // Folder / Directory recursive scan
+                if let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
+                    for case let fileURL as URL in enumerator {
+                        if let res = try? fileURL.resourceValues(forKeys: [.isRegularFileKey]), res.isRegularFile == true {
+                            if let count = try? await importVocabulary(from: fileURL, store: store, languageID: languageID), count > 0 {
+                                totalFiles += 1
+                                totalWords += count
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Single File
+                if let count = try? await importVocabulary(from: url, store: store, languageID: languageID) {
+                    totalFiles += 1
+                    totalWords += count
+                }
+            }
+        }
+        
+        return (max(1, totalFiles), totalWords)
+    }
 }
 
 // MARK: - Google Drive File Model

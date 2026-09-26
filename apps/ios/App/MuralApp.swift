@@ -28,9 +28,9 @@ import SwiftUI
                     .onOpenURL { url in
                         Task {
                             do {
-                                _ = try await AnkiGoogleDriveManager.shared.importVocabulary(from: url, store: store)
+                                _ = try await AnkiGoogleDriveManager.shared.importBatch(from: [url], store: store)
                             } catch {
-                                print("Error opening shared file:", error)
+                                print("Error opening shared file/folder:", error)
                             }
                         }
                     }

@@ -645,14 +645,14 @@ struct WordsView: View {
                         }
                         .buttonStyle(.plain)
                         
-                        // 2. Anki & Local File Import Button
+                        // 2. Anki, Folder & Local File Batch Import Button
                         Button {
                             importingAnki = true
                         } label: {
                             HStack(spacing: 5) {
-                                Image(systemName: "square.and.arrow.down")
+                                Image(systemName: "folder.badge.plus")
                                     .font(.caption)
-                                Text("Anki / Fichier")
+                                Text("Dossier / Fichiers")
                                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
                             }
                             .foregroundStyle(FluenceColor.ink)
@@ -754,13 +754,14 @@ struct WordsView: View {
                 ActivityViewController(activityItems: [url])
             }
         }
-        .fileImporter(isPresented: $importingAnki, allowedContentTypes: [.plainText, .json, .commaSeparatedText, .tabSeparatedText, .item]) { result in
+        .fileImporter(isPresented: $importingAnki, allowedContentTypes: [.folder, .directory, .item, .data, .plainText, .pdf, .json, .commaSeparatedText, .tabSeparatedText], allowsMultipleSelection: true) { result in
             switch result {
-            case .success(let url):
+            case .success(let urls):
+                guard !urls.isEmpty else { return }
                 Task {
                     do {
-                        let count = try await AnkiGoogleDriveManager.shared.importVocabulary(from: url, store: coordinator.store, languageID: coordinator.language.id)
-                        alertMessage = "\(count) mots importés avec succès dans votre vocabulaire Fluence !"
+                        let res = try await AnkiGoogleDriveManager.shared.importBatch(from: urls, store: coordinator.store, languageID: coordinator.language.id)
+                        alertMessage = "\(res.filesCount) fichier(s) du dossier traité(s), \(res.wordsCount) mots et expressions importés avec succès !"
                         showAlert = true
                     } catch {
                         alertMessage = "Erreur lors de l'importation : \(error.localizedDescription)"
