@@ -1,7 +1,7 @@
 import Foundation
 import Security
 import CryptoKit
-import MuralCore
+import FluenceCore
 
 extension ManagedAccountConfiguration {
     /// These keys contain public client IDs, never OAuth secrets or Fluence bearer tokens.

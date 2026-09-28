@@ -1,5 +1,5 @@
 import SwiftUI
-import MuralCore
+import FluenceCore
 
 struct OnboardingView: View {
     let coordinator: ConversationCoordinator

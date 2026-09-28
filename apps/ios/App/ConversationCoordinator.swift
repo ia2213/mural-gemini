@@ -3,7 +3,7 @@ import Observation
 import NaturalLanguage
 import AVFoundation
 import UIKit
-import MuralCore
+import FluenceCore
 
 @MainActor @Observable final class ConversationCoordinator {
     let store: LearningStore

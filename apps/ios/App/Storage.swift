@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 import Security
 import Observation
-import MuralCore
+import FluenceCore
 
 @Model final class StoredArchive {
     @Attribute(.unique) var key: String

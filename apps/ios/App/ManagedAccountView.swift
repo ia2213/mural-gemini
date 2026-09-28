@@ -1,6 +1,6 @@
 import SwiftUI
 import AuthenticationServices
-import MuralCore
+import FluenceCore
 
 /// Ready for a Settings navigation destination when managed accounts are configured.
 struct ManagedAccountView: View {

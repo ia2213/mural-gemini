@@ -1,6 +1,6 @@
 import Foundation
 import AVFoundation
-import MuralCore
+import FluenceCore
 
 enum ConnectionState: Equatable { case idle, connecting, active, closing, ended, failed }
 

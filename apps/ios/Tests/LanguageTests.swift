@@ -1,5 +1,5 @@
 import XCTest
-@testable import MuralCore
+@testable import FluenceCore
 
 final class LanguageTests: XCTestCase {
     func testExistingArchivesRequireConsentAndAcceptedVersionRoundTrips() throws {

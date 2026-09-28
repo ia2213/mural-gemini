@@ -1,5 +1,5 @@
 import Foundation
-import MuralCore
+import FluenceCore
 
 // MARK: - Document Vector Chunk Model
 
@@ -38,7 +38,7 @@ public final class GeminiEmbeddingManager: @unchecked Sendable {
     
     private let vectorStoreURL: URL
     private var vectorCache: [VectorChunk] = []
-    private let queue = DispatchQueue(label: "no.william.mural.embeddings")
+    private let queue = DispatchQueue(label: "no.william.fluence.embeddings")
     
     public init() {
         let fm = FileManager.default

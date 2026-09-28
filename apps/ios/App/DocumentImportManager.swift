@@ -3,7 +3,7 @@ import UIKit
 import PDFKit
 import UniformTypeIdentifiers
 import AuthenticationServices
-import MuralCore
+import FluenceCore
 
 @MainActor
 final class DocumentImportManager {

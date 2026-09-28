@@ -1,5 +1,5 @@
 import Foundation
-import MuralCore
+import FluenceCore
 
 // MARK: - Hermes VPS Orchestrator Models
 

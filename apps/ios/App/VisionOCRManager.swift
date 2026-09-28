@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 import Vision
-import MuralCore
+import FluenceCore
 
 @MainActor
 final class VisionOCRManager {

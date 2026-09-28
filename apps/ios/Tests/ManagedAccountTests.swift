@@ -1,5 +1,5 @@
 import XCTest
-@testable import MuralCore
+@testable import FluenceCore
 
 final class ManagedAccountTests: XCTestCase {
     private let client = "123-example.apps.googleusercontent.com"

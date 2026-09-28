@@ -2,7 +2,7 @@ import SwiftUI
 import PhotosUI
 import AVFoundation
 import UniformTypeIdentifiers
-import MuralCore
+import FluenceCore
 
 // MARK: - Camera Picker Representable
 struct CameraPickerView: UIViewControllerRepresentable {

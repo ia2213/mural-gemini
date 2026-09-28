@@ -1,5 +1,5 @@
 import SwiftUI
-import MuralCore
+import FluenceCore
 
 /// Keeps Han text selectable and word links intact, with an optional reading below it.
 struct PinyinHelp: View {

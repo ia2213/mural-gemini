@@ -1,5 +1,5 @@
 import XCTest
-@testable import MuralCore
+@testable import FluenceCore
 
 final class AdditionalLanguageTests: XCTestCase {
     private let ids = ["de", "it", "pt", "zh"]

@@ -2,7 +2,7 @@ import SwiftUI
 import AVFoundation
 import UniformTypeIdentifiers
 import WebKit
-import MuralCore
+import FluenceCore
 
 struct ThemesView: View {
     let coordinator: ConversationCoordinator

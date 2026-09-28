@@ -1,7 +1,7 @@
 import Foundation
 import UserNotifications
 import UIKit
-import MuralCore
+import FluenceCore
 
 // MARK: - Daily Notification Settings
 

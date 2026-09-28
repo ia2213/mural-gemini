@@ -1,6 +1,6 @@
 #if DEBUG && targetEnvironment(simulator)
 import Foundation
-import MuralCore
+import FluenceCore
 
 /// Sample content for native simulator captures. Never loaded on a physical device.
 @MainActor enum ScreenshotPreview {

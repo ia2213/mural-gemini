@@ -1,5 +1,5 @@
 import SwiftUI
-import MuralCore
+import FluenceCore
 
 struct RootView: View {
     @State private var coordinator: ConversationCoordinator

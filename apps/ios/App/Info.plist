@@ -150,7 +150,7 @@
 			<string>Google sign-in</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>$(MURAL_GOOGLE_CALLBACK_SCHEME)</string>
+				<string>$(FLUENCE_GOOGLE_CALLBACK_SCHEME)</string>
 			</array>
 		</dict>
 	</array>

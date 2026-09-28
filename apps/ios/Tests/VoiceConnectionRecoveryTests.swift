@@ -1,5 +1,5 @@
 import XCTest
-@testable import MuralCore
+@testable import FluenceCore
 
 @MainActor final class VoiceConnectionRecoveryTests: XCTestCase {
     func testBriefHandoffRecoversAndLaterDisconnectFailsOnce() async throws {
