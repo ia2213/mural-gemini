@@ -76,28 +76,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
     
-    // MARK: - Rich Notification Attachment
-    private func createFluenceIconAttachment() -> UNNotificationAttachment? {
-        let candidateNames = ["FluenceIcon", "AppIcon60x60@3x", "AppIcon60x60@2x", "AppIcon1024x1024"]
-        for name in candidateNames {
-            if let url = Bundle.main.url(forResource: name, withExtension: "png") {
-                let tempDir = FileManager.default.temporaryDirectory
-                let targetURL = tempDir.appendingPathComponent("fluence_notification_icon_\(UUID().uuidString).png")
-                do {
-                    if FileManager.default.fileExists(atPath: targetURL.path) {
-                        try FileManager.default.removeItem(at: targetURL)
-                    }
-                    try FileManager.default.copyItem(at: url, to: targetURL)
-                    let attachment = try UNNotificationAttachment(identifier: "fluence_logo_\(UUID().uuidString)", url: targetURL, options: nil)
-                    return attachment
-                } catch {
-                    continue
-                }
-            }
-        }
-        return nil
-    }
-
     // MARK: - Test Notification
     func sendTestNotification() async {
         let center = UNUserNotificationCenter.current()
@@ -106,10 +84,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.body = "Hé oh ! C'est l'heure de pratiquer ton allemand en vocal avec Fluence 🎙️"
         content.sound = .default
         content.userInfo = ["action": "open_voice_session"]
-        
-        if let attachment = createFluenceIconAttachment() {
-            content.attachments = [attachment]
-        }
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
         let request = UNNotificationRequest(identifier: "fluence_test_notification_\(UUID().uuidString)", content: content, trigger: trigger)
@@ -197,11 +171,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         
         content.body = humanMessages.randomElement() ?? "Hé oh ! C'est l'heure de réviser un peu d'allemand en vocal !"
         content.userInfo = ["action": "open_voice_session"]
-        
-        if let attachment = createFluenceIconAttachment() {
-            content.attachments = [attachment]
-        }
-        
         return content
     }
     
