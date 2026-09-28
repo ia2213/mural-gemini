@@ -937,16 +937,26 @@ struct SettingsView: View {
     private var store: LearningStore { coordinator.store }
     private var totalVoiceSeconds: Double { store.sessions.reduce(0) { $0 + $1.voiceSeconds } }
 
+    private var availableVoices: [AVSpeechSynthesisVoice] {
+        AVSpeechSynthesisVoice.speechVoices().filter {
+            $0.language.lowercased().hasPrefix(String(store.language.locale.prefix(2)).lowercased())
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                appearanceSection
-                pedagogySection
-                audioSection
-                notificationSection
-                aiSection
-                dataSection
-                aboutSection
+                Group {
+                    appearanceSection
+                    pedagogySection
+                    audioSection
+                    notificationSection
+                }
+                Group {
+                    aiSection
+                    dataSection
+                    aboutSection
+                }
             }
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
@@ -1105,9 +1115,6 @@ struct SettingsView: View {
             }
             .pickerStyle(.menu)
             
-            let availableVoices = AVSpeechSynthesisVoice.speechVoices().filter {
-                $0.language.lowercased().hasPrefix(String(store.language.locale.prefix(2)).lowercased())
-            }
             Picker(selection: Binding(get: { store.preferences.selectedVoiceIdentifier }, set: { val in store.updatePreferences { $0.selectedVoiceIdentifier = val } })) {
                 Text("Automatique").tag("")
                 ForEach(availableVoices, id: \.identifier) { v in
