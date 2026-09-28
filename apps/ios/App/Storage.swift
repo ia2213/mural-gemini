@@ -110,36 +110,45 @@ import MuralCore
 
 enum CredentialStore {
     private static let service = "no.william.fluence.gemini"
-    private static var query: [String: Any] { [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "owner", kSecAttrSynchronizable as String: false] }
-    static func read() -> String? {
-        var q = query; q[kSecReturnData as String] = true; q[kSecMatchLimit as String] = kSecMatchLimitOne
+    private static func query(for account: String = "owner") -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account, kSecAttrSynchronizable as String: false]
+    }
+    
+    static func read(for account: String = "owner") -> String? {
+        var q = query(for: account); q[kSecReturnData as String] = true; q[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
         guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
-    static var hasKey: Bool { read() != nil }
-    static func save(_ key: String) throws {
+    
+    static func hasKey(for account: String = "owner") -> Bool { read(for: account) != nil }
+    static var hasKey: Bool { hasKey(for: "owner") }
+    
+    static func save(_ key: String, for account: String = "owner") throws {
         let value = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty, !value.contains(where: \.isWhitespace) else { throw KeyError.invalid }
         let data = Data(value.utf8)
-        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        let q = query(for: account)
+        let status = SecItemUpdate(q as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         if status == errSecItemNotFound {
-            var q = query; q[kSecValueData as String] = data
-            q[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-            guard SecItemAdd(q as CFDictionary, nil) == errSecSuccess else { throw KeyError.save }
+            var addQ = q; addQ[kSecValueData as String] = data
+            addQ[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            guard SecItemAdd(addQ as CFDictionary, nil) == errSecSuccess else { throw KeyError.save }
         } else if status != errSecSuccess { throw KeyError.save }
     }
-    static func delete() throws {
-        let status = SecItemDelete(query as CFDictionary)
+    
+    static func delete(for account: String = "owner") throws {
+        let status = SecItemDelete(query(for: account) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw KeyError.remove }
     }
+    
     enum KeyError: LocalizedError {
         case invalid, save, remove
         var errorDescription: String? {
             switch self {
-            case .invalid: "Enter a valid Gemini API key."
-            case .save: "The key couldn’t be saved to this device’s Keychain."
-            case .remove: "The key couldn’t be removed. Unlock this iPhone and try again."
+            case .invalid: "Entrez une clé API valide sans espaces."
+            case .save: "Impossible d'enregistrer la clé dans le Keychain sécurisé d'iOS."
+            case .remove: "Impossible de supprimer la clé. Déverrouillez l'iPhone et réessayez."
             }
         }
     }

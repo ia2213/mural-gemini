@@ -1172,9 +1172,15 @@ struct SettingsView: View {
     private var aiSection: some View {
         Section {
             Picker(selection: Binding(get: { store.preferences.providerID }, set: { val in store.updatePreferences { $0.providerID = val } })) {
-                Text("Auto (Groq → Gemini → VPS)").tag("auto")
-                Text("Groq Cloud (Llama 3.3)").tag("groq")
+                Text("Auto (Sélection Intelligente & Fallback)").tag("auto")
+                Text("OpenAI (ChatGPT / GPT-4o)").tag("openai")
+                Text("Anthropic (Claude 3.5)").tag("anthropic")
                 Text("Google Gemini (2.0 Flash)").tag("google")
+                Text("Groq Cloud (Llama 3.3 / Ultra-Rapide)").tag("groq")
+                Text("DeepSeek (V3 / R1)").tag("deepseek")
+                Text("Mistral AI (Large / Small)").tag("mistral")
+                Text("OpenRouter (100+ Modèles)").tag("openrouter")
+                Text("Serveur Personnalisé (Ollama / LocalAI)").tag("custom")
                 Text("Hermes VPS Personnel").tag("hermes_vps")
             } label: {
                 Label("Moteur actif", systemImage: "cpu")
@@ -1251,86 +1257,305 @@ struct SettingsView: View {
 struct AISettingsSubView: View {
     let coordinator: ConversationCoordinator
     @State private var groqKey = ""
-    @State private var hasGroqKey = CredentialStore.hasKey
+    @State private var hasGroqKey = CredentialStore.hasKey(for: "groq")
+    @State private var openaiKey = ""
+    @State private var hasOpenAIKey = CredentialStore.hasKey(for: "openai")
+    @State private var anthropicKey = ""
+    @State private var hasAnthropicKey = CredentialStore.hasKey(for: "anthropic")
+    @State private var deepseekKey = ""
+    @State private var hasDeepseekKey = CredentialStore.hasKey(for: "deepseek")
+    @State private var mistralKey = ""
+    @State private var hasMistralKey = CredentialStore.hasKey(for: "mistral")
+    @State private var openrouterKey = ""
+    @State private var hasOpenrouterKey = CredentialStore.hasKey(for: "openrouter")
     @State private var message: String?
     
     private var store: LearningStore { coordinator.store }
     
     var body: some View {
         Form {
-            // Groq Cloud
-            Section {
-                Picker("Modèle Groq", selection: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } })) {
-                    Text("Llama 3.3 70B (Optimal)").tag("llama-3.3-70b-versatile")
-                    Text("GPT-OSS 120B").tag("openai/gpt-oss-120b")
-                    Text("Qwen 3.8 27B").tag("qwen/qwen3.8-27b")
-                    Text("Llama 3.1 8B (Ultra-Rapide)").tag("llama-3.1-8b-instant")
-                }
-                .pickerStyle(.menu)
-                
-                SecureField(hasGroqKey ? "Clé enregistrée (remplacer)" : "Clé API Groq (gsk_...)", text: $groqKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                
-                if !groqKey.isEmpty {
-                    Button("Sauvegarder la clé Groq") {
-                        do {
-                            try CredentialStore.save(groqKey)
-                            groqKey = ""
-                            hasGroqKey = true
-                            message = "Clé Groq enregistrée."
-                        } catch { message = error.localizedDescription }
-                    }
-                }
-                
-                Link("Obtenir une clé Groq gratuite", destination: URL(string: "https://console.groq.com/keys")!)
-            } header: {
-                Label("Groq Cloud API", systemImage: "bolt.fill")
+            Group {
+                openaiSection
+                anthropicSection
+                geminiSection
+                groqSection
             }
-            
-            // Google Gemini
-            Section {
-                Picker("Modèle Gemini", selection: Binding(get: { store.preferences.geminiModel }, set: { val in store.updatePreferences { $0.geminiModel = val } })) {
-                    Text("Gemini 2.0 Flash (Recommandé)").tag("gemini-2.0-flash")
-                    Text("Gemini 2.0 Lite").tag("gemini-2.0-flash-lite")
-                    Text("Gemini 1.5 Flash").tag("gemini-1.5-flash")
-                    Text("Gemini 1.5 Pro").tag("gemini-1.5-pro")
-                }
-                .pickerStyle(.menu)
-                
-                SecureField("Clé API Gemini (AIzaSy...)", text: Binding(get: { store.preferences.googleAPIKey }, set: { val in store.updatePreferences { $0.googleAPIKey = val } }))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                
-                Link("Obtenir une clé Gemini gratuite", destination: URL(string: "https://aistudio.google.com/app/apikey")!)
-            } header: {
-                Label("Google Gemini API", systemImage: "sparkle")
-            }
-            
-            // Hermes VPS
-            Section {
-                TextField("URL Endpoint VPS", text: Binding(get: { store.preferences.vpsEndpoint }, set: { val in store.updatePreferences { $0.vpsEndpoint = val } }))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                
-                SecureField("Token VPS (Facultatif)", text: Binding(get: { store.preferences.vpsAPIKey }, set: { val in store.updatePreferences { $0.vpsAPIKey = val } }))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                
-                Picker("Modèle VPS", selection: Binding(get: { store.preferences.vpsModel }, set: { val in store.updatePreferences { $0.vpsModel = val } })) {
-                    Text("Hermes Auto (OmniRoute)").tag("auto/best-coding")
-                    Text("Hermes 3 (8B Local)").tag("NousResearch/Hermes-3-Llama-3.1-8B")
-                    Text("Hermes Vocal VPS").tag("hermes-agent-vps")
-                }
-                .pickerStyle(.menu)
-            } header: {
-                Label("Agent VPS Personnel Hermes", systemImage: "server.rack")
-            } footer: {
-                Text("Connexion directe à votre instance Oracle Cloud VPS.")
+            Group {
+                deepseekSection
+                mistralSection
+                openrouterSection
+                customServerSection
+                vpsSection
             }
         }
-        .navigationTitle("Configuration IA")
+        .navigationTitle("Fournisseurs d'IA")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Information", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
+            Button("OK") { message = nil }
+        } message: {
+            Text(message ?? "")
+        }
+    }
+    
+    @ViewBuilder
+    private var openaiSection: some View {
+        Section {
+            Picker("Modèle OpenAI", selection: Binding(get: { store.preferences.openaiModel }, set: { val in store.updatePreferences { $0.openaiModel = val } })) {
+                Text("GPT-4o mini (Rapide & Économique)").tag("gpt-4o-mini")
+                Text("GPT-4o (Complet)").tag("gpt-4o")
+                Text("o3-mini (Raisonnement)").tag("o3-mini")
+                Text("o1 (Raisonnement Avancé)").tag("o1")
+                Text("GPT-4 Turbo").tag("gpt-4-turbo")
+            }
+            .pickerStyle(.menu)
+            
+            SecureField(hasOpenAIKey ? "Clé enregistrée (remplacer)" : "Clé API OpenAI (sk-...)", text: $openaiKey)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            if !openaiKey.isEmpty {
+                Button("Sauvegarder la clé OpenAI") {
+                    do {
+                        try CredentialStore.save(openaiKey, for: "openai")
+                        store.updatePreferences { $0.openaiAPIKey = openaiKey }
+                        openaiKey = ""
+                        hasOpenAIKey = true
+                        message = "Clé OpenAI enregistrée dans le Keychain."
+                    } catch { message = error.localizedDescription }
+                }
+            }
+            
+            Link("Obtenir une clé API OpenAI", destination: URL(string: "https://platform.openai.com/api-keys")!)
+        } header: {
+            Label("OpenAI (ChatGPT / GPT-4o)", systemImage: "brain.head.profile")
+        }
+    }
+    
+    @ViewBuilder
+    private var anthropicSection: some View {
+        Section {
+            Picker("Modèle Claude", selection: Binding(get: { store.preferences.anthropicModel }, set: { val in store.updatePreferences { $0.anthropicModel = val } })) {
+                Text("Claude 3.5 Sonnet (Recommandé)").tag("claude-3-5-sonnet-20241022")
+                Text("Claude 3.5 Haiku (Ultra-Rapide)").tag("claude-3-5-haiku-20241022")
+                Text("Claude 3 Opus (Créatif)").tag("claude-3-opus-20240229")
+            }
+            .pickerStyle(.menu)
+            
+            SecureField(hasAnthropicKey ? "Clé enregistrée (remplacer)" : "Clé API Claude (sk-ant-...)", text: $anthropicKey)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            if !anthropicKey.isEmpty {
+                Button("Sauvegarder la clé Anthropic") {
+                    do {
+                        try CredentialStore.save(anthropicKey, for: "anthropic")
+                        store.updatePreferences { $0.anthropicAPIKey = anthropicKey }
+                        anthropicKey = ""
+                        hasAnthropicKey = true
+                        message = "Clé Anthropic enregistrée."
+                    } catch { message = error.localizedDescription }
+                }
+            }
+            
+            Link("Obtenir une clé API Anthropic", destination: URL(string: "https://console.anthropic.com/settings/keys")!)
+        } header: {
+            Label("Anthropic Claude", systemImage: "sparkles")
+        }
+    }
+    
+    @ViewBuilder
+    private var geminiSection: some View {
+        Section {
+            Picker("Modèle Gemini", selection: Binding(get: { store.preferences.geminiModel }, set: { val in store.updatePreferences { $0.geminiModel = val } })) {
+                Text("Gemini 2.0 Flash (Recommandé)").tag("gemini-2.0-flash")
+                Text("Gemini 2.0 Lite").tag("gemini-2.0-flash-lite")
+                Text("Gemini 1.5 Pro").tag("gemini-1.5-pro")
+                Text("Gemini 1.5 Flash").tag("gemini-1.5-flash")
+            }
+            .pickerStyle(.menu)
+            
+            SecureField("Clé API Gemini (AIzaSy...)", text: Binding(get: { store.preferences.googleAPIKey }, set: { val in store.updatePreferences { $0.googleAPIKey = val } }))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            Link("Obtenir une clé Gemini gratuite", destination: URL(string: "https://aistudio.google.com/app/apikey")!)
+        } header: {
+            Label("Google Gemini API", systemImage: "sparkle")
+        }
+    }
+    
+    @ViewBuilder
+    private var groqSection: some View {
+        Section {
+            Picker("Modèle Groq", selection: Binding(get: { store.preferences.groqModel }, set: { val in store.updatePreferences { $0.groqModel = val } })) {
+                Text("Llama 3.3 70B (Optimal)").tag("llama-3.3-70b-versatile")
+                Text("GPT-OSS 120B").tag("openai/gpt-oss-120b")
+                Text("Qwen 3.8 27B").tag("qwen/qwen3.8-27b")
+                Text("Llama 3.1 8B (Ultra-Rapide)").tag("llama-3.1-8b-instant")
+            }
+            .pickerStyle(.menu)
+            
+            SecureField(hasGroqKey ? "Clé enregistrée (remplacer)" : "Clé API Groq (gsk_...)", text: $groqKey)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            if !groqKey.isEmpty {
+                Button("Sauvegarder la clé Groq") {
+                    do {
+                        try CredentialStore.save(groqKey, for: "groq")
+                        try CredentialStore.save(groqKey, for: "owner")
+                        groqKey = ""
+                        hasGroqKey = true
+                        message = "Clé Groq enregistrée."
+                    } catch { message = error.localizedDescription }
+                }
+            }
+            
+            Link("Obtenir une clé Groq gratuite", destination: URL(string: "https://console.groq.com/keys")!)
+        } header: {
+            Label("Groq Cloud API", systemImage: "bolt.fill")
+        }
+    }
+    
+    @ViewBuilder
+    private var deepseekSection: some View {
+        Section {
+            Picker("Modèle DeepSeek", selection: Binding(get: { store.preferences.deepseekModel }, set: { val in store.updatePreferences { $0.deepseekModel = val } })) {
+                Text("DeepSeek V3 (Chat)").tag("deepseek-chat")
+                Text("DeepSeek R1 (Raisonnement)").tag("deepseek-reasoner")
+            }
+            .pickerStyle(.menu)
+            
+            SecureField(hasDeepseekKey ? "Clé enregistrée (remplacer)" : "Clé API DeepSeek (sk-...)", text: $deepseekKey)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            if !deepseekKey.isEmpty {
+                Button("Sauvegarder la clé DeepSeek") {
+                    do {
+                        try CredentialStore.save(deepseekKey, for: "deepseek")
+                        store.updatePreferences { $0.deepseekAPIKey = deepseekKey }
+                        deepseekKey = ""
+                        hasDeepseekKey = true
+                        message = "Clé DeepSeek enregistrée."
+                    } catch { message = error.localizedDescription }
+                }
+            }
+            
+            Link("Obtenir une clé API DeepSeek", destination: URL(string: "https://platform.deepseek.com/api_keys")!)
+        } header: {
+            Label("DeepSeek AI", systemImage: "magnifyingglass.circle")
+        }
+    }
+    
+    @ViewBuilder
+    private var mistralSection: some View {
+        Section {
+            Picker("Modèle Mistral", selection: Binding(get: { store.preferences.mistralModel }, set: { val in store.updatePreferences { $0.mistralModel = val } })) {
+                Text("Mistral Small (Rapide)").tag("mistral-small-latest")
+                Text("Mistral Large 2 (Complet)").tag("mistral-large-latest")
+                Text("Codestral (Spécialisé Code)").tag("codestral-latest")
+            }
+            .pickerStyle(.menu)
+            
+            SecureField(hasMistralKey ? "Clé enregistrée (remplacer)" : "Clé API Mistral", text: $mistralKey)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            if !mistralKey.isEmpty {
+                Button("Sauvegarder la clé Mistral") {
+                    do {
+                        try CredentialStore.save(mistralKey, for: "mistral")
+                        store.updatePreferences { $0.mistralAPIKey = mistralKey }
+                        mistralKey = ""
+                        hasMistralKey = true
+                        message = "Clé Mistral enregistrée."
+                    } catch { message = error.localizedDescription }
+                }
+            }
+            
+            Link("Obtenir une clé API Mistral", destination: URL(string: "https://console.mistral.ai/api-keys/")!)
+        } header: {
+            Label("Mistral AI", systemImage: "wind")
+        }
+    }
+    
+    @ViewBuilder
+    private var openrouterSection: some View {
+        Section {
+            Picker("Modèle OpenRouter", selection: Binding(get: { store.preferences.openrouterModel }, set: { val in store.updatePreferences { $0.openrouterModel = val } })) {
+                Text("Llama 3.3 70B (Gratuit)").tag("meta-llama/llama-3.3-70b-instruct:free")
+                Text("Claude 3.5 Sonnet").tag("anthropic/claude-3.5-sonnet")
+                Text("GPT-4o").tag("openai/gpt-4o")
+                Text("DeepSeek V3").tag("deepseek/deepseek-chat")
+            }
+            .pickerStyle(.menu)
+            
+            SecureField(hasOpenrouterKey ? "Clé enregistrée (remplacer)" : "Clé API OpenRouter (sk-or-...)", text: $openrouterKey)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            if !openrouterKey.isEmpty {
+                Button("Sauvegarder la clé OpenRouter") {
+                    do {
+                        try CredentialStore.save(openrouterKey, for: "openrouter")
+                        store.updatePreferences { $0.openrouterAPIKey = openrouterKey }
+                        openrouterKey = ""
+                        hasOpenrouterKey = true
+                        message = "Clé OpenRouter enregistrée."
+                    } catch { message = error.localizedDescription }
+                }
+            }
+            
+            Link("Obtenir une clé OpenRouter", destination: URL(string: "https://openrouter.ai/keys")!)
+        } header: {
+            Label("OpenRouter (100+ Modèles)", systemImage: "network")
+        }
+    }
+    
+    @ViewBuilder
+    private var customServerSection: some View {
+        Section {
+            TextField("URL Endpoint (ex: http://192.168.1.50:11434/v1/chat/completions)", text: Binding(get: { store.preferences.customEndpoint }, set: { val in store.updatePreferences { $0.customEndpoint = val } }))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            TextField("Identifiant du modèle (ex: llama3, mistral)", text: Binding(get: { store.preferences.customModel }, set: { val in store.updatePreferences { $0.customModel = val } }))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            SecureField("Clé API / Bearer Token (Facultatif)", text: Binding(get: { store.preferences.customAPIKey }, set: { val in store.updatePreferences { $0.customAPIKey = val } }))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        } header: {
+            Label("Serveur Personnalisé (Ollama / LM Studio / Local)", systemImage: "desktopcomputer")
+        } footer: {
+            Text("Compatible avec tout serveur local ou distant exposant une API compatible OpenAI.")
+        }
+    }
+    
+    @ViewBuilder
+    private var vpsSection: some View {
+        Section {
+            TextField("URL Endpoint VPS", text: Binding(get: { store.preferences.vpsEndpoint }, set: { val in store.updatePreferences { $0.vpsEndpoint = val } }))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            SecureField("Token VPS (Facultatif)", text: Binding(get: { store.preferences.vpsAPIKey }, set: { val in store.updatePreferences { $0.vpsAPIKey = val } }))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            
+            Picker("Modèle VPS", selection: Binding(get: { store.preferences.vpsModel }, set: { val in store.updatePreferences { $0.vpsModel = val } })) {
+                Text("Hermes Auto (OmniRoute)").tag("auto/best-coding")
+                Text("Hermes 3 (8B Local)").tag("NousResearch/Hermes-3-Llama-3.1-8B")
+                Text("Hermes Vocal VPS").tag("hermes-agent-vps")
+            }
+            .pickerStyle(.menu)
+        } header: {
+            Label("Agent VPS Personnel Hermes", systemImage: "server.rack")
+        } footer: {
+            Text("Connexion directe à votre instance Oracle Cloud VPS.")
+        }
     }
 }
 

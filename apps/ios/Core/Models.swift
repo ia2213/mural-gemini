@@ -177,56 +177,73 @@ public struct SessionRecord: Codable, Identifiable, Sendable {
 }
 
 public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
-    case hermes = "hermes"
-    case gemini = "gemini"
-    case groq = "groq"
-    case openrouter = "openrouter"
+    case auto = "auto"
     case openai = "openai"
+    case anthropic = "anthropic"
+    case gemini = "google"
+    case groq = "groq"
+    case deepseek = "deepseek"
+    case mistral = "mistral"
+    case openrouter = "openrouter"
     case custom = "custom"
+    case hermes = "hermes_vps"
     
     public var id: String { rawValue }
     
     public var displayName: String {
         switch self {
-        case .hermes: return "Hermes Agent (Local / Remote)"
-        case .gemini: return "Google Gemini (2.0 Flash - Free)"
-        case .groq: return "Groq (Llama 3.3 70B - Free)"
-        case .openrouter: return "OpenRouter (Free Models)"
-        case .openai: return "OpenAI"
-        case .custom: return "Custom OpenAI Endpoint"
+        case .auto: return "Auto (Sélection Intelligente)"
+        case .openai: return "OpenAI (ChatGPT / GPT-4o)"
+        case .anthropic: return "Anthropic (Claude 3.5)"
+        case .gemini: return "Google Gemini (2.0 Flash)"
+        case .groq: return "Groq Cloud (Llama 3.3 / Ultra-Rapide)"
+        case .deepseek: return "DeepSeek (V3 / R1)"
+        case .mistral: return "Mistral AI (Large / Small)"
+        case .openrouter: return "OpenRouter (100+ Modèles)"
+        case .custom: return "Serveur Personnalisé (Ollama, LM Studio, vLLM)"
+        case .hermes: return "Hermes VPS Personnel"
         }
     }
     
     public var defaultEndpoint: String {
         switch self {
-        case .hermes: return "http://localhost:8765/v1/chat/completions"
-        case .gemini: return "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-        case .groq: return "https://api.groq.com/openai/v1/chat/completions"
-        case .openrouter: return "https://openrouter.ai/api/v1/chat/completions"
+        case .auto, .groq: return "https://api.groq.com/openai/v1/chat/completions"
         case .openai: return "https://api.openai.com/v1/chat/completions"
-        case .custom: return "http://192.168.1.100:8000/v1/chat/completions"
+        case .anthropic: return "https://api.anthropic.com/v1/messages"
+        case .gemini: return "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        case .deepseek: return "https://api.deepseek.com/chat/completions"
+        case .mistral: return "https://api.mistral.ai/v1/chat/completions"
+        case .openrouter: return "https://openrouter.ai/api/v1/chat/completions"
+        case .custom: return "http://192.168.1.100:11434/v1/chat/completions"
+        case .hermes: return "https://miscellaneous-rays-detect-relationships.trycloudflare.com/v1/chat/completions"
         }
     }
     
     public var defaultModel: String {
         switch self {
-        case .hermes: return "hermes-3-llama-3.1-8b"
-        case .gemini: return "gemini-2.0-flash"
-        case .groq: return "llama-3.1-8b-instant"
-        case .openrouter: return "meta-llama/llama-3.3-70b-instruct:free"
+        case .auto, .groq: return "llama-3.3-70b-versatile"
         case .openai: return "gpt-4o-mini"
-        case .custom: return "default"
+        case .anthropic: return "claude-3-5-sonnet-20241022"
+        case .gemini: return "gemini-2.0-flash"
+        case .deepseek: return "deepseek-chat"
+        case .mistral: return "mistral-small-latest"
+        case .openrouter: return "meta-llama/llama-3.3-70b-instruct:free"
+        case .custom: return "llama3"
+        case .hermes: return "auto/best-coding"
         }
     }
     
     public var keyURL: String {
         switch self {
-        case .hermes: return "https://hermes-agent.nousresearch.com/"
-        case .gemini: return "https://aistudio.google.com/app/apikey"
-        case .groq: return "https://console.groq.com/keys"
-        case .openrouter: return "https://openrouter.ai/keys"
+        case .auto, .groq: return "https://console.groq.com/keys"
         case .openai: return "https://platform.openai.com/api-keys"
+        case .anthropic: return "https://console.anthropic.com/settings/keys"
+        case .gemini: return "https://aistudio.google.com/app/apikey"
+        case .deepseek: return "https://platform.deepseek.com/api_keys"
+        case .mistral: return "https://console.mistral.ai/api-keys/"
+        case .openrouter: return "https://openrouter.ai/keys"
         case .custom: return ""
+        case .hermes: return "https://hermes-agent.nousresearch.com/"
         }
     }
 }
@@ -241,14 +258,45 @@ public struct Preferences: Codable, Sendable {
     public var hasOnboarded = false
     public var aiConsentVersion: Int?
     public var providerID: String = "auto"
+    
+    // Custom endpoint & model
     public var customEndpoint: String = ""
     public var customModel: String = ""
-    public var groqModel: String = "openai/gpt-oss-120b"
-    public var googleAPIKey: String = ""
+    public var customAPIKey: *** = ""
+    
+    // OpenAI
+    public var openaiModel: String = "gpt-4o-mini"
+    public var openaiAPIKey: *** = ""
+    
+    // Anthropic
+    public var anthropicModel: String = "claude-3-5-sonnet-20241022"
+    public var anthropicAPIKey: *** = ""
+    
+    // Google Gemini
+    public var googleAPIKey: *** = ""
     public var geminiModel: String = "gemini-2.0-flash"
+    
+    // Groq
+    public var groqModel: String = "llama-3.3-70b-versatile"
+    public var groqAPIKey: *** = ""
+    
+    // DeepSeek
+    public var deepseekModel: String = "deepseek-chat"
+    public var deepseekAPIKey: *** = ""
+    
+    // Mistral AI
+    public var mistralModel: String = "mistral-small-latest"
+    public var mistralAPIKey: *** = ""
+    
+    // OpenRouter
+    public var openrouterModel: String = "meta-llama/llama-3.3-70b-instruct:free"
+    public var openrouterAPIKey: *** = ""
+    
+    // Hermes VPS
     public var vpsEndpoint: String = "https://miscellaneous-rays-detect-relationships.trycloudflare.com/v1/chat/completions"
-    public var vpsAPIKey: String = ""
+    public var vpsAPIKey: *** = ""
     public var vpsModel: String = "auto/best-coding"
+    
     public var speechRate: Float = 0.50
     public var selectedVoiceIdentifier: String = ""
     public var ttsEngine: String = "ios"
