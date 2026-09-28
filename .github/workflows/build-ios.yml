@@ -37,12 +37,13 @@ jobs:
           echo "APP_PATH=$APP_PATH"
           if [ -n "$APP_PATH" ]; then
             cp -R "$APP_PATH" Payload/Fluence.app
-            # Also keep Mural.app alias in Payload if required by bundle id
-            cp -R "$APP_PATH" Payload/Mural.app
           else
             echo "ERROR: App bundle not found in build/"
             exit 1
           fi
+
+          # Copy explicit icon files directly into app bundle root
+          cp -f apps/ios/App/Assets.xcassets/AppIcon.appiconset/*.png Payload/Fluence.app/ || true
 
           # Find widget extension
           WIDGET_PATH=$(find build /Users/runner/Library/Developer/Xcode/DerivedData -name "*.appex" -type d 2>/dev/null | head -n 1)
@@ -63,9 +64,8 @@ jobs:
 
           echo "WIDGET_PATH=$WIDGET_PATH"
           if [ -n "$WIDGET_PATH" ]; then
-            mkdir -p Payload/Fluence.app/PlugIns Payload/Mural.app/PlugIns
+            mkdir -p Payload/Fluence.app/PlugIns
             cp -R "$WIDGET_PATH" Payload/Fluence.app/PlugIns/
-            cp -R "$WIDGET_PATH" Payload/Mural.app/PlugIns/
             echo "✅ Widget extension embedded in PlugIns/"
           else
             echo "Warning: Widget extension could not be built or found."
