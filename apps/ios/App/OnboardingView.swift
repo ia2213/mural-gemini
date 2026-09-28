@@ -248,7 +248,7 @@ struct OnboardingView: View {
                 Divider()
                 
                 HStack(spacing: 12) {
-                    Text("🇫🇷")
+                    Text(meaningFlag(for: meaningLanguage))
                         .font(.title3)
                     Text(MeaningLanguages.greeting(in: meaningLanguage))
                         .font(.subheadline)
@@ -342,6 +342,23 @@ struct OnboardingView: View {
             coordinator.selectMeaningLanguage(meaningLanguage)
             coordinator.store.updatePreferences { $0.meaningVisible = true; $0.aiConsentVersion = AIProcessingConsent.version }
             done()
+        }
+    }
+
+    private func meaningFlag(for language: String) -> String {
+        switch language.lowercased() {
+        case "français", "french": return "🇫🇷"
+        case "english", "anglais": return "🇬🇧"
+        case "deutsch", "allemand", "german": return "🇩🇪"
+        case "español", "espagnol", "spanish": return "🇪🇸"
+        case "italiano", "italien", "italian": return "🇮🇹"
+        case "português", "portugais", "portuguese": return "🇵🇹"
+        case "română", "roumain", "romanian": return "🇷🇴"
+        case "العربية", "arabe", "arabic": return "🇸🇦"
+        case "中文", "chinois", "chinese (simplified)": return "🇨🇳"
+        case "polski", "polonais", "polish": return "🇵🇱"
+        case "українська", "ukrainien", "ukrainian": return "🇺🇦"
+        default: return "🌐"
         }
     }
 
