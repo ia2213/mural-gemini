@@ -1224,9 +1224,6 @@ struct SettingsView: View {
         }
     }
 }
-        }
-    }
-}
 
 // MARK: - Dedicated Clean AI Subpage
 struct AISettingsSubView: View {
