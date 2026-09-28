@@ -58,7 +58,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         scheduleNotifications()
     }
     
-    // MARK: - Permission Request
+    // MARK: - Permission Request & Status Check
+    func checkAuthorizationStatus() async -> UNAuthorizationStatus {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        return settings.authorizationStatus
+    }
+    
     func requestAuthorization() async -> Bool {
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
@@ -69,6 +74,20 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         } catch {
             return false
         }
+    }
+    
+    // MARK: - Test Notification
+    func sendTestNotification() async {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.title = "Fluence Professeur 🇩🇪"
+        content.body = "Hé oh ! C'est l'heure de pratiquer ton allemand en vocal avec Fluence 🎙️"
+        content.sound = .default
+        content.userInfo = ["action": "open_voice_session"]
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
+        let request = UNNotificationRequest(identifier: "fluence_test_notification_\(UUID().uuidString)", content: content, trigger: trigger)
+        try? await center.add(request)
     }
     
     // MARK: - Notification Scheduling

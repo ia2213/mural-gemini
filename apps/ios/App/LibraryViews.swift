@@ -1066,7 +1066,26 @@ struct SettingsView: View {
                     Text("Voix & Audio")
                 }
                 
-                // MARK: 3. CONFIGURATION DES MOTEURS IA (Subpage)
+                // MARK: 3. RAPPELS & NOTIFICATIONS
+                Section {
+                    NavigationLink {
+                        NotificationSettingsSubView()
+                    } label: {
+                        HStack {
+                            Label("Rappels & Notifications", systemImage: "bell.badge.fill")
+                            Spacer()
+                            Text(NotificationManager.shared.settings.isEnabled ? "Activé" : "Désactivé")
+                                .font(.subheadline)
+                                .foregroundStyle(NotificationManager.shared.settings.isEnabled ? FluenceColor.accent : FluenceColor.muted)
+                        }
+                    }
+                } header: {
+                    Text("Notifications")
+                } footer: {
+                    Text("Recevez des rappels matin et soir avec vos mots de vocabulaire FSRS à réviser.")
+                }
+                
+                // MARK: 4. CONFIGURATION DES MOTEURS IA (Subpage)
                 Section {
                     Picker(selection: Binding(get: { store.preferences.providerID }, set: { val in store.updatePreferences { $0.providerID = val } })) {
                         Text("Auto (Groq → Gemini → VPS)").tag("auto")
@@ -1089,7 +1108,7 @@ struct SettingsView: View {
                     Text("En mode Auto, Fluence bascule automatiquement sur le meilleur modèle disponible sans interruption.")
                 }
                 
-                // MARK: 4. SAUVEGARDES & DONNÉES
+                // MARK: 5. SAUVEGARDES & DONNÉES
                 Section {
                     Button {
                         do { backup = BackupDocument(data: try store.exportData()); exporting = true }
@@ -1280,5 +1299,208 @@ struct LearningLanguagePicker: View {
         .pickerStyle(.menu)
         .disabled(coordinator.isRunning)
         .accessibilityIdentifier("learning-language-picker")
+    }
+}
+
+// MARK: - Notification Settings Subview (Apple Compliant)
+
+struct NotificationSettingsSubView: View {
+    @State private var settings: NotificationSettings = NotificationManager.shared.settings
+    @State private var authStatus: UNAuthorizationStatus = .notDetermined
+    @State private var testSent = false
+    
+    private var morningDateBinding: Binding<Date> {
+        Binding(
+            get: {
+                var components = DateComponents()
+                components.hour = settings.morningHour
+                components.minute = settings.morningMinute
+                return Calendar.current.date(from: components) ?? Date()
+            },
+            set: { newDate in
+                let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                settings.morningHour = components.hour ?? 9
+                settings.morningMinute = components.minute ?? 0
+                NotificationManager.shared.saveSettings(settings)
+            }
+        )
+    }
+    
+    private var eveningDateBinding: Binding<Date> {
+        Binding(
+            get: {
+                var components = DateComponents()
+                components.hour = settings.eveningHour
+                components.minute = settings.eveningMinute
+                return Calendar.current.date(from: components) ?? Date()
+            },
+            set: { newDate in
+                let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                settings.eveningHour = components.hour ?? 19
+                settings.eveningMinute = components.minute ?? 30
+                NotificationManager.shared.saveSettings(settings)
+            }
+        )
+    }
+    
+    var body: some View {
+        Form {
+            // Permission Banner (if not authorized)
+            if authStatus == .denied {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text("Notifications désactivées")
+                                .font(.headline)
+                        }
+                        Text("Les alertes sont bloquées dans les réglages système d'iOS. Activez-les pour recevoir vos rappels de cours et de vocabulaire.")
+                            .font(.caption)
+                            .foregroundStyle(FluenceColor.muted)
+                        
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text("Ouvrir les Réglages de l'iPhone")
+                                .font(.subheadline.bold())
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(FluenceColor.accent)
+                    }
+                    .padding(.vertical, 4)
+                }
+            } else if authStatus == .notDetermined {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "bell.badge.fill")
+                                .foregroundStyle(FluenceColor.accent)
+                            Text("Autorisation requise")
+                                .font(.headline)
+                        }
+                        Text("Conformément aux règles de confidentialité d'Apple, Fluence demande votre accord avant d'envoyer des rappels d'étude.")
+                            .font(.caption)
+                            .foregroundStyle(FluenceColor.muted)
+                        
+                        Button {
+                            Task {
+                                let granted = await NotificationManager.shared.requestAuthorization()
+                                authStatus = await NotificationManager.shared.checkAuthorizationStatus()
+                                if granted {
+                                    settings.isEnabled = true
+                                    NotificationManager.shared.saveSettings(settings)
+                                }
+                            }
+                        } label: {
+                            Text("Autoriser les notifications")
+                                .font(.subheadline.bold())
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(FluenceColor.accent)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            
+            // Scheduling Options
+            Section {
+                Toggle(isOn: Binding(
+                    get: { settings.isEnabled },
+                    set: { val in
+                        settings.isEnabled = val
+                        NotificationManager.shared.saveSettings(settings)
+                        if val && authStatus != .authorized {
+                            Task {
+                                _ = await NotificationManager.shared.requestAuthorization()
+                                authStatus = await NotificationManager.shared.checkAuthorizationStatus()
+                            }
+                        }
+                    }
+                )) {
+                    Label("Rappels quotidiens d'allemand", systemImage: "bell.fill")
+                }
+                
+                if settings.isEnabled {
+                    Picker(selection: Binding(
+                        get: { settings.notificationsPerDay },
+                        set: { val in
+                            settings.notificationsPerDay = val
+                            NotificationManager.shared.saveSettings(settings)
+                        }
+                    )) {
+                        Text("1 fois par jour").tag(1)
+                        Text("2 fois par jour (Matin & Soir)").tag(2)
+                    } label: {
+                        Label("Fréquence", systemImage: "repeat")
+                    }
+                    .pickerStyle(.menu)
+                    
+                    DatePicker(
+                        selection: morningDateBinding,
+                        displayedComponents: .hourAndMinute
+                    ) {
+                        Label("Rappel du Matin", systemImage: "sun.max.fill")
+                    }
+                    
+                    if settings.notificationsPerDay >= 2 {
+                        DatePicker(
+                            selection: eveningDateBinding,
+                            displayedComponents: .hourAndMinute
+                        ) {
+                            Label("Rappel du Soir", systemImage: "moon.stars.fill")
+                        }
+                    }
+                }
+            } header: {
+                Text("Planification")
+            } footer: {
+                Text("Les notifications intègrent vos vrais mots de vocabulaire FSRS en attente de révision pour stimuler votre mémoire.")
+            }
+            
+            // Test Notification Section
+            if authStatus == .authorized {
+                Section {
+                    Button {
+                        Task {
+                            await NotificationManager.shared.sendTestNotification()
+                            testSent = true
+                            try? await Task.sleep(nanoseconds: 4_000_000_000)
+                            testSent = false
+                        }
+                    } label: {
+                        HStack {
+                            Label("Envoyer une notification test (dans 3s)", systemImage: "paperplane.fill")
+                            Spacer()
+                            if testSent {
+                                Text("Envoyé !")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Test")
+                } footer: {
+                    Text("Touchez ce bouton puis verrouillez votre iPhone ou revenez à l'écran d'accueil pour voir la bannière et la nouvelle icône 3D Fluence.")
+                }
+            }
+        }
+        .navigationTitle("Rappels & Notifications")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            authStatus = await NotificationManager.shared.checkAuthorizationStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            Task {
+                authStatus = await NotificationManager.shared.checkAuthorizationStatus()
+            }
+        }
     }
 }
