@@ -940,221 +940,13 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // MARK: 0. APPARENCE & THÈME
-                Section {
-                    Picker(selection: Binding(get: { store.preferences.appearance }, set: { val in store.updatePreferences { $0.appearance = val } })) {
-                        Text("Automatique (Système)").tag("system")
-                        Text("Sombre").tag("dark")
-                        Text("Clair").tag("light")
-                    } label: {
-                        Label("Thème d'affichage", systemImage: "circle.lefthalf.filled")
-                    }
-                    .pickerStyle(.menu)
-                } header: {
-                    Text("Apparence")
-                }
-                
-                // MARK: 1. APPRENTISSAGE & PÉDAGOGIE
-                Section {
-                    Picker(selection: Binding(get: { store.preferences.pedagogicalMode }, set: { val in store.updatePreferences { $0.pedagogicalMode = val } })) {
-                        Text("👨🏫 Professeur Particulier (Guidé)").tag("teacher")
-                        Text("💬 Discussion Libre (Immersion)").tag("conversation")
-                    } label: {
-                        Label("Mode d'apprentissage", systemImage: "graduationcap.fill")
-                    }
-                    .pickerStyle(.menu)
-                    
-                    Picker(selection: Binding(get: { coordinator.language.id }, set: { coordinator.selectLanguage($0) })) {
-                        ForEach(LanguageRegistry.all) { language in
-                            Text(language.settingsTitle).tag(language.id)
-                        }
-                    } label: {
-                        Label("Langue apprise", systemImage: "globe")
-                    }
-                    .pickerStyle(.menu)
-                    
-                    Picker(selection: Binding(get: { store.preferences.cefrLevel }, set: { val in store.updatePreferences { $0.cefrLevel = val } })) {
-                        Text("A1 · Débutant").tag("A1")
-                        Text("A2 · Élémentaire").tag("A2")
-                        Text("B1 · Intermédiaire").tag("B1")
-                        Text("B2 · Avancé (Recommandé)").tag("B2")
-                        Text("C1 · Autonome / Médical").tag("C1")
-                        Text("C2 · Bilingue / Expert").tag("C2")
-                    } label: {
-                        Label("Niveau de départ (CECRL)", systemImage: "chart.bar.fill")
-                    }
-                    .pickerStyle(.menu)
-                    
-                    Toggle(isOn: Binding(get: { store.preferences.meaningVisible }, set: { value in
-                        if value != store.preferences.meaningVisible { coordinator.toggleMeaning() }
-                    })) {
-                        Label("Sous-titres & Traduction", systemImage: "captions.bubble.fill")
-                    }
-                    
-                    if store.preferences.meaningVisible {
-                        Picker(selection: Binding(get: { store.preferences.meaningLanguage }, set: { coordinator.selectMeaningLanguage($0) })) {
-                            ForEach(MeaningLanguages.all, id: \.self) { Text($0).tag($0) }
-                        } label: {
-                            Label("Langue de traduction", systemImage: "character.book.closed")
-                        }
-                        .pickerStyle(.menu)
-                    }
-                    
-                    Picker(selection: Binding(get: { store.preferences.correctionLevel }, set: { val in store.updatePreferences { $0.correctionLevel = val } })) {
-                        Text("Strict (corrige chaque phrase)").tag("high")
-                        Text("Équilibré (naturel)").tag("medium")
-                        Text("Fluide (erreurs clés)").tag("low")
-                    } label: {
-                        Label("Niveau de correction", systemImage: "checkmark.seal")
-                    }
-                    .pickerStyle(.menu)
-                    
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label("Centres d'intérêt", systemImage: "sparkles")
-                            .font(.subheadline)
-                            .foregroundStyle(FluenceColor.ink)
-                        TextField("Ex: médecine, voyages, philosophie...", text: Binding(get: { store.preferences.interests }, set: { value in store.updatePreferences { $0.interests = String(value.prefix(500)) } }))
-                            .font(.subheadline)
-                            .foregroundStyle(FluenceColor.secondary)
-                    }
-                    .padding(.vertical, 2)
-                } header: {
-                    Text("Apprentissage")
-                }
-                
-                // MARK: 2. VOIX & AUDIO
-                Section {
-                    Picker(selection: Binding(get: { store.preferences.speechRate }, set: { val in store.updatePreferences { $0.speechRate = val } })) {
-                        Text("Lente (0.8x)").tag(Float(0.40))
-                        Text("Normale (1.0x)").tag(Float(0.50))
-                        Text("Rapide (1.2x)").tag(Float(0.60))
-                    } label: {
-                        Label("Vitesse vocale", systemImage: "gauge.with.dots.needle.50percent")
-                    }
-                    .pickerStyle(.menu)
-                    
-                    let availableVoices = AVSpeechSynthesisVoice.speechVoices().filter {
-                        $0.language.lowercased().hasPrefix(String(store.language.locale.prefix(2)).lowercased())
-                    }
-                    Picker(selection: Binding(get: { store.preferences.selectedVoiceIdentifier }, set: { val in store.updatePreferences { $0.selectedVoiceIdentifier = val } })) {
-                        Text("Automatique").tag("")
-                        ForEach(availableVoices, id: \.identifier) { v in
-                            let qualityStr = v.quality == .premium ? " (HD)" : ""
-                            Text("\(v.name)\(qualityStr)").tag(v.identifier)
-                        }
-                    } label: {
-                        Label("Accent & Timbre", systemImage: "person.wave.2")
-                    }
-                    .pickerStyle(.menu)
-                    
-                    Button {
-                        let text = store.language.greeting
-                        let synth = AVSpeechSynthesizer()
-                        let utterance = AVSpeechUtterance(string: text)
-                        if !store.preferences.selectedVoiceIdentifier.isEmpty, let v = AVSpeechSynthesisVoice(identifier: store.preferences.selectedVoiceIdentifier) {
-                            utterance.voice = v
-                        } else {
-                            utterance.voice = AVSpeechSynthesisVoice(language: store.language.locale)
-                        }
-                        utterance.rate = store.preferences.speechRate
-                        synth.speak(utterance)
-                    } label: {
-                        Label("Écouter un extrait audio", systemImage: "speaker.wave.2.fill")
-                            .foregroundStyle(FluenceColor.accent)
-                    }
-                } header: {
-                    Text("Voix & Audio")
-                }
-                
-                // MARK: 3. RAPPELS & NOTIFICATIONS
-                Section {
-                    NavigationLink {
-                        NotificationSettingsSubView()
-                    } label: {
-                        HStack {
-                            Label("Rappels & Notifications", systemImage: "bell.badge.fill")
-                            Spacer()
-                            Text(NotificationManager.shared.settings.isEnabled ? "Activé" : "Désactivé")
-                                .font(.subheadline)
-                                .foregroundStyle(NotificationManager.shared.settings.isEnabled ? FluenceColor.accent : FluenceColor.muted)
-                        }
-                    }
-                } header: {
-                    Text("Notifications")
-                } footer: {
-                    Text("Recevez des rappels matin et soir avec vos mots de vocabulaire FSRS à réviser.")
-                }
-                
-                // MARK: 4. CONFIGURATION DES MOTEURS IA (Subpage)
-                Section {
-                    Picker(selection: Binding(get: { store.preferences.providerID }, set: { val in store.updatePreferences { $0.providerID = val } })) {
-                        Text("Auto (Groq → Gemini → VPS)").tag("auto")
-                        Text("Groq Cloud (Llama 3.3)").tag("groq")
-                        Text("Google Gemini (2.0 Flash)").tag("google")
-                        Text("Hermes VPS Personnel").tag("hermes_vps")
-                    } label: {
-                        Label("Moteur actif", systemImage: "cpu")
-                    }
-                    .pickerStyle(.menu)
-                    
-                    NavigationLink {
-                        AISettingsSubView(coordinator: coordinator)
-                    } label: {
-                        Label("Clés API & Modèles avancés", systemImage: "slider.horizontal.2.square")
-                    }
-                } header: {
-                    Text("Intelligence Artificielle")
-                } footer: {
-                    Text("En mode Auto, Fluence bascule automatiquement sur le meilleur modèle disponible sans interruption.")
-                }
-                
-                // MARK: 5. SAUVEGARDES & DONNÉES
-                Section {
-                    Button {
-                        do { backup = BackupDocument(data: try store.exportData()); exporting = true }
-                        catch { message = error.localizedDescription }
-                    } label: {
-                        Label("Exporter mes données", systemImage: "square.and.arrow.up")
-                    }
-                    
-                    Button {
-                        importing = true
-                    } label: {
-                        Label("Importer une sauvegarde", systemImage: "square.and.arrow.down")
-                    }
-                    .disabled(coordinator.isRunning)
-                    
-                    Button(role: .destructive) {
-                        deleting = true
-                    } label: {
-                        Label("Réinitialiser l'apprentissage", systemImage: "trash")
-                    }
-                    .disabled(coordinator.isRunning)
-                } header: {
-                    Text("Données & Sauvegarde")
-                }
-                
-                // MARK: 5. À PROPOS
-                Section {
-                    HStack {
-                        Label("Version", systemImage: "info.circle")
-                        Spacer()
-                        Text("2.0 (Fluence)")
-                            .foregroundStyle(FluenceColor.secondary)
-                    }
-                    
-                    Link(destination: URL(string: "https://fluence.chat/privacy/")!) {
-                        Label("Politique de confidentialité", systemImage: "lock.shield")
-                    }
-                    
-                    Button {
-                        notices = true
-                    } label: {
-                        Label("Mentions légales open-source", systemImage: "doc.plaintext")
-                    }
-                } header: {
-                    Text("À propos")
-                }
+                appearanceSection
+                pedagogySection
+                audioSection
+                notificationSection
+                aiSection
+                dataSection
+                aboutSection
             }
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
@@ -1177,28 +969,261 @@ struct SettingsView: View {
                 defer { if granted { url.stopAccessingSecurityScopedResource() } }
                 try store.importData(Archive.readImportData(from: url))
                 message = "Sauvegarde importée avec succès."
-            } catch { message = error.localizedDescription }
+            } catch {
+                message = error.localizedDescription
+            }
         }
-        .confirmationDialog("Supprimer toutes les données ?", isPresented: $deleting, titleVisibility: .visible) {
-            Button("Tout supprimer", role: .destructive) { coordinator.deleteLearningData() }
+        .alert("Information", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
+            Button("OK") { message = nil }
         } message: {
-            Text("Ceci réinitialisera votre historique et vos mots mémorisés. Vos clés API resteront enregistrées.")
+            Text(message ?? "")
+        }
+        .alert("Réinitialiser l'apprentissage", isPresented: $deleting) {
+            Button("Annuler", role: .cancel) {}
+            Button("Tout effacer", role: .destructive) {
+                store.resetProgress()
+                dismiss()
+            }
+        } message: {
+            Text("Voulez-vous vraiment effacer tout votre historique de sessions et réinitialiser vos statistiques ? Cette action est irréversible.")
         }
         .sheet(isPresented: $notices) {
-            NavigationStack {
-                ScrollView {
-                    Text(Bundle.main.url(forResource: "ThirdPartyNotices", withExtension: "txt").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Notices unavailable.")
-                        .font(.footnote)
-                        .padding(24)
+            LegalNoticesView()
+        }
+    }
+    
+    // MARK: - Sections Découpées pour Compilation Rapide
+    
+    @ViewBuilder
+    private var appearanceSection: some View {
+        Section {
+            Picker(selection: Binding(get: { store.preferences.appearance }, set: { val in store.updatePreferences { $0.appearance = val } })) {
+                Text("Automatique (Système)").tag("system")
+                Text("Sombre").tag("dark")
+                Text("Clair").tag("light")
+            } label: {
+                Label("Thème d'affichage", systemImage: "circle.lefthalf.filled")
+            }
+            .pickerStyle(.menu)
+        } header: {
+            Text("Apparence")
+        }
+    }
+    
+    @ViewBuilder
+    private var pedagogySection: some View {
+        Section {
+            Picker(selection: Binding(get: { store.preferences.pedagogicalMode }, set: { val in store.updatePreferences { $0.pedagogicalMode = val } })) {
+                Text("👨🏫 Professeur Particulier (Guidé)").tag("teacher")
+                Text("💬 Discussion Libre (Immersion)").tag("conversation")
+            } label: {
+                Label("Mode d'apprentissage", systemImage: "graduationcap.fill")
+            }
+            .pickerStyle(.menu)
+            
+            Picker(selection: Binding(get: { coordinator.language.id }, set: { coordinator.selectLanguage($0) })) {
+                ForEach(LanguageRegistry.all) { language in
+                    Text(language.settingsTitle).tag(language.id)
                 }
-                .navigationTitle("Mentions Légales")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Fermer") { notices = false }
-                    }
+            } label: {
+                Label("Langue apprise", systemImage: "globe")
+            }
+            .pickerStyle(.menu)
+            
+            Picker(selection: Binding(get: { store.preferences.cefrLevel }, set: { val in store.updatePreferences { $0.cefrLevel = val } })) {
+                Text("A1 · Débutant").tag("A1")
+                Text("A2 · Élémentaire").tag("A2")
+                Text("B1 · Intermédiaire").tag("B1")
+                Text("B2 · Avancé (Recommandé)").tag("B2")
+                Text("C1 · Autonome / Médical").tag("C1")
+                Text("C2 · Bilingue / Expert").tag("C2")
+            } label: {
+                Label("Niveau de départ (CECRL)", systemImage: "chart.bar.fill")
+            }
+            .pickerStyle(.menu)
+            
+            Toggle(isOn: Binding(get: { store.preferences.meaningVisible }, set: { value in
+                if value != store.preferences.meaningVisible { coordinator.toggleMeaning() }
+            })) {
+                Label("Sous-titres & Traduction", systemImage: "captions.bubble.fill")
+            }
+            
+            if store.preferences.meaningVisible {
+                Picker(selection: Binding(get: { store.preferences.meaningLanguage }, set: { coordinator.selectMeaningLanguage($0) })) {
+                    ForEach(MeaningLanguages.all, id: \.self) { Text($0).tag($0) }
+                } label: {
+                    Label("Langue de traduction", systemImage: "character.book.closed")
+                }
+                .pickerStyle(.menu)
+            }
+            
+            Picker(selection: Binding(get: { store.preferences.correctionLevel }, set: { val in store.updatePreferences { $0.correctionLevel = val } })) {
+                Text("Strict (corrige chaque phrase)").tag("high")
+                Text("Équilibré (naturel)").tag("medium")
+                Text("Fluide (erreurs clés)").tag("low")
+            } label: {
+                Label("Niveau de correction", systemImage: "checkmark.seal")
+            }
+            .pickerStyle(.menu)
+            
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Centres d'intérêt", systemImage: "sparkles")
+                    .font(.subheadline)
+                    .foregroundStyle(FluenceColor.ink)
+                TextField("Ex: médecine, voyages, philosophie...", text: Binding(get: { store.preferences.interests }, set: { value in store.updatePreferences { $0.interests = String(value.prefix(500)) } }))
+                    .font(.subheadline)
+                    .foregroundStyle(FluenceColor.secondary)
+            }
+            .padding(.vertical, 2)
+        } header: {
+            Text("Apprentissage")
+        }
+    }
+    
+    @ViewBuilder
+    private var audioSection: some View {
+        Section {
+            Picker(selection: Binding(get: { store.preferences.speechRate }, set: { val in store.updatePreferences { $0.speechRate = val } })) {
+                Text("Lente (0.8x)").tag(Float(0.40))
+                Text("Normale (1.0x)").tag(Float(0.50))
+                Text("Rapide (1.2x)").tag(Float(0.60))
+            } label: {
+                Label("Vitesse vocale", systemImage: "gauge.with.dots.needle.50percent")
+            }
+            .pickerStyle(.menu)
+            
+            let availableVoices = AVSpeechSynthesisVoice.speechVoices().filter {
+                $0.language.lowercased().hasPrefix(String(store.language.locale.prefix(2)).lowercased())
+            }
+            Picker(selection: Binding(get: { store.preferences.selectedVoiceIdentifier }, set: { val in store.updatePreferences { $0.selectedVoiceIdentifier = val } })) {
+                Text("Automatique").tag("")
+                ForEach(availableVoices, id: \.identifier) { v in
+                    let qualityStr = v.quality == .premium ? " (HD)" : ""
+                    Text("\(v.name)\(qualityStr)").tag(v.identifier)
+                }
+            } label: {
+                Label("Accent & Timbre", systemImage: "person.wave.2")
+            }
+            .pickerStyle(.menu)
+            
+            Button {
+                let text = store.language.greeting
+                let synth = AVSpeechSynthesizer()
+                let utterance = AVSpeechUtterance(string: text)
+                if !store.preferences.selectedVoiceIdentifier.isEmpty, let v = AVSpeechSynthesisVoice(identifier: store.preferences.selectedVoiceIdentifier) {
+                    utterance.voice = v
+                } else {
+                    utterance.voice = AVSpeechSynthesisVoice(language: store.language.locale)
+                }
+                utterance.rate = store.preferences.speechRate
+                synth.speak(utterance)
+            } label: {
+                Label("Écouter un extrait audio", systemImage: "speaker.wave.2.fill")
+                    .foregroundStyle(FluenceColor.accent)
+            }
+        } header: {
+            Text("Voix & Audio")
+        }
+    }
+    
+    @ViewBuilder
+    private var notificationSection: some View {
+        Section {
+            NavigationLink {
+                NotificationSettingsSubView()
+            } label: {
+                HStack {
+                    Label("Rappels & Notifications", systemImage: "bell.badge.fill")
+                    Spacer()
+                    Text(NotificationManager.shared.settings.isEnabled ? "Activé" : "Désactivé")
+                        .font(.subheadline)
+                        .foregroundStyle(NotificationManager.shared.settings.isEnabled ? FluenceColor.accent : FluenceColor.secondary)
                 }
             }
+        } header: {
+            Text("Notifications")
+        } footer: {
+            Text("Recevez des rappels matin et soir avec vos mots de vocabulaire FSRS à réviser.")
+        }
+    }
+    
+    @ViewBuilder
+    private var aiSection: some View {
+        Section {
+            Picker(selection: Binding(get: { store.preferences.providerID }, set: { val in store.updatePreferences { $0.providerID = val } })) {
+                Text("Auto (Groq → Gemini → VPS)").tag("auto")
+                Text("Groq Cloud (Llama 3.3)").tag("groq")
+                Text("Google Gemini (2.0 Flash)").tag("google")
+                Text("Hermes VPS Personnel").tag("hermes_vps")
+            } label: {
+                Label("Moteur actif", systemImage: "cpu")
+            }
+            .pickerStyle(.menu)
+            
+            NavigationLink {
+                AISettingsSubView(coordinator: coordinator)
+            } label: {
+                Label("Clés API & Modèles avancés", systemImage: "slider.horizontal.2.square")
+            }
+        } header: {
+            Text("Intelligence Artificielle")
+        } footer: {
+            Text("En mode Auto, Fluence bascule automatiquement sur le meilleur modèle disponible sans interruption.")
+        }
+    }
+    
+    @ViewBuilder
+    private var dataSection: some View {
+        Section {
+            Button {
+                do { backup = BackupDocument(data: try store.exportData()); exporting = true }
+                catch { message = error.localizedDescription }
+            } label: {
+                Label("Exporter mes données", systemImage: "square.and.arrow.up")
+            }
+            
+            Button {
+                importing = true
+            } label: {
+                Label("Importer une sauvegarde", systemImage: "square.and.arrow.down")
+            }
+            .disabled(coordinator.isRunning)
+            
+            Button(role: .destructive) {
+                deleting = true
+            } label: {
+                Label("Réinitialiser l'apprentissage", systemImage: "trash")
+            }
+            .disabled(coordinator.isRunning)
+        } header: {
+            Text("Données & Sauvegarde")
+        }
+    }
+    
+    @ViewBuilder
+    private var aboutSection: some View {
+        Section {
+            HStack {
+                Label("Version", systemImage: "info.circle")
+                Spacer()
+                Text("2.0 (Fluence)")
+                    .foregroundStyle(FluenceColor.secondary)
+            }
+            
+            Link(destination: URL(string: "https://fluence.chat/privacy/")!) {
+                Label("Politique de confidentialité", systemImage: "lock.shield")
+            }
+            
+            Button {
+                notices = true
+            } label: {
+                Label("Mentions légales open-source", systemImage: "doc.plaintext")
+            }
+        } header: {
+            Text("À propos")
+        }
+    }
+}
         }
     }
 }
@@ -1357,7 +1382,7 @@ struct NotificationSettingsSubView: View {
                         }
                         Text("Les alertes sont bloquées dans les réglages système d'iOS. Activez-les pour recevoir vos rappels de cours et de vocabulaire.")
                             .font(.caption)
-                            .foregroundStyle(FluenceColor.muted)
+                            .foregroundStyle(FluenceColor.secondary)
                         
                         Button {
                             if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -1385,7 +1410,7 @@ struct NotificationSettingsSubView: View {
                         }
                         Text("Conformément aux règles de confidentialité d'Apple, Fluence demande votre accord avant d'envoyer des rappels d'étude.")
                             .font(.caption)
-                            .foregroundStyle(FluenceColor.muted)
+                            .foregroundStyle(FluenceColor.secondary)
                         
                         Button {
                             Task {
