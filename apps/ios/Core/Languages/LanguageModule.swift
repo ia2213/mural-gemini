@@ -54,8 +54,30 @@ public enum LanguageRegistry {
 }
 
 public enum MeaningLanguages {
-    public static let all = ["English", "French", "German", "Spanish", "Norwegian", "Portuguese", "Italian", "Chinese (Simplified)", "Polish", "Arabic", "Ukrainian"]
+    public static let all = ["Français", "English", "Deutsch", "Español", "Italiano", "Português", "Română", "العربية", "中文", "Polski", "Українська", "French", "German", "Spanish"]
     public static func greeting(in language: String) -> String {
-        ["English": "Hi!", "French": "Salut !", "German": "Hallo!", "Spanish": "¡Hola!", "Norwegian": "Hei!", "Portuguese": "Olá!", "Italian": "Ciao!", "Chinese (Simplified)": "你好！", "Chinese": "你好！", "Polish": "Cześć!", "Arabic": "مرحبًا!", "Ukrainian": "Привіт!"][language] ?? "Hi!"
+        [
+            "Français": "Salut !",
+            "French": "Salut !",
+            "English": "Hi!",
+            "Deutsch": "Hallo!",
+            "German": "Hallo!",
+            "Español": "¡Hola!",
+            "Spanish": "¡Hola!",
+            "Italiano": "Ciao!",
+            "Italian": "Ciao!",
+            "Português": "Olá!",
+            "Portuguese": "Olá!",
+            "Română": "Bună!",
+            "Norwegian": "Hei!",
+            "Chinese (Simplified)": "你好！",
+            "中文": "你好！",
+            "Polski": "Cześć!",
+            "Polish": "Cześć!",
+            "Arabic": "مرحبًا!",
+            "العربية": "مرحبًا!",
+            "Ukrainian": "Привіт!",
+            "Українська": "Привіт!"
+        ][language] ?? "Salut !"
     }
 }
