@@ -961,7 +961,13 @@ struct SettingsView: View {
             }
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Terminé") { dismiss() }.fontWeight(.semibold).foregroundStyle(FluenceColor.accent))
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Terminé") { dismiss() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(FluenceColor.accent)
+                }
+            }
         }
         .presentationDragIndicator(.visible)
         .fileExporter(isPresented: $exporting, document: backup, contentType: .json, defaultFilename: "Fluence-learning-backup") { result in
@@ -986,7 +992,7 @@ struct SettingsView: View {
         .alert("Réinitialiser l'apprentissage", isPresented: $deleting) {
             Button("Annuler", role: .cancel) {}
             Button("Tout effacer", role: .destructive) {
-                store.resetProgress()
+                coordinator.deleteLearningData()
                 dismiss()
             }
         } message: {
