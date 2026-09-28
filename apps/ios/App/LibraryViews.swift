@@ -924,6 +924,7 @@ struct EditableTranscriptView: View {
     }
 }
 
+@MainActor
 struct SettingsView: View {
     let coordinator: ConversationCoordinator
     @Environment(\.dismiss) private var dismiss
@@ -950,9 +951,9 @@ struct SettingsView: View {
                     appearanceSection
                     pedagogySection
                     audioSection
-                    notificationSection
                 }
                 Group {
+                    notificationSection
                     aiSection
                     dataSection
                     aboutSection
@@ -1155,9 +1156,9 @@ struct SettingsView: View {
                 HStack {
                     Label("Rappels & Notifications", systemImage: "bell.badge.fill")
                     Spacer()
-                    Text(NotificationManager.shared.settings.isEnabled ? "Activé" : "Désactivé")
-                        .font(.subheadline)
-                        .foregroundStyle(NotificationManager.shared.settings.isEnabled ? FluenceColor.accent : FluenceColor.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(FluenceColor.secondary)
                 }
             }
         } header: {
@@ -1246,6 +1247,7 @@ struct SettingsView: View {
 }
 
 // MARK: - Dedicated Clean AI Subpage
+@MainActor
 struct AISettingsSubView: View {
     let coordinator: ConversationCoordinator
     @State private var groqKey = ""
@@ -1346,6 +1348,7 @@ struct LearningLanguagePicker: View {
 
 // MARK: - Notification Settings Subview (Apple Compliant)
 
+@MainActor
 struct NotificationSettingsSubView: View {
     @State private var settings: NotificationSettings = NotificationManager.shared.settings
     @State private var authStatus: UNAuthorizationStatus = .notDetermined
