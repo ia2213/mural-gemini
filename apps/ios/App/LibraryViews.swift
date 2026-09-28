@@ -988,7 +988,20 @@ struct SettingsView: View {
             Text("Voulez-vous vraiment effacer tout votre historique de sessions et réinitialiser vos statistiques ? Cette action est irréversible.")
         }
         .sheet(isPresented: $notices) {
-            LegalNoticesView()
+            NavigationStack {
+                ScrollView {
+                    Text(Bundle.main.url(forResource: "ThirdPartyNotices", withExtension: "txt").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Notices unavailable.")
+                        .font(.footnote)
+                        .padding(24)
+                }
+                .navigationTitle("Mentions Légales")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Fermer") { notices = false }
+                    }
+                }
+            }
         }
     }
     
