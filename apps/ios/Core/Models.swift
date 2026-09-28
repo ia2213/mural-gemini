@@ -262,39 +262,39 @@ public struct Preferences: Codable, Sendable {
     // Custom endpoint & model
     public var customEndpoint: String = ""
     public var customModel: String = ""
-    public var customAPIKey: *** = ""
+    public var customAPIKey: String = ""
     
     // OpenAI
     public var openaiModel: String = "gpt-4o-mini"
-    public var openaiAPIKey: *** = ""
+    public var openaiAPIKey: String = ""
     
     // Anthropic
     public var anthropicModel: String = "claude-3-5-sonnet-20241022"
-    public var anthropicAPIKey: *** = ""
+    public var anthropicAPIKey: String = ""
     
     // Google Gemini
-    public var googleAPIKey: *** = ""
+    public var googleAPIKey: String = ""
     public var geminiModel: String = "gemini-2.0-flash"
     
     // Groq
     public var groqModel: String = "llama-3.3-70b-versatile"
-    public var groqAPIKey: *** = ""
+    public var groqAPIKey: String = ""
     
     // DeepSeek
     public var deepseekModel: String = "deepseek-chat"
-    public var deepseekAPIKey: *** = ""
+    public var deepseekAPIKey: String = ""
     
     // Mistral AI
     public var mistralModel: String = "mistral-small-latest"
-    public var mistralAPIKey: *** = ""
+    public var mistralAPIKey: String = ""
     
     // OpenRouter
     public var openrouterModel: String = "meta-llama/llama-3.3-70b-instruct:free"
-    public var openrouterAPIKey: *** = ""
+    public var openrouterAPIKey: String = ""
     
     // Hermes VPS
     public var vpsEndpoint: String = "https://miscellaneous-rays-detect-relationships.trycloudflare.com/v1/chat/completions"
-    public var vpsAPIKey: *** = ""
+    public var vpsAPIKey: String = ""
     public var vpsModel: String = "auto/best-coding"
     
     public var speechRate: Float = 0.50
