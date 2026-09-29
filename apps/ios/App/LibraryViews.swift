@@ -1817,7 +1817,7 @@ struct NotificationSettingsSubView: View {
 
 // MARK: - Kids Settings SubView
 struct KidsSettingsSubView: View {
-    @ObservedObject var coordinator: ConversationCoordinator
+    var coordinator: ConversationCoordinator
     @State private var showingGuidedAccessTutorial = false
     @Environment(\.dismiss) private var dismiss
     

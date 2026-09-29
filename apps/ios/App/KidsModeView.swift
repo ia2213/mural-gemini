@@ -3,7 +3,7 @@ import FluenceCore
 
 // MARK: - Kids Vocal Hub (Mode Enfant Sécurisé)
 public struct KidsVocalHubView: View {
-    @ObservedObject var coordinator: ConversationCoordinator
+    var coordinator: ConversationCoordinator
     @State private var showingPinUnlock = false
     @State private var showingGuidedAccessInfo = false
     @State private var enteredPin = ""
@@ -19,7 +19,7 @@ public struct KidsVocalHubView: View {
         ("heroes", "Aventure 🚀", "rocket.fill", Color.blue)
     ]
     
-    public init(coordinator: ConversationCoordinator) {
+    init(coordinator: ConversationCoordinator) {
         self.coordinator = coordinator
     }
     
@@ -372,7 +372,7 @@ struct GuidedAccessHelpSheet: View {
 
 // MARK: - Parental PIN Unlock Sheet
 struct ParentalPinUnlockSheet: View {
-    @ObservedObject var coordinator: ConversationCoordinator
+    var coordinator: ConversationCoordinator
     @Binding var isPresented: Bool
     @State private var pinInput = ""
     @State private var showError = false
