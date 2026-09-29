@@ -34,227 +34,12 @@ public struct KidsVocalHubView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 16) {
-                // Top Kids Bar
-                HStack {
-                    // Stars badge
-                    HStack(spacing: 6) {
-                        Image(systemName: "star.fill")
-                            .foregroundStyle(.yellow)
-                            .font(.title3)
-                            .symbolEffect(.bounce, value: coordinator.store.preferences.kidsStarsCount)
-                        Text("\(coordinator.store.preferences.kidsStarsCount) étoiles")
-                            .font(.headline.bold())
-                            .foregroundStyle(.white)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(Color.white.opacity(0.12)))
-                    
-                    Spacer()
-                    
-                    // Language Flag Badge
-                    HStack(spacing: 6) {
-                        Text(LanguageRegistry.module(for: coordinator.store.preferences.kidsTargetLanguageID)?.flag ?? "🇩🇪")
-                            .font(.title3)
-                        Text(coordinator.store.preferences.kidsChildName.isEmpty ? "Champion" : coordinator.store.preferences.kidsChildName)
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.white)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color.indigo.opacity(0.35)))
-                    
-                    Spacer()
-                    
-                    // Guided Access hint button
-                    Button {
-                        showingGuidedAccessInfo = true
-                    } label: {
-                        Image(systemName: "lock.shield.fill")
-                            .font(.title3)
-                            .foregroundStyle(.cyan)
-                            .padding(8)
-                            .background(Circle().fill(Color.white.opacity(0.12)))
-                    }
-                    
-                    // Parental Lock Exit Button
-                    Button {
-                        showingPinUnlock = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "lock.fill")
-                            Text("Parent")
-                                .font(.caption.bold())
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(Color.red.opacity(0.4)))
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                
-                // Mascot / Fluency Companion Avatar
-                VStack(spacing: 8) {
-                    ZStack {
-                        // Ambient glow
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.3), Color.clear],
-                                    center: .center,
-                                    startRadius: 10,
-                                    endRadius: 90
-                                )
-                            )
-                            .frame(width: 170, height: 170)
-                            .scaleEffect(coordinator.state == .active ? 1.25 : (mascotBouncing ? 1.08 : 1.0))
-                            .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: mascotBouncing)
-                        
-                        // Cheerful Mascot Icon
-                        Text(mascotEmoji)
-                            .font(.system(size: 82))
-                            .scaleEffect(coordinator.state == .active ? 1.15 : (mascotBouncing ? 1.05 : 0.95))
-                            .rotationEffect(.degrees(coordinator.state == .active ? 5 : 0))
-                            .animation(.spring(response: 0.5, dampingFraction: 0.6), value: coordinator.state == .active)
-                    }
-                    .onAppear { mascotBouncing = true }
-                    
-                    Text("Parle avec Fluency !")
-                        .font(.title2.bold())
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.cyan, .yellow, .pink],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                }
-                
-                // Theme Selector
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(themes, id: \.id) { theme in
-                            Button {
-                                selectedTheme = theme.id
-                                coordinator.store.updatePreferences { $0.kidsTheme = theme.id }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: theme.icon)
-                                    Text(theme.title)
-                                        .font(.caption.bold())
-                                }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(
-                                    Capsule().fill(
-                                        selectedTheme == theme.id
-                                            ? theme.color.opacity(0.7)
-                                            : Color.white.opacity(0.08)
-                                    )
-                                )
-                                .overlay(
-                                    Capsule().stroke(
-                                        selectedTheme == theme.id ? Color.white : Color.clear,
-                                        lineWidth: 1.5
-                                    )
-                                )
-                                .foregroundStyle(.white)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                }
-                
-                // Live Speech Bubble Box
-                ScrollView {
-                    VStack(spacing: 12) {
-                        if !coordinator.caption.isEmpty {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text("🤖 Fluency")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.cyan)
-                                    Spacer()
-                                    Button {
-                                        coordinator.replayAudio(coordinator.caption)
-                                    } label: {
-                                        Image(systemName: "speaker.wave.2.fill")
-                                            .foregroundStyle(.yellow)
-                                            .font(.caption)
-                                    }
-                                }
-                                Text(coordinator.caption)
-                                    .font(.title3.bold())
-                                    .foregroundStyle(.white)
-                                    .lineSpacing(4)
-                                
-                                if !coordinator.translation.isEmpty {
-                                    Text(coordinator.translation)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.yellow.opacity(0.9))
-                                }
-                            }
-                            .padding(16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                    .fill(Color(hex: "#241842").opacity(0.95))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                            .stroke(Color.purple.opacity(0.4), lineWidth: 1.5)
-                                    )
-                            )
-                        } else {
-                            VStack(spacing: 8) {
-                                Text("Appuie sur le gros micro en bas pour commencer l'aventure vocale !")
-                                    .font(.headline)
-                                    .foregroundStyle(.white.opacity(0.85))
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding(20)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(Color.white.opacity(0.06))
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                }
-                
+                topKidsBar
+                mascotSection
+                themeSelectorSection
+                speechBubbleSection
                 Spacer()
-                
-                // Massive Child-Friendly Vocal Button
-                Button {
-                    if coordinator.state == .active {
-                        coordinator.stop()
-                        // Reward star upon successful interaction
-                        coordinator.store.updatePreferences { $0.kidsStarsCount += 1 }
-                    } else {
-                        // Ensure kids pedagogical mode is applied
-                        coordinator.store.updatePreferences {
-                            $0.pedagogicalMode = "kids"
-                            $0.learningLanguageID = $0.kidsTargetLanguageID
-                        }
-                        coordinator.start()
-                    }
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                coordinator.state == .active
-                                    ? LinearGradient(colors: [.red, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                    : LinearGradient(colors: [Color(hex: "#6366F1"), Color(hex: "#A855F7"), Color(hex: "#EC4899")], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            )
-                            .frame(width: 105, height: 105)
-                            .shadow(color: (coordinator.state == .active ? Color.red : Color.purple).opacity(0.6), radius: 24, x: 0, y: 10)
-                        
-                        Image(systemName: coordinator.state == .active ? "stop.fill" : "mic.fill")
-                            .font(.system(size: 44, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .padding(.bottom, 24)
+                bigVocalButton
             }
         }
         .sheet(isPresented: $showingPinUnlock) {
@@ -263,6 +48,233 @@ public struct KidsVocalHubView: View {
         .sheet(isPresented: $showingGuidedAccessInfo) {
             GuidedAccessHelpSheet(isPresented: $showingGuidedAccessInfo)
         }
+    }
+    
+    // MARK: - Subviews
+    
+    @ViewBuilder
+    private var topKidsBar: some View {
+        HStack {
+            // Stars badge
+            HStack(spacing: 6) {
+                Image(systemName: "star.fill")
+                    .foregroundStyle(.yellow)
+                    .font(.title3)
+                Text("\(coordinator.store.preferences.kidsStarsCount) étoiles")
+                    .font(.headline.bold())
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(Color.white.opacity(0.12)))
+            
+            Spacer()
+            
+            // Language Flag Badge
+            HStack(spacing: 6) {
+                Text(LanguageRegistry.module(for: coordinator.store.preferences.kidsTargetLanguageID)?.flag ?? "🇩🇪")
+                    .font(.title3)
+                Text(coordinator.store.preferences.kidsChildName.isEmpty ? "Champion" : coordinator.store.preferences.kidsChildName)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(Color.indigo.opacity(0.35)))
+            
+            Spacer()
+            
+            // Guided Access hint button
+            Button {
+                showingGuidedAccessInfo = true
+            } label: {
+                Image(systemName: "lock.shield.fill")
+                    .font(.title3)
+                    .foregroundStyle(.cyan)
+                    .padding(8)
+                    .background(Circle().fill(Color.white.opacity(0.12)))
+            }
+            
+            // Parental Lock Exit Button
+            Button {
+                showingPinUnlock = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "lock.fill")
+                    Text("Parent")
+                        .font(.caption.bold())
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(Color.red.opacity(0.4)))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+    
+    @ViewBuilder
+    private var mascotSection: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.3), Color.clear],
+                            center: .center,
+                            startRadius: 10,
+                            endRadius: 90
+                        )
+                    )
+                    .frame(width: 170, height: 170)
+                    .scaleEffect(coordinator.state == .active ? 1.25 : (mascotBouncing ? 1.08 : 1.0))
+                    .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: mascotBouncing)
+                
+                Text(mascotEmoji)
+                    .font(.system(size: 82))
+                    .scaleEffect(coordinator.state == .active ? 1.15 : (mascotBouncing ? 1.05 : 0.95))
+                    .rotationEffect(.degrees(coordinator.state == .active ? 5 : 0))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: coordinator.state == .active)
+            }
+            .onAppear { mascotBouncing = true }
+            
+            Text("Parle avec Fluency !")
+                .font(.title2.bold())
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.cyan, .yellow, .pink],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+        }
+    }
+    
+    @ViewBuilder
+    private var themeSelectorSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(themes, id: \.id) { theme in
+                    Button {
+                        selectedTheme = theme.id
+                        coordinator.store.updatePreferences { $0.kidsTheme = theme.id }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: theme.icon)
+                            Text(theme.title)
+                                .font(.caption.bold())
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule().fill(
+                                selectedTheme == theme.id
+                                    ? theme.color.opacity(0.7)
+                                    : Color.white.opacity(0.08)
+                            )
+                        )
+                        .overlay(
+                            Capsule().stroke(
+                                selectedTheme == theme.id ? Color.white : Color.clear,
+                                lineWidth: 1.5
+                            )
+                        )
+                        .foregroundStyle(.white)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    @ViewBuilder
+    private var speechBubbleSection: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                if !coordinator.caption.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("🤖 Fluency")
+                                .font(.caption.bold())
+                                .foregroundStyle(.cyan)
+                            Spacer()
+                            Button {
+                                coordinator.replayAudio(coordinator.caption)
+                            } label: {
+                                Image(systemName: "speaker.wave.2.fill")
+                                    .foregroundStyle(.yellow)
+                                    .font(.caption)
+                            }
+                        }
+                        Text(coordinator.caption)
+                            .font(.title3.bold())
+                            .foregroundStyle(.white)
+                            .lineSpacing(4)
+                        
+                        if !coordinator.translation.isEmpty {
+                            Text(coordinator.translation)
+                                .font(.subheadline)
+                                .foregroundStyle(.yellow.opacity(0.9))
+                        }
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(Color(hex: "#241842").opacity(0.95))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .stroke(Color.purple.opacity(0.4), lineWidth: 1.5)
+                            )
+                    )
+                } else {
+                    VStack(spacing: 8) {
+                        Text("Appuie sur le gros micro en bas pour commencer l'aventure vocale !")
+                            .font(.headline)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.white.opacity(0.06))
+                    )
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    @ViewBuilder
+    private var bigVocalButton: some View {
+        Button {
+            if coordinator.state == .active {
+                coordinator.stop()
+                coordinator.store.updatePreferences { $0.kidsStarsCount += 1 }
+            } else {
+                coordinator.store.updatePreferences {
+                    $0.pedagogicalMode = "kids"
+                    $0.learningLanguageID = $0.kidsTargetLanguageID
+                }
+                coordinator.start()
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(
+                        coordinator.state == .active
+                            ? LinearGradient(colors: [.red, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(colors: [Color(hex: "#6366F1"), Color(hex: "#A855F7"), Color(hex: "#EC4899")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .frame(width: 105, height: 105)
+                    .shadow(color: (coordinator.state == .active ? Color.red : Color.purple).opacity(0.6), radius: 24, x: 0, y: 10)
+                
+                Image(systemName: coordinator.state == .active ? "stop.fill" : "mic.fill")
+                    .font(.system(size: 44, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .padding(.bottom, 24)
     }
     
     private var mascotEmoji: String {
