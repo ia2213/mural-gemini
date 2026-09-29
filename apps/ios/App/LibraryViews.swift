@@ -2047,9 +2047,9 @@ public class StoreKitManager: ObservableObject {
         switch result { case .unverified: throw StoreError.failedVerification; case .verified(let s): return s }
     }
     private func listenForTransactions() -> Task<Void, Error> {
-        Task.detached { for await result in Transaction.updates { do { let t = try await checkVerified(result); await updatePurchasedProducts(); await t.finish() } catch { print("TX failed: \(error)") } } }
+        Task.detached { for await result in Transaction.updates { do { let t = try await self.checkVerified(result); await self.updatePurchasedProducts(); await t.finish() } catch { print("TX failed: \(error)") } } }
     }
-    public func restorePurchases() async { try? await AppStore.sync(); await updatePurchasedProducts() }
+    public func restorePurchases() async { try? await AppStore.sync(); await self.updatePurchasedProducts() }
 }
 
 public enum StoreError: Error { case failedVerification }
