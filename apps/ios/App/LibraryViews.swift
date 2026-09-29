@@ -2057,7 +2057,8 @@ public enum StoreError: Error { case failedVerification }
 public struct PaywallView: View {
     @StateObject private var storeKit = StoreKitManager.shared
     @Environment(\.dismiss) private var dismiss
-    @State private var isPurchasing = false, errorMessage: String?
+    @State private var isPurchasing = false
+    @State private var errorMessage: String?
     public init() {}
     public var body: some View {
         ZStack {
