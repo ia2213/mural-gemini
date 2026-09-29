@@ -192,53 +192,10 @@ public struct KidsVocalHubView: View {
     private var speechBubbleSection: some View {
         ScrollView {
             VStack(spacing: 12) {
-                if !coordinator.caption.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("🤖 Fluency")
-                                .font(.caption.bold())
-                                .foregroundStyle(.cyan)
-                            Spacer()
-                            Button {
-                                coordinator.replayAudio(coordinator.caption)
-                            } label: {
-                                Image(systemName: "speaker.wave.2.fill")
-                                    .foregroundStyle(.yellow)
-                                    .font(.caption)
-                            }
-                        }
-                        Text(coordinator.caption)
-                            .font(.title3.bold())
-                            .foregroundStyle(.white)
-                            .lineSpacing(4)
-                        
-                        if !coordinator.translation.isEmpty {
-                            Text(coordinator.translation)
-                                .font(.subheadline)
-                                .foregroundStyle(.yellow.opacity(0.9))
-                        }
-                    }
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(Color(hex: "#241842").opacity(0.95))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                    .stroke(Color.purple.opacity(0.4), lineWidth: 1.5)
-                            )
-                    )
+                if coordinator.caption.isEmpty {
+                    emptySpeechBubble
                 } else {
-                    VStack(spacing: 8) {
-                        Text("Appuie sur le gros micro en bas pour commencer l'aventure vocale !")
-                            .font(.headline)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.white.opacity(0.06))
-                    )
+                    activeSpeechBubble
                 }
             }
             .padding(.horizontal, 16)
@@ -246,10 +203,57 @@ public struct KidsVocalHubView: View {
     }
     
     @ViewBuilder
+    private var activeSpeechBubble: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("🤖 Fluency")
+                    .font(.caption.bold())
+                    .foregroundStyle(.cyan)
+                Spacer()
+                Button {
+                    coordinator.replayAudio(coordinator.caption)
+                } label: {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .foregroundStyle(.yellow)
+                        .font(.caption)
+                }
+            }
+            Text(coordinator.caption)
+                .font(.title3.bold())
+                .foregroundStyle(.white)
+                .lineSpacing(4)
+            
+            if !coordinator.translation.isEmpty {
+                Text(coordinator.translation)
+                    .font(.subheadline)
+                    .foregroundStyle(.yellow.opacity(0.9))
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color(hex: "#241842").opacity(0.95))
+        )
+    }
+    
+    @ViewBuilder
+    private var emptySpeechBubble: some View {
+        Text("Appuie sur le gros micro en bas pour commencer l'aventure vocale !")
+            .font(.headline)
+            .foregroundStyle(.white.opacity(0.85))
+            .multilineTextAlignment(.center)
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white.opacity(0.06))
+            )
+    }
+    
+    @ViewBuilder
     private var bigVocalButton: some View {
         Button {
             if coordinator.state == .active {
-                coordinator.stop()
+                coordinator.end()
                 coordinator.store.updatePreferences { $0.kidsStarsCount += 1 }
             } else {
                 coordinator.store.updatePreferences {
