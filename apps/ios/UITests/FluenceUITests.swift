@@ -1,6 +1,6 @@
 import XCTest
 
-final class MuralUITests: XCTestCase {
+final class FluenceUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
@@ -161,9 +161,9 @@ final class MuralUITests: XCTestCase {
             let app = XCUIApplication()
             app.launchArguments = ["--preview", "--ended-conversation", "--test-end-notice"] + (inactivity ? ["--test-inactivity"] : [])
             app.launch()
-            let expected = inactivity ? "Mural ended this quiet session to avoid running up usage." : "Conversation saved. Final voice usage is unconfirmed."
+            let expected = inactivity ? "Fluence ended this quiet session to avoid running up usage." : "Conversation saved. Final voice usage is unconfirmed."
             XCTAssertTrue(app.staticTexts[expected].waitForExistence(timeout: 10))
-            XCTAssertFalse(app.staticTexts["Mural will make that a little simpler."].exists)
+            XCTAssertFalse(app.staticTexts["Fluence will make that a little simpler."].exists)
         }
     }
 
@@ -393,7 +393,7 @@ final class MuralUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--preview", "--preview-inactivity-timer"]
         app.launch()
-        let ended = app.staticTexts["Mural ended this quiet session to avoid running up usage."]
+        let ended = app.staticTexts["Fluence ended this quiet session to avoid running up usage."]
         XCTAssertTrue(ended.waitForExistence(timeout: 16))
         XCTAssertEqual(app.staticTexts["microphone-status"].label, "Microphone off")
     }

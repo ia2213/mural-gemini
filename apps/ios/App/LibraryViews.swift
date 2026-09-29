@@ -944,9 +944,12 @@ struct SettingsView: View {
         }
     }
 
+    @State private var showingPaywall = false
+
     var body: some View {
         NavigationStack {
             Form {
+                premiumSection
                 Group {
                     appearanceSection
                     kidsModeSection
@@ -1015,9 +1018,38 @@ struct SettingsView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showingPaywall) {
+            PaywallView()
+        }
     }
     
     // MARK: - Sections Découpées pour Compilation Rapide
+    
+    @ViewBuilder
+    private var premiumSection: some View {
+        Section {
+            Button(action: { showingPaywall = true }) {
+                HStack {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(StoreKitManager.shared.isPremium ? .yellow : .blue)
+                    VStack(alignment: .leading) {
+                        Text(StoreKitManager.shared.isPremium ? "Fluence Premium Actif" : "Passer à Fluence Premium")
+                            .font(.headline)
+                            .foregroundStyle(StoreKitManager.shared.isPremium ? .yellow : .primary)
+                        Text(StoreKitManager.shared.isPremium ? "Merci pour votre soutien !" : "Débloquez l'apprentissage illimité")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if !StoreKitManager.shared.isPremium {
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
     
     @ViewBuilder
     private var appearanceSection: some View {

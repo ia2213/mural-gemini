@@ -5,7 +5,7 @@ import SwiftUI
     @State private var startupError: String?
     init() {
         do { _store = State(initialValue: try LearningStore(inMemory: ProcessInfo.processInfo.arguments.contains("--preview") || AudioVerification.requested)) }
-        catch { _startupError = State(initialValue: "Fluence couldn’t open its learning record. Your existing data has not been replaced.") }
+        catch { _startupError = State(initialValue: "Fluence n’a pas pu ouvrir vos données d’apprentissage. Vos données existantes n'ont pas été écrasées.") }
     }
     
     private var colorScheme: ColorScheme? {
@@ -36,7 +36,7 @@ import SwiftUI
                     }
             }
             else {
-                ContentUnavailableView("Let’s try again", systemImage: "externaldrive.badge.exclamationmark", description: Text(startupError ?? "The learning record is unavailable."))
+                ContentUnavailableView("Réessayer", systemImage: "externaldrive.badge.exclamationmark", description: Text(startupError ?? "Le registre d'apprentissage n'est pas disponible."))
                     .preferredColorScheme(colorScheme)
             }
         }
