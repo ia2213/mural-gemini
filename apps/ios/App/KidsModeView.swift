@@ -1,0 +1,495 @@
+import SwiftUI
+import FluenceCore
+
+// MARK: - Kids Vocal Hub (Mode Enfant Sécurisé)
+public struct KidsVocalHubView: View {
+    @ObservedObject var coordinator: ConversationCoordinator
+    @State private var showingPinUnlock = false
+    @State private var showingGuidedAccessInfo = false
+    @State private var enteredPin = ""
+    @State private var pinError = false
+    @State private var selectedTheme: String = "animals"
+    @State private var mascotBouncing = false
+    
+    let themes: [(id: String, title: String, icon: String, color: Color)] = [
+        ("animals", "Animaux 🐶", "pawprint.fill", Color.orange),
+        ("colors", "Couleurs 🎨", "paintpalette.fill", Color.pink),
+        ("numbers", "Chiffres 🔢", "number.circle.fill", Color.green),
+        ("magic", "Magie 🪄", "wand.and.stars", Color.purple),
+        ("heroes", "Aventure 🚀", "rocket.fill", Color.blue)
+    ]
+    
+    public init(coordinator: ConversationCoordinator) {
+        self.coordinator = coordinator
+    }
+    
+    public var body: some View {
+        ZStack {
+            // Child-friendly warm gradient background
+            LinearGradient(
+                colors: [Color(hex: "#1A102F"), Color(hex: "#0F172A"), Color(hex: "#090D16")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: 16) {
+                // Top Kids Bar
+                HStack {
+                    // Stars badge
+                    HStack(spacing: 6) {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(.yellow)
+                            .font(.title3)
+                            .symbolEffect(.bounce, value: coordinator.preferences.kidsStarsCount)
+                        Text("\(coordinator.preferences.kidsStarsCount) étoiles")
+                            .font(.headline.bold())
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.white.opacity(0.12)))
+                    
+                    Spacer()
+                    
+                    // Language Flag Badge
+                    HStack(spacing: 6) {
+                        Text(LanguageRegistry.language(for: coordinator.preferences.kidsTargetLanguageID)?.flag ?? "🇩🇪")
+                            .font(.title3)
+                        Text(coordinator.preferences.kidsChildName.isEmpty ? "Champion" : coordinator.preferences.kidsChildName)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.indigo.opacity(0.35)))
+                    
+                    Spacer()
+                    
+                    // Guided Access hint button
+                    Button {
+                        showingGuidedAccessInfo = true
+                    } label: {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.title3)
+                            .foregroundStyle(.cyan)
+                            .padding(8)
+                            .background(Circle().fill(Color.white.opacity(0.12)))
+                    }
+                    
+                    // Parental Lock Exit Button
+                    Button {
+                        showingPinUnlock = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "lock.fill")
+                            Text("Parent")
+                                .font(.caption.bold())
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.red.opacity(0.4)))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                
+                // Mascot / Fluency Companion Avatar
+                VStack(spacing: 8) {
+                    ZStack {
+                        // Ambient glow
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.3), Color.clear],
+                                    center: .center,
+                                    startRadius: 10,
+                                    endRadius: 90
+                                )
+                            )
+                            .frame(width: 170, height: 170)
+                            .scaleEffect(coordinator.isRecording ? 1.25 : (mascotBouncing ? 1.08 : 1.0))
+                            .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: mascotBouncing)
+                        
+                        // Cheerful Mascot Icon
+                        Text(mascotEmoji)
+                            .font(.system(size: 82))
+                            .scaleEffect(coordinator.isRecording ? 1.15 : (mascotBouncing ? 1.05 : 0.95))
+                            .rotationEffect(.degrees(coordinator.isRecording ? 5 : 0))
+                            .animation(.spring(response: 0.5, dampingFraction: 0.6), value: coordinator.isRecording)
+                    }
+                    .onAppear { mascotBouncing = true }
+                    
+                    Text("Parle avec Fluency !")
+                        .font(.title2.bold())
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.cyan, .yellow, .pink],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                }
+                
+                // Theme Selector
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(themes, id: \.id) { theme in
+                            Button {
+                                selectedTheme = theme.id
+                                coordinator.preferences.kidsTheme = theme.id
+                                coordinator.savePreferences()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: theme.icon)
+                                    Text(theme.title)
+                                        .font(.caption.bold())
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(
+                                    Capsule().fill(
+                                        selectedTheme == theme.id
+                                            ? theme.color.opacity(0.7)
+                                            : Color.white.opacity(0.08)
+                                    )
+                                )
+                                .overlay(
+                                    Capsule().stroke(
+                                        selectedTheme == theme.id ? Color.white : Color.clear,
+                                        lineWidth: 1.5
+                                    )
+                                )
+                                .foregroundStyle(.white)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                
+                // Live Speech Bubble Box
+                ScrollView {
+                    VStack(spacing: 12) {
+                        if !coordinator.lastTeacherResponse.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("🤖 Fluency")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.cyan)
+                                    Spacer()
+                                    Button {
+                                        coordinator.replayLastAudio()
+                                    } label: {
+                                        Image(systemName: "speaker.wave.2.fill")
+                                            .foregroundStyle(.yellow)
+                                            .font(.caption)
+                                    }
+                                }
+                                Text(coordinator.lastTeacherResponse)
+                                    .font(.title3.bold())
+                                    .foregroundStyle(.white)
+                                    .lineSpacing(4)
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .fill(Color(hex: "#241842").opacity(0.95))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                            .stroke(Color.purple.opacity(0.4), lineWidth: 1.5)
+                                    )
+                            )
+                        } else {
+                            VStack(spacing: 8) {
+                                Text("Appuie sur le gros micro en bas pour commencer l'aventure vocale !")
+                                    .font(.headline)
+                                    .foregroundStyle(.white.opacity(0.85))
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color.white.opacity(0.06))
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                
+                Spacer()
+                
+                // Massive Child-Friendly Vocal Button
+                Button {
+                    Task {
+                        if coordinator.isRecording {
+                            coordinator.stopSpeech()
+                            // Reward star upon successful interaction
+                            coordinator.preferences.kidsStarsCount += 1
+                            coordinator.savePreferences()
+                        } else {
+                            // Ensure kids pedagogical mode is applied
+                            coordinator.preferences.pedagogicalMode = "kids"
+                            coordinator.preferences.learningLanguageID = coordinator.preferences.kidsTargetLanguageID
+                            await coordinator.startSpeech()
+                        }
+                    }
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                coordinator.isRecording
+                                    ? LinearGradient(colors: [.red, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    : LinearGradient(colors: [Color(hex: "#6366F1"), Color(hex: "#A855F7"), Color(hex: "#EC4899")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            )
+                            .frame(width: 105, height: 105)
+                            .shadow(color: (coordinator.isRecording ? Color.red : Color.purple).opacity(0.6), radius: 24, x: 0, y: 10)
+                        
+                        Image(systemName: coordinator.isRecording ? "stop.fill" : "mic.fill")
+                            .font(.system(size: 44, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(.bottom, 24)
+            }
+        }
+        .sheet(isPresented: $showingPinUnlock) {
+            ParentalPinUnlockSheet(coordinator: coordinator, isPresented: $showingPinUnlock)
+        }
+        .sheet(isPresented: $showingGuidedAccessInfo) {
+            GuidedAccessHelpSheet(isPresented: $showingGuidedAccessInfo)
+        }
+    }
+    
+    private var mascotEmoji: String {
+        switch selectedTheme {
+        case "animals": return "🐶"
+        case "colors": return "🎨"
+        case "numbers": return "🔢"
+        case "magic": return "🪄"
+        case "heroes": return "🚀"
+        default: return "🌟"
+        }
+    }
+}
+
+// MARK: - Guided Access (Accès Restreint Apple) Instructions Sheet
+struct GuidedAccessHelpSheet: View {
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(hex: "#0F172A").ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "lock.shield.fill")
+                                .font(.system(size: 40))
+                                .foregroundStyle(.cyan)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Accès Guidé iOS")
+                                    .font(.title2.bold())
+                                    .foregroundStyle(.white)
+                                Text("Verrouillez l'iPhone sur Fluence")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.7))
+                            }
+                        }
+                        .padding(.top, 8)
+                        
+                        Divider().background(Color.white.opacity(0.15))
+                        
+                        VStack(alignment: .leading, spacing: 16) {
+                            stepRow(number: "1", title: "Activer dans iOS", description: "Ouvrez Réglages ➔ Accessibilité ➔ Accès guidé et activez l'interrupteur.")
+                            stepRow(number: "2", title: "Donner le téléphone à l'enfant", description: "Ouvrez Fluence en Mode Enfant sur la leçon choisie.")
+                            stepRow(number: "3", title: "Verrouiller en 1 seconde", description: "Appuyez 3 fois rapidement sur le bouton latéral (Power) de votre iPhone et touchez « Démarrer » en haut à droite.")
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(.green)
+                                Text("Sécurité Maximale")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                            }
+                            Text("L'enfant ne peut ni quitter l'application, ni voir vos photos, SMS, messages ou autres réglages sans votre Face ID ou code parent.")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.8))
+                        }
+                        .padding(14)
+                        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.08)))
+                        
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text("Ouvrir Réglages iOS")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Capsule().fill(Color.cyan))
+                                .foregroundStyle(.black)
+                        }
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Fermer") {
+                        isPresented = false
+                    }
+                    .foregroundStyle(.cyan)
+                }
+            }
+        }
+    }
+    
+    private func stepRow(number: String, title: String, description: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Text(number)
+                .font(.headline.bold())
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(Color.indigo))
+                .foregroundStyle(.white)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.75))
+            }
+        }
+    }
+}
+
+// MARK: - Parental PIN Unlock Sheet
+struct ParentalPinUnlockSheet: View {
+    @ObservedObject var coordinator: ConversationCoordinator
+    @Binding var isPresented: Bool
+    @State private var pinInput = ""
+    @State private var showError = false
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(hex: "#0F172A").ignoresSafeArea()
+                
+                VStack(spacing: 24) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.indigo)
+                        .padding(.top, 20)
+                    
+                    Text("Contrôle Parental")
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                    
+                    Text("Entrez votre code PIN à 4 chiffres pour quitter le Mode Enfant")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                    
+                    // PIN Dots indicator
+                    HStack(spacing: 16) {
+                        ForEach(0..<4) { index in
+                            Circle()
+                                .fill(index < pinInput.count ? Color.indigo : Color.white.opacity(0.2))
+                                .frame(width: 18, height: 18)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    
+                    if showError {
+                        Text("Code PIN incorrect. Réessayez.")
+                            .font(.caption.bold())
+                            .foregroundStyle(.red)
+                    }
+                    
+                    // Simple Numeric Pad
+                    VStack(spacing: 12) {
+                        ForEach(0..<3) { row in
+                            HStack(spacing: 24) {
+                                ForEach(1...3, id: \.self) { col in
+                                    let digit = String(row * 3 + col)
+                                    numButton(digit)
+                                }
+                            }
+                        }
+                        HStack(spacing: 24) {
+                            Button {
+                                if !pinInput.isEmpty { pinInput.removeLast() }
+                            } label: {
+                                Image(systemName: "delete.left.fill")
+                                    .font(.title2)
+                                    .frame(width: 72, height: 72)
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                            
+                            numButton("0")
+                            
+                            Button {
+                                pinInput = ""
+                            } label: {
+                                Text("C")
+                                    .font(.title2.bold())
+                                    .frame(width: 72, height: 72)
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                }
+                .padding()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") {
+                        isPresented = false
+                    }
+                    .foregroundStyle(.white)
+                }
+            }
+        }
+    }
+    
+    private func numButton(_ digit: String) -> some View {
+        Button {
+            if pinInput.count < 4 {
+                pinInput.append(digit)
+                if pinInput.count == 4 {
+                    verifyPin()
+                }
+            }
+        } label: {
+            Text(digit)
+                .font(.title.bold())
+                .frame(width: 72, height: 72)
+                .background(Circle().fill(Color.white.opacity(0.12)))
+                .foregroundStyle(.white)
+        }
+    }
+    
+    private func verifyPin() {
+        let expected = coordinator.preferences.kidsParentalPIN.isEmpty ? "1234" : coordinator.preferences.kidsParentalPIN
+        if pinInput == expected {
+            coordinator.preferences.isKidsModeActive = false
+            coordinator.preferences.pedagogicalMode = "teacher"
+            coordinator.savePreferences()
+            isPresented = false
+        } else {
+            showError = true
+            pinInput = ""
+        }
+    }
+}

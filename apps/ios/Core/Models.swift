@@ -303,7 +303,16 @@ public struct Preferences: Codable, Sendable {
     public var correctionLevel: String = "medium"
     public var cefrLevel: String = "A1"
     public var appearance: String = "dark"
-    public var pedagogicalMode: String = "teacher" // "teacher" (Professeur particulier guidé) ou "conversation" (Discussion libre)
+    public var pedagogicalMode: String = "teacher" // "teacher" (Professeur particulier guidé), "conversation" (Discussion libre), "kids" (Mode Enfant Magique)
+    
+    // Mode Enfant & Contrôle Parental
+    public var isKidsModeActive: Bool = false
+    public var kidsParentalPIN: String = "1234"
+    public var kidsChildName: String = "Champion"
+    public var kidsChildAge: Int = 6
+    public var kidsTargetLanguageID: String = "de"
+    public var kidsTheme: String = "animals" // animals, magic, heroes, colors, numbers
+    public var kidsStarsCount: Int = 0
     public init() {}
 }
 

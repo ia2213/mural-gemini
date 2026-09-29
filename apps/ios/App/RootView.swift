@@ -32,43 +32,49 @@ struct RootView: View {
     
     var body: some View {
         @Bindable var coordinator = coordinator
-        TabView(selection: $tab) {
-            NavigationStack {
-                TalkView(coordinator: coordinator)
-            }
-            .tabItem {
-                Label("Discussion", systemImage: "waveform")
-            }
-            .tag(0)
-            
-            NavigationStack {
-                StudyHubView(coordinator: coordinator)
-            }
-            .tabItem {
-                Label("Professeur", systemImage: "graduationcap.fill")
-            }
-            .tag(1)
-            
-            NavigationStack {
-                WordsView(coordinator: coordinator)
-            }
-            .tabItem {
-                Label("Vocabulaire", systemImage: "book.fill")
-            }
-            .tag(2)
-            
-            NavigationStack {
-                ThemesView(coordinator: coordinator) { theme in
-                    coordinator.chooseTheme(theme)
-                    tab = 0
+        Group {
+            if coordinator.store.preferences.isKidsModeActive {
+                KidsVocalHubView(coordinator: coordinator)
+            } else {
+                TabView(selection: $tab) {
+                    NavigationStack {
+                        TalkView(coordinator: coordinator)
+                    }
+                    .tabItem {
+                        Label("Discussion", systemImage: "waveform")
+                    }
+                    .tag(0)
+                    
+                    NavigationStack {
+                        StudyHubView(coordinator: coordinator)
+                    }
+                    .tabItem {
+                        Label("Professeur", systemImage: "graduationcap.fill")
+                    }
+                    .tag(1)
+                    
+                    NavigationStack {
+                        WordsView(coordinator: coordinator)
+                    }
+                    .tabItem {
+                        Label("Vocabulaire", systemImage: "book.fill")
+                    }
+                    .tag(2)
+                    
+                    NavigationStack {
+                        ThemesView(coordinator: coordinator) { theme in
+                            coordinator.chooseTheme(theme)
+                            tab = 0
+                        }
+                    }
+                    .tabItem {
+                        Label("Thèmes", systemImage: "sparkles")
+                    }
+                    .tag(3)
                 }
+                .tint(FluenceColor.accent)
             }
-            .tabItem {
-                Label("Thèmes", systemImage: "sparkles")
-            }
-            .tag(3)
         }
-        .tint(FluenceColor.accent)
         .preferredColorScheme(colorScheme)
         .sheet(isPresented: $coordinator.showSettings) {
             SettingsView(coordinator: coordinator)

@@ -949,6 +949,7 @@ struct SettingsView: View {
             Form {
                 Group {
                     appearanceSection
+                    kidsModeSection
                     pedagogySection
                     audioSection
                 }
@@ -1031,6 +1032,45 @@ struct SettingsView: View {
             .pickerStyle(.menu)
         } header: {
             Text("Apparence")
+        }
+    }
+    
+    @ViewBuilder
+    private var kidsModeSection: some View {
+        Section {
+            NavigationLink {
+                KidsSettingsSubView(coordinator: coordinator)
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(colors: [.indigo, .purple, .pink], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "face.smiling.fill")
+                            .foregroundStyle(.yellow)
+                            .font(.system(size: 16))
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Mode Enfant & Contrôle Parental")
+                            .font(.headline)
+                            .foregroundStyle(FluenceColor.ink)
+                        Text(store.preferences.isKidsModeActive ? "Actif · Verrouillé" : "Apprentissage ludique & Accès restreint")
+                            .font(.caption)
+                            .foregroundStyle(store.preferences.isKidsModeActive ? Color.green : FluenceColor.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(FluenceColor.secondary)
+                }
+            }
+        } header: {
+            Text("Espace Enfants")
+        } footer: {
+            Text("Permet de confier votre iPhone à votre enfant pour apprendre une langue en toute sécurité grâce au verrouillage parental et à l'Accès Guidé iOS.")
         }
     }
     
@@ -1771,6 +1811,163 @@ struct NotificationSettingsSubView: View {
             Task {
                 authStatus = await NotificationManager.shared.checkAuthorizationStatus()
             }
+        }
+    }
+}
+
+// MARK: - Kids Settings SubView
+struct KidsSettingsSubView: View {
+    @ObservedObject var coordinator: ConversationCoordinator
+    @State private var showingGuidedAccessTutorial = false
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        Form {
+            Section {
+                Toggle(isOn: Binding(
+                    get: { coordinator.preferences.isKidsModeActive },
+                    set: { val in
+                        coordinator.preferences.isKidsModeActive = val
+                        if val {
+                            coordinator.preferences.pedagogicalMode = "kids"
+                        } else {
+                            coordinator.preferences.pedagogicalMode = "teacher"
+                        }
+                        coordinator.savePreferences()
+                    }
+                )) {
+                    Label("Activer le Mode Enfant", systemImage: "face.smiling.fill")
+                        .foregroundStyle(FluenceColor.ink)
+                }
+                
+                if !coordinator.preferences.isKidsModeActive {
+                    Button {
+                        coordinator.preferences.isKidsModeActive = true
+                        coordinator.preferences.pedagogicalMode = "kids"
+                        coordinator.savePreferences()
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Label("Lancer la session Enfant maintenant", systemImage: "play.circle.fill")
+                                .font(.headline)
+                            Spacer()
+                            Image(systemName: "arrow.right")
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 4)
+                    }
+                    .listRowBackground(Color.indigo)
+                }
+            } header: {
+                Text("État du Mode")
+            } footer: {
+                Text("Lorsque le Mode Enfant est activé, l'interface se simplifie en un espace vocal magique et tous les réglages et comptes sont masqués derrière votre code PIN.")
+            }
+            
+            Section {
+                Picker(selection: Binding(
+                    get: { coordinator.preferences.kidsTargetLanguageID },
+                    set: { val in
+                        coordinator.preferences.kidsTargetLanguageID = val
+                        coordinator.preferences.learningLanguageID = val
+                        coordinator.savePreferences()
+                    }
+                )) {
+                    ForEach(LanguageRegistry.all) { lang in
+                        Text("\(lang.flag) \(lang.settingsTitle)").tag(lang.id)
+                    }
+                } label: {
+                    Label("Langue pour l'enfant", systemImage: "globe")
+                }
+                .pickerStyle(.menu)
+                
+                HStack {
+                    Label("Prénom de l'enfant", systemImage: "person.fill")
+                    Spacer()
+                    TextField("Prénom", text: Binding(
+                        get: { coordinator.preferences.kidsChildName },
+                        set: { val in
+                            coordinator.preferences.kidsChildName = val
+                            coordinator.savePreferences()
+                        }
+                    ))
+                    .multilineTextAlignment(.trailing)
+                    .foregroundStyle(FluenceColor.secondary)
+                }
+                
+                Stepper(value: Binding(
+                    get: { coordinator.preferences.kidsChildAge },
+                    set: { val in
+                        coordinator.preferences.kidsChildAge = val
+                        coordinator.savePreferences()
+                    }
+                ), in: 3...15) {
+                    Label("Âge : \(coordinator.preferences.kidsChildAge) ans", systemImage: "calendar")
+                }
+                
+                Picker(selection: Binding(
+                    get: { coordinator.preferences.kidsTheme },
+                    set: { val in
+                        coordinator.preferences.kidsTheme = val
+                        coordinator.savePreferences()
+                    }
+                )) {
+                    Text("🐾 Animaux rigolos").tag("animals")
+                    Text("🎨 Couleurs & Nombres").tag("colors")
+                    Text("🔢 Chiffres & Magie").tag("numbers")
+                    Text("🪄 Contes de fées").tag("magic")
+                    Text("🚀 Super-Héros & Espace").tag("heroes")
+                } label: {
+                    Label("Thème préféré", systemImage: "sparkles")
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Profil de l'Enfant")
+            }
+            
+            Section {
+                HStack {
+                    Label("Code PIN Parental", systemImage: "lock.fill")
+                    Spacer()
+                    SecureField("1234", text: Binding(
+                        get: { coordinator.preferences.kidsParentalPIN },
+                        set: { val in
+                            coordinator.preferences.kidsParentalPIN = String(val.prefix(4))
+                            coordinator.savePreferences()
+                        }
+                    ))
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 80)
+                }
+            } header: {
+                Text("Sécurité Parentale")
+            } footer: {
+                Text("Code à 4 chiffres nécessaire pour déverrouiller et quitter le Mode Enfant.")
+            }
+            
+            Section {
+                Button {
+                    showingGuidedAccessTutorial = true
+                } label: {
+                    HStack {
+                        Label("Activer l'Accès Restreint (Accès Guidé iOS)", systemImage: "lock.shield.fill")
+                            .foregroundStyle(FluenceColor.accent)
+                        Spacer()
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(FluenceColor.secondary)
+                    }
+                }
+            } header: {
+                Text("Verrouillage Système de l'iPhone")
+            } footer: {
+                Text("Grâce à l'Accès Guidé iOS, verrouillez votre iPhone sur Fluence (3 clics sur le bouton latéral) pour empêcher votre enfant d'ouvrir d'autres applications.")
+            }
+        }
+        .navigationTitle("Mode Enfant & Sécurité")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingGuidedAccessTutorial) {
+            GuidedAccessHelpSheet(isPresented: $showingGuidedAccessTutorial)
         }
     }
 }
