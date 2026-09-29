@@ -22,6 +22,10 @@
 				<string>AppIcon20x20</string>
 				<string>AppIcon29x29</string>
 				<string>AppIcon40x40</string>
+				<string>AppIcon</string>
+				<string>Icon</string>
+				<string>Icon-60</string>
+				<string>FluenceIcon</string>
 			</array>
 			<key>CFBundleIconName</key>
 			<string>AppIcon</string>
@@ -41,6 +45,10 @@
 				<string>AppIcon20x20</string>
 				<string>AppIcon29x29</string>
 				<string>AppIcon40x40</string>
+				<string>AppIcon</string>
+				<string>Icon</string>
+				<string>Icon-76</string>
+				<string>FluenceIcon</string>
 			</array>
 			<key>CFBundleIconName</key>
 			<string>AppIcon</string>
@@ -53,7 +61,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>2.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>3</string>
 	<key>UIDeviceFamily</key>
 	<array>
 		<integer>1</integer>
