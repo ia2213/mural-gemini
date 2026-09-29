@@ -1,5 +1,101 @@
-import SwiftUI
+import Foundation
 import StoreKit
+
+@MainActor
+public class StoreKitManager: ObservableObject {
+    public static let shared = StoreKitManager()
+    
+    @Published public private(set) var products: [Product] = []
+    @Published public private(set) var purchasedProductIDs = Set<String>()
+    
+    private var transactionListener: Task<Void, Error>?
+    
+    public var isPremium: Bool {
+        !purchasedProductIDs.isEmpty
+    }
+    
+    private init() {
+        transactionListener = listenForTransactions()
+        Task {
+            await updatePurchasedProducts()
+            await fetchProducts()
+        }
+    }
+    
+    deinit {
+        transactionListener?.cancel()
+    }
+    
+    public func fetchProducts() async {
+        do {
+            let storeProducts = try await Product.products(for: ["com.fluence.premium.monthly", "com.fluence.premium.yearly"])
+            self.products = storeProducts.sorted(by: { $0.price < $1.price })
+        } catch {
+            print("Failed product fetch: \(error)")
+        }
+    }
+    
+    public func purchase(_ product: Product) async throws {
+        let result = try await product.purchase()
+        
+        switch result {
+        case .success(let verification):
+            let transaction = try checkVerified(verification)
+            await updatePurchasedProducts()
+            await transaction.finish()
+        case .userCancelled, .pending:
+            break
+        @unknown default:
+            break
+        }
+    }
+    
+    public func updatePurchasedProducts() async {
+        var purchasedIDs = Set<String>()
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result {
+                if transaction.revocationDate == nil {
+                    purchasedIDs.insert(transaction.productID)
+                }
+            }
+        }
+        self.purchasedProductIDs = purchasedIDs
+    }
+    
+    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+        switch result {
+        case .unverified:
+            throw StoreError.failedVerification
+        case .verified(let safe):
+            return safe
+        }
+    }
+    
+    private func listenForTransactions() -> Task<Void, Error> {
+        return Task.detached {
+            for await result in Transaction.updates {
+                do {
+                    let transaction = try await self.checkVerified(result)
+                    await self.updatePurchasedProducts()
+                    await transaction.finish()
+                } catch {
+                    print("Transaction update failed: \(error)")
+                }
+            }
+        }
+    }
+    
+    public func restorePurchases() async {
+        try? await AppStore.sync()
+        await updatePurchasedProducts()
+    }
+}
+
+public enum StoreError: Error {
+    case failedVerification
+}
+
+import SwiftUI
 
 public struct PaywallView: View {
     @StateObject private var storeKit = StoreKitManager.shared
@@ -11,7 +107,6 @@ public struct PaywallView: View {
     
     public var body: some View {
         ZStack {
-            // Background Theme matching Fluence's 3D wave aura
             LinearGradient(
                 colors: [Color(hex: "#120B24"), Color(hex: "#1A0F3D"), Color(hex: "#241842")],
                 startPoint: .top,
@@ -21,7 +116,6 @@ public struct PaywallView: View {
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 28) {
-                    // Header Brand Elements
                     VStack(spacing: 12) {
                         ZStack {
                             Circle()
@@ -49,7 +143,6 @@ public struct PaywallView: View {
                             .padding(.horizontal, 32)
                     }
                     
-                    // Feature List Highlights
                     VStack(alignment: .leading, spacing: 16) {
                         FeatureRow(icon: "waveform.path", title: "Conversations Vocales Illimitées", subtitle: "Plus aucune limite de temps ou d'usage quotidien.")
                         FeatureRow(icon: "wand.and.stars", title: "Moteurs d'IA Avancés & HD", subtitle: "Accès prioritaire à Claude-3.5, GPT-4o et voix studio ultra-réalistes.")
@@ -67,7 +160,6 @@ public struct PaywallView: View {
                     )
                     .padding(.horizontal, 20)
                     
-                    // Subscription Product Options
                     if storeKit.products.isEmpty {
                         ProgressView()
                             .tint(.white)
@@ -93,7 +185,6 @@ public struct PaywallView: View {
                             .padding(.horizontal, 32)
                     }
                     
-                    // Restore Purchases and Legal Links
                     HStack(spacing: 24) {
                         Button("Restaurer les achats") {
                             Task {
@@ -121,7 +212,6 @@ public struct PaywallView: View {
                 }
             }
             
-            // Close Button
             VStack {
                 HStack {
                     Spacer()

@@ -237,7 +237,7 @@ struct GoogleDriveBrowserSheet: View {
                                     HStack(spacing: 10) {
                                         Image(systemName: "square.and.arrow.up.circle.fill")
                                             .font(.system(size: 28))
-                                            .foregroundStyle(FluenceColor.accent)
+                                            .foregroundStyle(.blue)
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text("Partage direct depuis Google Drive")
                                                 .font(.system(.headline, design: .rounded, weight: .bold))
@@ -270,7 +270,7 @@ struct GoogleDriveBrowserSheet: View {
                                         .foregroundStyle(Color.white)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(FluenceColor.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                        .background(.blue, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     }
                                     .buttonStyle(.plain)
                                     .padding(.top, 6)
@@ -335,7 +335,7 @@ struct GoogleDriveBrowserSheet: View {
                                         .foregroundStyle(Color.white)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(driveLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? FluenceColor.secondary.opacity(0.3) : FluenceColor.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                        .background(driveLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? FluenceColor.secondary.opacity(0.3) : .blue, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     }
                                     .buttonStyle(.plain)
                                     .disabled(driveLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isDownloading)
@@ -353,7 +353,7 @@ struct GoogleDriveBrowserSheet: View {
                                 VStack(alignment: .leading, spacing: 12) {
                                     HStack {
                                         Image(systemName: "doc.text.fill")
-                                            .foregroundStyle(FluenceColor.accent)
+                                            .foregroundStyle(.blue)
                                         Text("Coller du Texte ou Liste de Vocabulaire")
                                             .font(.system(.caption, design: .rounded, weight: .bold))
                                             .foregroundStyle(FluenceColor.ink)
@@ -400,7 +400,7 @@ struct GoogleDriveBrowserSheet: View {
                                             .foregroundStyle(Color.white)
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 12)
-                                            .background(rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? FluenceColor.secondary.opacity(0.3) : FluenceColor.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                            .background(rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? FluenceColor.secondary.opacity(0.3) : .blue, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                                         }
                                         .buttonStyle(.plain)
                                         .disabled(rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -421,7 +421,7 @@ struct GoogleDriveBrowserSheet: View {
                                 } label: {
                                     Image(systemName: "chevron.left")
                                         .font(.system(size: 16, weight: .bold))
-                                        .foregroundStyle(canGoBack ? FluenceColor.accent : FluenceColor.secondary.opacity(0.4))
+                                        .foregroundStyle(canGoBack ? .blue : FluenceColor.secondary.opacity(0.4))
                                 }
                                 .disabled(!canGoBack)
                                 
@@ -430,7 +430,7 @@ struct GoogleDriveBrowserSheet: View {
                                 } label: {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 16, weight: .bold))
-                                        .foregroundStyle(canGoForward ? FluenceColor.accent : FluenceColor.secondary.opacity(0.4))
+                                        .foregroundStyle(canGoForward ? .blue : FluenceColor.secondary.opacity(0.4))
                                 }
                                 .disabled(!canGoForward)
                                 
@@ -483,7 +483,7 @@ struct GoogleDriveBrowserSheet: View {
                                     .foregroundStyle(Color.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
-                                    .background(FluenceColor.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .background(.blue, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 }
                                 .disabled(isDownloading)
                             }
@@ -524,7 +524,7 @@ struct GoogleDriveBrowserSheet: View {
                 .font(.system(.caption, design: .rounded, weight: .bold))
                 .foregroundStyle(Color.white)
                 .frame(width: 22, height: 22)
-                .background(FluenceColor.accent, in: Circle())
+                .background(.blue, in: Circle())
             Text(text)
                 .font(.subheadline)
                 .foregroundStyle(FluenceColor.ink)
@@ -639,7 +639,7 @@ struct WordsView: View {
                             .foregroundStyle(Color.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(FluenceColor.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .background(.blue, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         
@@ -969,7 +969,7 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Terminé") { dismiss() }
                         .fontWeight(.semibold)
-                        .foregroundStyle(FluenceColor.accent)
+                        .foregroundStyle(.blue)
                 }
             }
         }
@@ -1212,7 +1212,7 @@ struct SettingsView: View {
                 synth.speak(utterance)
             } label: {
                 Label("Écouter un extrait audio", systemImage: "speaker.wave.2.fill")
-                    .foregroundStyle(FluenceColor.accent)
+                    .foregroundStyle(.blue)
             }
         } header: {
             Text("Voix & Audio")
@@ -1712,7 +1712,7 @@ struct NotificationSettingsSubView: View {
                                 .padding(.vertical, 8)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(FluenceColor.accent)
+                        .tint(.blue)
                     }
                     .padding(.vertical, 4)
                 }
@@ -1721,7 +1721,7 @@ struct NotificationSettingsSubView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: "bell.badge.fill")
-                                .foregroundStyle(FluenceColor.accent)
+                                .foregroundStyle(.blue)
                             Text("Autorisation requise")
                                 .font(.headline)
                         }
@@ -1745,7 +1745,7 @@ struct NotificationSettingsSubView: View {
                                 .padding(.vertical, 8)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(FluenceColor.accent)
+                        .tint(.blue)
                     }
                     .padding(.vertical, 4)
                 }
@@ -1983,7 +1983,7 @@ struct KidsSettingsSubView: View {
                 } label: {
                     HStack {
                         Label("Activer l'Accès Restreint (Accès Guidé iOS)", systemImage: "lock.shield.fill")
-                            .foregroundStyle(FluenceColor.accent)
+                            .foregroundStyle(.blue)
                         Spacer()
                         Image(systemName: "info.circle")
                             .foregroundStyle(FluenceColor.secondary)
@@ -1999,6 +1999,333 @@ struct KidsSettingsSubView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingGuidedAccessTutorial) {
             GuidedAccessHelpSheet(isPresented: $showingGuidedAccessTutorial)
+        }
+    }
+}
+import Foundation
+import StoreKit
+
+@MainActor
+public class StoreKitManager: ObservableObject {
+    public static let shared = StoreKitManager()
+    
+    @Published public private(set) var products: [Product] = []
+    @Published public private(set) var purchasedProductIDs = Set<String>()
+    
+    private var transactionListener: Task<Void, Error>?
+    
+    public var isPremium: Bool {
+        !purchasedProductIDs.isEmpty
+    }
+    
+    private init() {
+        transactionListener = listenForTransactions()
+        Task {
+            await updatePurchasedProducts()
+            await fetchProducts()
+        }
+    }
+    
+    deinit {
+        transactionListener?.cancel()
+    }
+    
+    public func fetchProducts() async {
+        do {
+            let storeProducts = try await Product.products(for: ["com.fluence.premium.monthly", "com.fluence.premium.yearly"])
+            self.products = storeProducts.sorted(by: { $0.price < $1.price })
+        } catch {
+            print("Failed product fetch: \(error)")
+        }
+    }
+    
+    public func purchase(_ product: Product) async throws {
+        let result = try await product.purchase()
+        
+        switch result {
+        case .success(let verification):
+            let transaction = try checkVerified(verification)
+            await updatePurchasedProducts()
+            await transaction.finish()
+        case .userCancelled, .pending:
+            break
+        @unknown default:
+            break
+        }
+    }
+    
+    public func updatePurchasedProducts() async {
+        var purchasedIDs = Set<String>()
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result {
+                if transaction.revocationDate == nil {
+                    purchasedIDs.insert(transaction.productID)
+                }
+            }
+        }
+        self.purchasedProductIDs = purchasedIDs
+    }
+    
+    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+        switch result {
+        case .unverified:
+            throw StoreError.failedVerification
+        case .verified(let safe):
+            return safe
+        }
+    }
+    
+    private func listenForTransactions() -> Task<Void, Error> {
+        return Task.detached {
+            for await result in Transaction.updates {
+                do {
+                    let transaction = try await self.checkVerified(result)
+                    await self.updatePurchasedProducts()
+                    await transaction.finish()
+                } catch {
+                    print("Transaction update failed: \(error)")
+                }
+            }
+        }
+    }
+    
+    public func restorePurchases() async {
+        try? await AppStore.sync()
+        await updatePurchasedProducts()
+    }
+}
+
+public enum StoreError: Error {
+    case failedVerification
+}
+
+import SwiftUI
+
+public struct PaywallView: View {
+    @StateObject private var storeKit = StoreKitManager.shared
+    @Environment(\.dismiss) private var dismiss
+    @State private var isPurchasing = false
+    @State private var errorMessage: String?
+    
+    public init() {}
+    
+    public var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(hex: "#120B24"), Color(hex: "#1A0F3D"), Color(hex: "#241842")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 28) {
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient(colors: [Color(hex: "#9F7AEA"), Color(hex: "#63B3ED")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .frame(width: 84, height: 84)
+                                .opacity(0.15)
+                                .blur(radius: 8)
+                            
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 40))
+                                .foregroundStyle(
+                                    LinearGradient(colors: [.white, Color(hex: "#A3BFFA")], startPoint: .top, endPoint: .bottom)
+                                )
+                        }
+                        .padding(.top, 24)
+                        
+                        Text("Fluence Premium")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        
+                        Text("Libérez votre plein potentiel linguistique")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 16) {
+                        FeatureRow(icon: "waveform.path", title: "Conversations Vocales Illimitées", subtitle: "Plus aucune limite de temps ou d'usage quotidien.")
+                        FeatureRow(icon: "wand.and.stars", title: "Moteurs d'IA Avancés & HD", subtitle: "Accès prioritaire à Claude-3.5, GPT-4o et voix studio ultra-réalistes.")
+                        FeatureRow(icon: "face.smiling", title: "Mode Enfant Premium", subtitle: "Suivi intelligent de la progression et histoires immersives pour vos enfants.")
+                        FeatureRow(icon: "globe", title: "Plus de 25 Langues", subtitle: "Basculez librement d'une langue à l'autre instantanément.")
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color.white.opacity(0.04))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        )
+                    )
+                    .padding(.horizontal, 20)
+                    
+                    if storeKit.products.isEmpty {
+                        ProgressView()
+                            .tint(.white)
+                            .padding(.vertical, 20)
+                    } else {
+                        VStack(spacing: 14) {
+                            ForEach(storeKit.products, id: \.id) { product in
+                                ProductCard(product: product, isSelected: true) {
+                                    Task {
+                                        await purchaseProduct(product)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    
+                    HStack(spacing: 24) {
+                        Button("Restaurer les achats") {
+                            Task {
+                                await storeKit.restorePurchases()
+                                if storeKit.isPremium {
+                                    dismiss()
+                                }
+                            }
+                        }
+                        
+                        Text("•")
+                            .foregroundStyle(.secondary)
+                        
+                        Link("Conditions", destination: URL(string: "https://fluence-agent.nousresearch.com/terms")!)
+                        
+                        Text("•")
+                            .foregroundStyle(.secondary)
+                        
+                        Link("Confidentialité", destination: URL(string: "https://fluence-agent.nousresearch.com/privacy")!)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 10)
+                    .padding(.bottom, 32)
+                }
+            }
+            
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 26))
+                            .foregroundStyle(.white.opacity(0.3))
+                            .padding(20)
+                    }
+                }
+                Spacer()
+            }
+        }
+    }
+    
+    private func purchaseProduct(_ product: Product) async {
+        isPurchasing = true
+        errorMessage = nil
+        do {
+            try await storeKit.purchase(product)
+            if storeKit.isPremium {
+                dismiss()
+            }
+        } catch {
+            errorMessage = "Échec du paiement. Veuillez réessayer."
+        }
+        isPurchasing = false
+    }
+}
+
+struct FeatureRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundStyle(LinearGradient(colors: [Color(hex: "#9F7AEA"), Color(hex: "#63B3ED")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 28, height: 28)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+struct ProductCard: View {
+    let product: Product
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var isYearly: Bool {
+        product.id.contains("yearly")
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(product.displayName)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        
+                        if isYearly {
+                            Text("ÉCONOMIE 50%")
+                                .font(.system(size: 10, weight: .bold))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color(hex: "#48BB78"))
+                                .cornerRadius(4)
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    Text(product.description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(product.displayPrice)
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                    
+                    Text(isYearly ? "/ an" : "/ mois")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(isYearly ? Color(hex: "#9F7AEA").opacity(0.12) : Color.white.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(isYearly ? Color(hex: "#9F7AEA").opacity(0.6) : Color.white.opacity(0.15), lineWidth: isYearly ? 2 : 1)
+                    )
+            )
         }
     }
 }
