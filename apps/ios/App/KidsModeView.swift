@@ -109,15 +109,15 @@ public struct KidsVocalHubView: View {
                                 )
                             )
                             .frame(width: 170, height: 170)
-                            .scaleEffect(coordinator.isRecording ? 1.25 : (mascotBouncing ? 1.08 : 1.0))
+                            .scaleEffect(coordinator.state == .active ? 1.25 : (mascotBouncing ? 1.08 : 1.0))
                             .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: mascotBouncing)
                         
                         // Cheerful Mascot Icon
                         Text(mascotEmoji)
                             .font(.system(size: 82))
-                            .scaleEffect(coordinator.isRecording ? 1.15 : (mascotBouncing ? 1.05 : 0.95))
-                            .rotationEffect(.degrees(coordinator.isRecording ? 5 : 0))
-                            .animation(.spring(response: 0.5, dampingFraction: 0.6), value: coordinator.isRecording)
+                            .scaleEffect(coordinator.state == .active ? 1.15 : (mascotBouncing ? 1.05 : 0.95))
+                            .rotationEffect(.degrees(coordinator.state == .active ? 5 : 0))
+                            .animation(.spring(response: 0.5, dampingFraction: 0.6), value: coordinator.state == .active)
                     }
                     .onAppear { mascotBouncing = true }
                     
@@ -170,7 +170,7 @@ public struct KidsVocalHubView: View {
                 // Live Speech Bubble Box
                 ScrollView {
                     VStack(spacing: 12) {
-                        if !coordinator.lastTeacherResponse.isEmpty {
+                        if !coordinator.caption.isEmpty {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack {
                                     Text("🤖 Fluency")
@@ -178,17 +178,23 @@ public struct KidsVocalHubView: View {
                                         .foregroundStyle(.cyan)
                                     Spacer()
                                     Button {
-                                        coordinator.replayLastAudio()
+                                        coordinator.replayAudio(coordinator.caption)
                                     } label: {
                                         Image(systemName: "speaker.wave.2.fill")
                                             .foregroundStyle(.yellow)
                                             .font(.caption)
                                     }
                                 }
-                                Text(coordinator.lastTeacherResponse)
+                                Text(coordinator.caption)
                                     .font(.title3.bold())
                                     .foregroundStyle(.white)
                                     .lineSpacing(4)
+                                
+                                if !coordinator.translation.isEmpty {
+                                    Text(coordinator.translation)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.yellow.opacity(0.9))
+                                }
                             }
                             .padding(16)
                             .background(
@@ -220,32 +226,30 @@ public struct KidsVocalHubView: View {
                 
                 // Massive Child-Friendly Vocal Button
                 Button {
-                    Task {
-                        if coordinator.isRecording {
-                            coordinator.stopSpeech()
-                            // Reward star upon successful interaction
-                            coordinator.store.updatePreferences { $0.kidsStarsCount += 1 }
-                        } else {
-                            // Ensure kids pedagogical mode is applied
-                            coordinator.store.updatePreferences {
-                                $0.pedagogicalMode = "kids"
-                                $0.learningLanguageID = $0.kidsTargetLanguageID
-                            }
-                            await coordinator.startSpeech()
+                    if coordinator.state == .active {
+                        coordinator.stop()
+                        // Reward star upon successful interaction
+                        coordinator.store.updatePreferences { $0.kidsStarsCount += 1 }
+                    } else {
+                        // Ensure kids pedagogical mode is applied
+                        coordinator.store.updatePreferences {
+                            $0.pedagogicalMode = "kids"
+                            $0.learningLanguageID = $0.kidsTargetLanguageID
                         }
+                        coordinator.start()
                     }
                 } label: {
                     ZStack {
                         Circle()
                             .fill(
-                                coordinator.isRecording
+                                coordinator.state == .active
                                     ? LinearGradient(colors: [.red, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)
                                     : LinearGradient(colors: [Color(hex: "#6366F1"), Color(hex: "#A855F7"), Color(hex: "#EC4899")], startPoint: .topLeading, endPoint: .bottomTrailing)
                             )
                             .frame(width: 105, height: 105)
-                            .shadow(color: (coordinator.isRecording ? Color.red : Color.purple).opacity(0.6), radius: 24, x: 0, y: 10)
+                            .shadow(color: (coordinator.state == .active ? Color.red : Color.purple).opacity(0.6), radius: 24, x: 0, y: 10)
                         
-                        Image(systemName: coordinator.isRecording ? "stop.fill" : "mic.fill")
+                        Image(systemName: coordinator.state == .active ? "stop.fill" : "mic.fill")
                             .font(.system(size: 44, weight: .bold))
                             .foregroundStyle(.white)
                     }
