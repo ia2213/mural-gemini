@@ -54,7 +54,7 @@ public struct KidsVocalHubView: View {
                     
                     // Language Flag Badge
                     HStack(spacing: 6) {
-                        Text(LanguageRegistry.language(for: coordinator.store.preferences.kidsTargetLanguageID)?.flag ?? "🇩🇪")
+                        Text(LanguageRegistry.module(for: coordinator.store.preferences.kidsTargetLanguageID)?.flag ?? "🇩🇪")
                             .font(.title3)
                         Text(coordinator.store.preferences.kidsChildName.isEmpty ? "Champion" : coordinator.store.preferences.kidsChildName)
                             .font(.subheadline.bold())
