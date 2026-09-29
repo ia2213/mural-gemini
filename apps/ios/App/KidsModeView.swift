@@ -10,6 +10,9 @@ public struct KidsVocalHubView: View {
     @State private var pinError = false
     @State private var selectedTheme: String = "animals"
     @State private var mascotBouncing = false
+    @State private var energyLevel: Double = 1.0
+    @State private var sessionTimer: Timer?
+    @State private var sessionJustEnded = false
     
     let themes: [(id: String, title: String, icon: String, color: Color)] = [
         ("animals", "Animaux 🐶", "pawprint.fill", Color.orange),

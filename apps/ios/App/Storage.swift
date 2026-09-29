@@ -7,7 +7,7 @@ import FluenceCore
 @Model final class StoredArchive {
     @Attribute(.unique) var key: String
     var payload: Data
-    init(payload: Data) { key = "mural-v1"; self.payload = payload }
+    init(payload: Data) { key = "fluence-v2"; self.payload = payload }
 }
 
 @MainActor @Observable final class LearningStore {

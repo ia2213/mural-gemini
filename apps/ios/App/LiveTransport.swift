@@ -307,7 +307,9 @@ final class NativeSynthesizer: NSObject, AVSpeechSynthesizerDelegate, Sendable {
                 onEvent?(["type": "session.input_transcript.delta", "delta": userText, "start_ms": startMS, "end_ms": startMS + 500, "event_id": UUID().uuidString])
                 
                 conversationHistory.append(["role": "user", "content": userText])
-                let result = try await api.respondHistory(instructions: instructions, history: conversationHistory, preferences: preferences)
+                // Keep only last 5 turns to protect token costs and avoid runaway bills
+                let trimmedHistory = Array(conversationHistory.suffix(5))
+                let result = try await api.respondHistory(instructions: instructions, history: trimmedHistory, preferences: preferences)
                 if !result.text.isEmpty {
                     let cleaned = cleanModelText(result.text)
                     if !cleaned.isEmpty {
