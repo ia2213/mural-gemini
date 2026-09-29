@@ -1825,26 +1825,28 @@ struct KidsSettingsSubView: View {
         Form {
             Section {
                 Toggle(isOn: Binding(
-                    get: { coordinator.preferences.isKidsModeActive },
+                    get: { coordinator.store.preferences.isKidsModeActive },
                     set: { val in
-                        coordinator.preferences.isKidsModeActive = val
-                        if val {
-                            coordinator.preferences.pedagogicalMode = "kids"
-                        } else {
-                            coordinator.preferences.pedagogicalMode = "teacher"
+                        coordinator.store.updatePreferences {
+                            $0.isKidsModeActive = val
+                            if val {
+                                $0.pedagogicalMode = "kids"
+                            } else {
+                                $0.pedagogicalMode = "teacher"
+                            }
                         }
-                        coordinator.savePreferences()
                     }
                 )) {
                     Label("Activer le Mode Enfant", systemImage: "face.smiling.fill")
                         .foregroundStyle(FluenceColor.ink)
                 }
                 
-                if !coordinator.preferences.isKidsModeActive {
+                if !coordinator.store.preferences.isKidsModeActive {
                     Button {
-                        coordinator.preferences.isKidsModeActive = true
-                        coordinator.preferences.pedagogicalMode = "kids"
-                        coordinator.savePreferences()
+                        coordinator.store.updatePreferences {
+                            $0.isKidsModeActive = true
+                            $0.pedagogicalMode = "kids"
+                        }
                         dismiss()
                     } label: {
                         HStack {
@@ -1866,11 +1868,12 @@ struct KidsSettingsSubView: View {
             
             Section {
                 Picker(selection: Binding(
-                    get: { coordinator.preferences.kidsTargetLanguageID },
+                    get: { coordinator.store.preferences.kidsTargetLanguageID },
                     set: { val in
-                        coordinator.preferences.kidsTargetLanguageID = val
-                        coordinator.preferences.learningLanguageID = val
-                        coordinator.savePreferences()
+                        coordinator.store.updatePreferences {
+                            $0.kidsTargetLanguageID = val
+                            $0.learningLanguageID = val
+                        }
                     }
                 )) {
                     ForEach(LanguageRegistry.all) { lang in
@@ -1885,10 +1888,9 @@ struct KidsSettingsSubView: View {
                     Label("Prénom de l'enfant", systemImage: "person.fill")
                     Spacer()
                     TextField("Prénom", text: Binding(
-                        get: { coordinator.preferences.kidsChildName },
+                        get: { coordinator.store.preferences.kidsChildName },
                         set: { val in
-                            coordinator.preferences.kidsChildName = val
-                            coordinator.savePreferences()
+                            coordinator.store.updatePreferences { $0.kidsChildName = val }
                         }
                     ))
                     .multilineTextAlignment(.trailing)
@@ -1896,20 +1898,18 @@ struct KidsSettingsSubView: View {
                 }
                 
                 Stepper(value: Binding(
-                    get: { coordinator.preferences.kidsChildAge },
+                    get: { coordinator.store.preferences.kidsChildAge },
                     set: { val in
-                        coordinator.preferences.kidsChildAge = val
-                        coordinator.savePreferences()
+                        coordinator.store.updatePreferences { $0.kidsChildAge = val }
                     }
                 ), in: 3...15) {
-                    Label("Âge : \(coordinator.preferences.kidsChildAge) ans", systemImage: "calendar")
+                    Label("Âge : \(coordinator.store.preferences.kidsChildAge) ans", systemImage: "calendar")
                 }
                 
                 Picker(selection: Binding(
-                    get: { coordinator.preferences.kidsTheme },
+                    get: { coordinator.store.preferences.kidsTheme },
                     set: { val in
-                        coordinator.preferences.kidsTheme = val
-                        coordinator.savePreferences()
+                        coordinator.store.updatePreferences { $0.kidsTheme = val }
                     }
                 )) {
                     Text("🐾 Animaux rigolos").tag("animals")
@@ -1930,10 +1930,9 @@ struct KidsSettingsSubView: View {
                     Label("Code PIN Parental", systemImage: "lock.fill")
                     Spacer()
                     SecureField("1234", text: Binding(
-                        get: { coordinator.preferences.kidsParentalPIN },
+                        get: { coordinator.store.preferences.kidsParentalPIN },
                         set: { val in
-                            coordinator.preferences.kidsParentalPIN = String(val.prefix(4))
-                            coordinator.savePreferences()
+                            coordinator.store.updatePreferences { $0.kidsParentalPIN = String(val.prefix(4)) }
                         }
                     ))
                     .keyboardType(.numberPad)

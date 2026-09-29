@@ -41,8 +41,8 @@ public struct KidsVocalHubView: View {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.title3)
-                            .symbolEffect(.bounce, value: coordinator.preferences.kidsStarsCount)
-                        Text("\(coordinator.preferences.kidsStarsCount) étoiles")
+                            .symbolEffect(.bounce, value: coordinator.store.preferences.kidsStarsCount)
+                        Text("\(coordinator.store.preferences.kidsStarsCount) étoiles")
                             .font(.headline.bold())
                             .foregroundStyle(.white)
                     }
@@ -54,9 +54,9 @@ public struct KidsVocalHubView: View {
                     
                     // Language Flag Badge
                     HStack(spacing: 6) {
-                        Text(LanguageRegistry.language(for: coordinator.preferences.kidsTargetLanguageID)?.flag ?? "🇩🇪")
+                        Text(LanguageRegistry.language(for: coordinator.store.preferences.kidsTargetLanguageID)?.flag ?? "🇩🇪")
                             .font(.title3)
-                        Text(coordinator.preferences.kidsChildName.isEmpty ? "Champion" : coordinator.preferences.kidsChildName)
+                        Text(coordinator.store.preferences.kidsChildName.isEmpty ? "Champion" : coordinator.store.preferences.kidsChildName)
                             .font(.subheadline.bold())
                             .foregroundStyle(.white)
                     }
@@ -138,8 +138,7 @@ public struct KidsVocalHubView: View {
                         ForEach(themes, id: \.id) { theme in
                             Button {
                                 selectedTheme = theme.id
-                                coordinator.preferences.kidsTheme = theme.id
-                                coordinator.savePreferences()
+                                coordinator.store.updatePreferences { $0.kidsTheme = theme.id }
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: theme.icon)
@@ -225,12 +224,13 @@ public struct KidsVocalHubView: View {
                         if coordinator.isRecording {
                             coordinator.stopSpeech()
                             // Reward star upon successful interaction
-                            coordinator.preferences.kidsStarsCount += 1
-                            coordinator.savePreferences()
+                            coordinator.store.updatePreferences { $0.kidsStarsCount += 1 }
                         } else {
                             // Ensure kids pedagogical mode is applied
-                            coordinator.preferences.pedagogicalMode = "kids"
-                            coordinator.preferences.learningLanguageID = coordinator.preferences.kidsTargetLanguageID
+                            coordinator.store.updatePreferences {
+                                $0.pedagogicalMode = "kids"
+                                $0.learningLanguageID = $0.kidsTargetLanguageID
+                            }
                             await coordinator.startSpeech()
                         }
                     }
@@ -481,11 +481,12 @@ struct ParentalPinUnlockSheet: View {
     }
     
     private func verifyPin() {
-        let expected = coordinator.preferences.kidsParentalPIN.isEmpty ? "1234" : coordinator.preferences.kidsParentalPIN
+        let expected = coordinator.store.preferences.kidsParentalPIN.isEmpty ? "1234" : coordinator.store.preferences.kidsParentalPIN
         if pinInput == expected {
-            coordinator.preferences.isKidsModeActive = false
-            coordinator.preferences.pedagogicalMode = "teacher"
-            coordinator.savePreferences()
+            coordinator.store.updatePreferences {
+                $0.isKidsModeActive = false
+                $0.pedagogicalMode = "teacher"
+            }
             isPresented = false
         } else {
             showError = true
