@@ -223,8 +223,8 @@ public struct KidsVocalHubView: View {
                 .foregroundStyle(.white)
                 .lineSpacing(4)
             
-            if !coordinator.translation.isEmpty {
-                Text(coordinator.translation)
+            if !coordinator.meaning.isEmpty {
+                Text(coordinator.meaning)
                     .font(.subheadline)
                     .foregroundStyle(.yellow.opacity(0.9))
             }
