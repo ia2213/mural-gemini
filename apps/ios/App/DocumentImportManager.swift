@@ -687,6 +687,7 @@ final class AnkiGoogleDriveManager {
         return (max(1, totalFiles), totalWords)
     }
 }
+}
 
 // MARK: - Google Drive File Model
 public struct GoogleDriveFile: Identifiable, Codable, Sendable {
