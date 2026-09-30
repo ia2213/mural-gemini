@@ -1,5 +1,6 @@
 import Foundation
 import SQLite3
+import FluenceCore
 
 // MARK: - SQLite Anki Importer (pagination, streaming)
 
