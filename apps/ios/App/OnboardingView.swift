@@ -20,7 +20,7 @@ struct OnboardingView: View {
         _targetID = State(initialValue: coordinator.language.id)
         _meaningLanguage = State(initialValue: coordinator.store.preferences.meaningLanguage.isEmpty ? "Français" : coordinator.store.preferences.meaningLanguage)
         _hasChosenMeaning = State(initialValue: coordinator.store.preferences.meaningLanguage != Preferences().meaningLanguage)
-        _apiKeyInput = State(initialValue: CredentialStore.read() ?? "")
+        _apiKeyInput = State(initialValue: KeychainHelper.shared.read(for: .groq) ?? "")
     }
 
     private var target: LanguageModule { LanguageRegistry.module(for: targetID) ?? .german }
@@ -335,8 +335,8 @@ struct OnboardingView: View {
         } else {
             let cleanKey = apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
             if !cleanKey.isEmpty {
-                try? CredentialStore.save(cleanKey, for: "groq")
-                try? CredentialStore.save(cleanKey, for: "owner")
+                try? KeychainHelper.shared.save(cleanKey, for: .groq)
+                try? KeychainHelper.shared.save(cleanKey, for: .owner)
             }
             coordinator.selectLanguage(targetID)
             coordinator.selectMeaningLanguage(meaningLanguage)

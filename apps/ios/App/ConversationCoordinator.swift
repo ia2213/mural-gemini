@@ -118,7 +118,7 @@ import FluenceCore
         }
     }
     private var hasConfiguredProvider: Bool {
-        if CredentialStore.hasKey { return true }
+        if KeychainHelper.shared.hasKey(for: .owner) { return true }
         if !store.preferences.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         if !store.preferences.vpsEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         return false

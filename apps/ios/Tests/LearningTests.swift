@@ -120,6 +120,45 @@ final class LearningTests: XCTestCase {
         let massed = LearningEngine.project([first, fixture(day: 0.01), fixture(day: 0.02)], now: first.startedAt)
         XCTAssertLessThanOrEqual(massed.words[0].bars, 2)
     }
+    func testFSRSIntervalsIncreaseWithStability() {
+        // A word recalled independently on 3 separate days should have growing stability.
+        let first = fixture(day: 0), second = fixture(day: 3), third = fixture(day: 10, theme: "dinner")
+        let p = LearningEngine.project([first, second, third], now: third.startedAt.addingTimeInterval(5 * 86400))
+        // Stability should be higher after 3 spaced recalls than after 2.
+        let twoRecalls = LearningEngine.project([first, second], now: second.startedAt.addingTimeInterval(5 * 86400))
+        XCTAssertGreaterThan(p.words[0].dueAt.timeIntervalSince(p.words[0].lastSeen),
+                            twoRecalls.words[0].dueAt.timeIntervalSince(twoRecalls.words[0].lastSeen))
+        // And bars should be at least 2 after 3 spaced recalls.
+        XCTAssertEqual(p.words[0].bars, 3)
+    }
+    func testFSRTRetrievabilityDecreasesExponentially() {
+        // Retrievability R = exp(-Δt/S) should drop as Δt grows.
+        let base = fixture()
+        let p = LearningEngine.project([base], now: base.startedAt)
+        let stability = FSRSStabilityForWord(p.words[0])
+        // R at Δt=0 is 1.0
+        XCTAssertEqual(FSRTRetrievability(stability: stability, elapsedDays: 0), 1.0, accuracy: 0.001)
+        // R at Δt=S is 1/e ≈ 0.368
+        XCTAssertEqual(FSRTRetrievability(stability: stability, elapsedDays: stability), exp(-1.0), accuracy: 0.01)
+        // R drops further at 2*S
+        XCTAssertLessThan(FSRTRetrievability(stability: stability, elapsedDays: 2 * stability),
+                         FSRTRetrievability(stability: stability, elapsedDays: stability))
+    }
+    func testFSRSVolumeLowerThanSM2() {
+        // With FSRS, stable words get longer intervals than SM-2's fixed [1,1,4,14].
+        // Build a word with 3 spaced independent recalls (bars=3 under old system, S ~14+ under FSRS).
+        let first = fixture(day: 0), second = fixture(day: 3), third = fixture(day: 12, theme: "dinner")
+        let fsrsNow = third.startedAt.addingTimeInterval(1 * 86400)
+        let fsrsProjection = LearningEngine.project([first, second, third], now: fsrsNow)
+        // Old SM-2: bars=3 → interval = 14 days from last recall.
+        let sm2Projection = LearningEngine.projectSM2([first, second, third], now: fsrsNow)
+        guard let fsrsWord = fsrsProjection.words.first, let sm2Word = sm2Projection.words.first else {
+            XCTFail("Expected projected words"); return
+        }
+        // FSRS due date should be at least as far out as SM-2 (typically much further).
+        XCTAssertGreaterThanOrEqual(fsrsWord.dueAt.timeIntervalSince(fsrsNow),
+                                   sm2Word.dueAt.timeIntervalSince(fsrsNow))
+    }
     func testStrengthFadesAndLapsesLowerIt() {
         let sessions = [fixture(), fixture(day: 2), fixture(day: 8, theme: "dinner")]
         let projected = LearningEngine.project(sessions, now: sessions.last!.startedAt.addingTimeInterval(30 * 86400))
