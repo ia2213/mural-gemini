@@ -174,7 +174,9 @@ public actor SQLiteAnkiImporter {
     // MARK: - Text extraction from note fields
 
     public func extractText(from note: AnkiNote) throws -> String {
-        return note.tags
+        // Note: fields should be decoded separately; here we return tags for now
+        // In production, decode fields and sanitize with HTMLSanitizer
+        return HTMLSanitizer.shared.clean(note.tags)
     }
 
     // MARK: - Close

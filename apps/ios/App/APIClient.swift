@@ -331,6 +331,12 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     func transcribe(audioData: Data, language: String = "en", preferences: Preferences = Preferences()) async throws -> String {
         try checkAIConsent(preferences: preferences)
+
+        // ZDR / COPPA-RGPD-K : aucune voix d'enfant ne quitte l'appareil
+        if preferences.isKidsModeActive {
+            throw APIError.kidsModeAudioBlocked
+        }
+
         let groqKey = preferences.groqAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .groq) ?? KeychainHelper.shared.read(for: .owner) ?? "") : preferences.groqAPIKey
         let openaiKey = preferences.openaiAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .openai) ?? "") : preferences.openaiAPIKey
         let geminiKey = preferences.googleAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .google) ?? "") : preferences.googleAPIKey
@@ -493,7 +499,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         ])]
     ]) }
     enum APIError: LocalizedError {
-        case missingKey, invalidResponse, incomplete, refused, http(Int), consentRequired
+        case missingKey, invalidResponse, incomplete, refused, http(Int), consentRequired, kidsModeAudioBlocked
         var errorDescription: String? {
             switch self {
             case .missingKey: "Veuillez entrer votre clé API dans les Réglages pour le fournisseur sélectionné."
@@ -504,6 +510,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             case .http(429): "La limite de requêtes (Rate Limit) de l'API a été atteinte. Réessayez dans un instant."
             case .http(let status): "Le service d'IA a rencontré une erreur (HTTP \\(status))."
             case .consentRequired: "Vous devez accepter le consentement IA avant d'utiliser les fonctionnalités de traitement par IA."
+            case .kidsModeAudioBlocked: "Mode Enfant actif : la transcription vocale cloud est désactivée pour protéger la voix de l'enfant (ZDR/COPPA). Utilisez l'instructeur d'accent sur l'appareil."
             }
         }
     }
