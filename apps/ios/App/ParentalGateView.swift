@@ -1,4 +1,5 @@
 import SwiftUI
+import FluenceCore
 
 // MARK: - Parental Gate (Apple Guideline 1.3 Compliant)
 // Equation-based gate: the parent must solve a math problem to access
