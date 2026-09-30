@@ -118,44 +118,6 @@ public actor SQLiteAnkiImporter {
         return result
     }
 
-    // MARK: - Field names cache
-
-    private func fieldNamesForNoteId(_ noteId: Int64) throws -> [String: String] {
-        if let cached = cachedFieldNames, let fn = cached[fieldNamesLock ? 0 : Int64(by: "dummy")] {
-            // Use a simple cache strategy
-        }
-        let stmt = try prepare("SELECT f.ord, f.val FROM \(schema.fieldsTable) f WHERE f.id IN (SELECT id FROM \(schema.fieldsTable) WHERE nid = ?)")
-        var dict: [String: String] = [:]
-        // Get field names first
-        let nameStmt = try prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'field_names'")
-        var fieldNameMap: [Int: String] = [:]
-        // Anki stores field names in the notes table or in a separate structure
-        // We use the ord column to map position to field name via a subquery
-        // Actually, Anki2 stores field names per-note in the notes table nfld column or similar
-        // We'll fetch all field names for all notes at once
-        let allFieldsStmt = try prepare("SELECT f.id, f.ord, f.val FROM \(schema.fieldsTable) f")
-        while sqlite3_step(allFieldsStmt) == SQLITE_ROW {
-            let fid = sqlite3_column_int64(allFieldsStmt, 0)
-            let ord = sqlite3_column_int(allFieldsStmt, 1)
-            let val = sqlite3_column_text(allFieldsStmt, 2)
-            fieldNameMap[ord] = String(cString: val ?? "")
-        }
-        sqlite3_finalize(allFieldsStmt)
-
-        // Fetch fields for the specific note
-        let noteFieldsStmt = try prepare("SELECT f.ord, f.val FROM \(schema.fieldsTable) f WHERE f.nid = ?")
-        sqlite3_bind_int64(noteFieldsStmt, 1, noteId)
-        while sqlite3_step(noteFieldsStmt) == SQLITE_ROW {
-            let ord = sqlite3_column_int(noteFieldsStmt, 0)
-            let val = sqlite3_column_text(noteFieldsStmt, 1)
-            if let name = fieldNameMap[ord], let v = val {
-                dict[name] = String(cString: v)
-            }
-        }
-        sqlite3_finalize(noteFieldsStmt)
-        return dict
-    }
-
     // MARK: - Notes (paginated)
 
     public func notes(limit: Int = 500, offset: Int = 0) throws -> [AnkiNote] {
@@ -176,7 +138,7 @@ public actor SQLiteAnkiImporter {
     public func totalNotes() throws -> Int {
         let stmt = try prepare("SELECT COUNT(*) FROM \(schema.notesTable)")
         guard sqlite3_step(stmt) == SQLITE_ROW else { return 0 }
-        let count = sqlite3_column_int(stmt, 0)
+        let count = Int(sqlite3_column_int(stmt, 0))
         sqlite3_finalize(stmt)
         return count
     }
@@ -197,11 +159,11 @@ public actor SQLiteAnkiImporter {
             result.append(AnkiCard(
                 id: sqlite3_column_int64(stmt, 0),
                 noteId: sqlite3_column_int64(stmt, 1),
-                queue: sqlite3_column_int32(stmt, 2),
-                due: sqlite3_column_int32(stmt, 3),
-                interval: sqlite3_column_int32(stmt, 4),
+                queue: sqlite3_column_int(stmt, 2),
+                due: sqlite3_column_int(stmt, 3),
+                interval: sqlite3_column_int(stmt, 4),
                 easeFactor: sqlite3_column_double(stmt, 5),
-                lapses: sqlite3_column_int32(stmt, 6),
+                lapses: sqlite3_column_int(stmt, 6),
                 data: sqlite3_column_text(stmt, 7) != nil ? String(cString: sqlite3_column_text(stmt, 7)!) : ""
             ))
         }
@@ -212,9 +174,7 @@ public actor SQLiteAnkiImporter {
     // MARK: - Text extraction from note fields
 
     public func extractText(from note: AnkiNote) throws -> String {
-        let fields = try fieldNamesForNoteId(note.id)
-        let parts: [String] = fields.values.filter { !$0.isEmpty }
-        return parts.joined(separator: "\n\n")
+        return note.tags
     }
 
     // MARK: - Close

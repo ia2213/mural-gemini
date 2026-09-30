@@ -89,12 +89,12 @@ struct ParentalGateView: View {
                                 feedbackCorrect = correct
                                 showFeedback = true
                                 if correct {
-                                    streak += 1
+                                    currentStreak += 1
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
                                         unlockParentalAccess()
                                     }
                                 } else {
-                                    streak = 0
+                                    currentStreak = 0
                                     selectedAnswer = nil
                                     // Regenerate after a short delay
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
@@ -138,7 +138,7 @@ struct ParentalGateView: View {
                     Spacer()
 
                     // Anti-brute-force notice
-                    if streak == 0 && showFeedback && !feedbackCorrect {
+                    if currentStreak == 0 && showFeedback && !feedbackCorrect {
                         Text("Nouveaux calcul après chaque erreur")
                             .font(.caption)
                             .foregroundStyle(.red.opacity(0.7))
@@ -165,31 +165,21 @@ struct ParentalGateView: View {
     // MARK: - Equation Logic
 
     private func generateNewEquation() {
-        // Regenerate with fresh random values on each attempt
-        let first = Int.random(in: 1...12)
-        let second = Int.random(in: 1...12)
+        var first = Int.random(in: 2...12)
+        var second = Int.random(in: 2...12)
         let third = Int.random(in: 1...9)
         let op1 = Self.supportedOps.randomElement()!
-        var op2 = Self.supportedOps.randomElement()!
+        let op2: Operator = .plus
 
-        // Avoid negative intermediate results for minus
         if op1 == .minus && first < second {
             swap(&first, &second)
-        }
-        // op2 operates on (first op1 second) and third
-        if op2 == .minus {
-            let intermediate = evaluate(first, second, op1)
-            if intermediate < third {
-                swap(op2, op1)  // use op1 as the second operator instead
-                if op1 == .minus && first < second { swap(&first, &second) }
-            }
         }
 
         equation = Equation(first: first, second: second, third: third, op1: op1, op2: op2)
         options = generateOptions(correct: equation.result)
         selectedAnswer = nil
         showFeedback = false
-        streak = 0
+        currentStreak = 0
     }
 
     private func generateOptions(correct: Int) -> [Int] {
