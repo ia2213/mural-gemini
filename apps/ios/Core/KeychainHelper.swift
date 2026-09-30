@@ -27,7 +27,7 @@ final class KeychainHelper: Sendable {
     // MARK: - Read
 
     func read(for account: Account) -> String? {
-        let query = brandedQuery(for: account)
+        var query = brandedQuery(for: account)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?

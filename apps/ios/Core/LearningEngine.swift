@@ -171,7 +171,7 @@ public enum LearningEngine {
 
         if independentSorted.isEmpty {
             // No independent recall: low stability, governed by last observation type.
-            if !lapseObservations.isEmpty, let lastLapse = lapseObservations.last?.date {
+            if !lapseObservations.isEmpty, let lastLapse = lapseObservations.last?.1 {
                 let daysSinceLapse = max(0, now.timeIntervalSince(lastLapse) / 86400)
                 if daysSinceLapse < 1.0 {
                     stability = 0.5  // very recent lapse
@@ -207,7 +207,7 @@ public enum LearningEngine {
         // Cap stability to avoid absurd intervals
         stability = min(365.0, max(0.5, stability))
 
-        let wasLapsed = !lapseObservations.isEmpty && lapseObservations.last!.date > (independentSorted.last?.date ?? .distantPast)
+        let wasLapsed = !lapseObservations.isEmpty && lapseObservations.last!.1 > (independentSorted.last?.date ?? .distantPast)
 
         return (difficulty, stability, understandingCount, independentCount, wasLapsed)
     }
