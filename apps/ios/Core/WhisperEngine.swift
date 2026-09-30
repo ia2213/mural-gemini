@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 
 /// Moteur Whisper.cpp on-device pour la transcription et le scoring d'accent.
 ///
@@ -63,7 +64,7 @@ public final class WhisperEngine {
 
     private func tokenize(_ text: String) -> [String] {
         text.lowercased()
-            .replacingOccurrences(of: "[^a-z0-9\\s]", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\W", with: " ", options: .regularExpression)
             .split(separator: " ", omittingEmptySubsequences: true)
             .map(String.init)
     }
