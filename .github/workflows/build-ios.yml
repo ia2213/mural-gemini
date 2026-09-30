@@ -36,36 +36,36 @@ jobs:
           APP_PATH=$(find build -name "*.app" -type d | head -n 1)
           echo "APP_PATH=$APP_PATH"
           if [ -n "$APP_PATH" ]; then
-            cp -R "$APP_PATH" Payload/Mural.app
+            cp -R "$APP_PATH" Payload/Fluence.app
           else
             echo "ERROR: App bundle not found in build/"
             exit 1
           fi
 
           # Copy explicit icon files directly into app bundle root
-          cp -f apps/ios/App/Assets.xcassets/AppIcon.appiconset/*.png Payload/Mural.app/ || true
+          cp -f apps/ios/App/Assets.xcassets/AppIcon.appiconset/*.png Payload/Fluence.app/ || true
 
           # Remove any embedded PlugIns that block Free Apple Developer signing
-          rm -rf Payload/Mural.app/PlugIns
+          rm -rf Payload/Fluence.app/PlugIns
 
           zip -r -y Fluence.ipa Payload
-          cp Fluence.ipa Mural-Gemini.ipa
+          cp Fluence.ipa Fluence-v3.0.ipa
           rm -rf Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Mural-Gemini-IPA
-          path: Mural-Gemini.ipa
+          name: Fluence-v3.0-IPA
+          path: Fluence-v3.0.ipa
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: always()
         with:
           tag_name: v2.0.0-mural-release
-          name: "Mural Native iOS v2.0.0 (SideStore / AltStore)"
-          body: "Application iOS native Mural issue du code source officiel avec 3 zones indépendantes (Hermes VPS, Gemini, Groq)."
-          files: Mural-Gemini.ipa
+          name: "Fluence iOS v3.0 (SideStore / AltStore)"
+          body: "Application iOS native Fluence issue du code source officiel avec moteur d'apprentissage FSRS, Whisper.cpp on-device, et conformité sécurité Keychain."
+          files: Fluence-v3.0.ipa
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
