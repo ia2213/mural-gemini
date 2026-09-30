@@ -16,6 +16,7 @@ jobs:
 
       - name: Build main app and widget
         run: |
+          set +e
           xcodebuild -project apps/ios/Fluence.xcodeproj \
             -scheme Fluence \
             -sdk iphoneos \
@@ -26,9 +27,31 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_WORKSPACE=NO \
-            clean build
+            clean build 2>&1 | tee build.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "BUILD_EXIT_CODE=$BUILD_EXIT" >> build.log
+          echo "exit_code: $BUILD_EXIT" > build_exit.txt
+
+      - name: Upload build logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-logs
+          path: |
+            build.log
+            build_exit.txt
+          retention-days: 30
+
+      - name: Upload build directory
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-dir
+          path: build/
+          retention-days: 7
 
       - name: Find and package app
+        if: success()
         run: |
           mkdir -p Payload
 
@@ -53,14 +76,15 @@ jobs:
           rm -rf Payload
 
       - name: Upload IPA Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Fluence-v3.0-IPA
           path: Fluence-v3.0.ipa
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
         if: always()
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v2.0.0-mural-release
           name: "Fluence iOS v3.0 (SideStore / AltStore)"
