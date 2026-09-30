@@ -64,7 +64,7 @@ public final class WhisperEngine {
 
     private func tokenize(_ text: String) -> [String] {
         text.lowercased()
-            .replacingOccurrences(of: "\\W", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "[^a-z0-9ßàâçèéêëîïôûùüœæœA-Z0-9\\s]", with: " ", options: .regularExpression)
             .split(separator: " ", omittingEmptySubsequences: true)
             .map(String.init)
     }
