@@ -13,7 +13,7 @@ struct ParentalGateView: View {
     @State private var selectedAnswer: Int?
     @State private var showFeedback: Bool = false
     @State private var feedbackCorrect: Bool = false
-    @State private var current streak = 0
+    @State private var currentStreak = 0
 
     private static let supportedOps: [Operator] = [.plus, .minus, .times]
 

@@ -6,7 +6,7 @@ import FluenceCore
 struct AIConsentModalView: View {
     let agree: () -> Void
     let decline: () -> Void
-    @ObservedObject var store: LearningStore
+    var store: LearningStore
 
     private var preferences: Preferences { store.preferences }
 

@@ -3,15 +3,15 @@ import Security
 
 // MARK: - KeychainHelper
 
-final class KeychainHelper: Sendable {
-    static let shared = KeychainHelper()
+public final class KeychainHelper: Sendable {
+    public static let shared = KeychainHelper()
     private let service = "no.william.mural"
 
     private init() {}
 
     // MARK: - Account enum
 
-    enum Account: String, CaseIterable, Sendable {
+    public enum Account: String, CaseIterable, Sendable {
         case owner
         case custom
         case openai
@@ -26,7 +26,7 @@ final class KeychainHelper: Sendable {
 
     // MARK: - Read
 
-    func read(for account: Account) -> String? {
+    public func read(for account: Account) -> String? {
         var query = brandedQuery(for: account)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -38,11 +38,11 @@ final class KeychainHelper: Sendable {
 
     // MARK: - HasKey
 
-    func hasKey(for account: Account) -> Bool { read(for: account) != nil }
+    public func hasKey(for account: Account) -> Bool { read(for: account) != nil }
 
     // MARK: - Save
 
-    func save(_ key: String, for account: Account) throws {
+    public func save(_ key: String, for account: Account) throws {
         let value = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { throw KeychainError.empty }
         let data = Data(value.utf8)
@@ -60,7 +60,7 @@ final class KeychainHelper: Sendable {
 
     // MARK: - Delete
 
-    func delete(for account: Account) throws {
+    public func delete(for account: Account) throws {
         let status = SecItemDelete(brandedQuery(for: account) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw KeychainError.delete }
     }
