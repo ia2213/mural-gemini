@@ -65,6 +65,17 @@ public final class KeychainHelper: Sendable {
         guard status == errSecSuccess || status == errSecItemNotFound else { throw KeychainError.delete }
     }
 
+    // MARK: - Migration from Legacy JSON / CredentialStore
+
+    public func migrateLegacyKeys(from rawKeys: [Account: String]) {
+        for (account, key) in rawKeys {
+            let clean = key.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clean.isEmpty && !hasKey(for: account) {
+                try? save(clean, for: account)
+            }
+        }
+    }
+
     // MARK: - Internal
 
     private func brandedQuery(for account: Account) -> [String: Any] {
