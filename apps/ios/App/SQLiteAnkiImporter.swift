@@ -189,7 +189,13 @@ public actor SQLiteAnkiImporter {
         var stmt: OpaquePointer?
         let rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
         guard rc == SQLITE_OK, let s = stmt else {
-            throw SQLiteAnkiError.queryFailed("\(sqlite3_errmsg(db) ?? "unknown")")
+            let errMsg: String
+            if let err = sqlite3_errmsg(db) {
+                errMsg = String(cString: err)
+            } else {
+                errMsg = "unknown"
+            }
+            throw SQLiteAnkiError.queryFailed(errMsg)
         }
         return s
     }
@@ -213,19 +219,19 @@ public actor AnkiImportSession {
     }
 
     public func importAll(batchSize: Int = 500) async throws -> AnkiImportResult {
-        let total = try importer.totalNotes()
+        let total = try await importer.totalNotes()
         var importedCount = 0
         var totalCards = 0
         var errors: [String] = []
         var offset = 0
 
         while offset < total {
-            let batch = try importer.notes(limit: batchSize, offset: offset)
+            let batch = try await importer.notes(limit: batchSize, offset: offset)
             guard !batch.isEmpty else { break }
 
             // Fetch cards for this batch
             let noteIds = batch.map(\.id)
-            let cards = try importer.cards(forNoteIds: noteIds)
+            let cards = try await importer.cards(forNoteIds: noteIds)
             totalCards += cards.count
             importedCount += batch.count
             importedNoteIds.formUnion(noteIds)
@@ -245,14 +251,14 @@ public actor AnkiImportSession {
     }
 
     public func extractAllTexts() async throws -> [(note: AnkiNote, text: String)] {
-        let total = try importer.totalNotes()
+        let total = try await importer.totalNotes()
         var results: [(note: AnkiNote, text: String)] = []
         var offset = 0
 
         while offset < total {
-            let batch = try importer.notes(limit: 500, offset: offset)
+            let batch = try await importer.notes(limit: 500, offset: offset)
             for note in batch {
-                let text = try importer.extractText(from: note)
+                let text = try await importer.extractText(from: note)
                 if !text.isEmpty {
                     results.append((note: note, text: text))
                 }
