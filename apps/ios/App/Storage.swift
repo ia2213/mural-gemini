@@ -26,6 +26,9 @@ import FluenceCore
         if let existing = try context.fetch(FetchDescriptor<StoredArchive>()).first {
             document = existing
             archive = try Archive.decode(existing.payload)
+            if let legacyOwner = CredentialStore.read(for: "owner"), !legacyOwner.isEmpty {
+                KeychainHelper.shared.migrateLegacyKeys(from: [.owner: legacyOwner, .groq: legacyOwner])
+            }
             if let backup = migrationBackupURL,
                let root = try JSONSerialization.jsonObject(with: existing.payload) as? [String: Any], root["schemaVersion"] as? Int == 1 {
                 let directory = backup.deletingLastPathComponent()

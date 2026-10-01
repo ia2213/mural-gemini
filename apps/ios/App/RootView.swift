@@ -82,7 +82,11 @@ struct RootView: View {
                 .tint(FluenceColor.accent)
         }
         .sheet(isPresented: $coordinator.showAIConsent, onDismiss: { coordinator.resumeAfterAIConsent() }) {
-            AIConsentView(agree: { coordinator.acceptAIConsent() }, decline: { coordinator.declineAIConsent() })
+            AIConsentModalView(
+                agree: { coordinator.acceptAIConsent() },
+                decline: { coordinator.declineAIConsent() },
+                store: coordinator.store
+            )
                 .preferredColorScheme(colorScheme)
                 .tint(FluenceColor.accent)
         }

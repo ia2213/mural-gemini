@@ -1330,17 +1330,17 @@ struct SettingsView: View {
 struct AISettingsSubView: View {
     let coordinator: ConversationCoordinator
     @State private var groqKey = ""
-    @State private var hasGroqKey = CredentialStore.hasKey(for: "groq")
+    @State private var hasGroqKey = KeychainHelper.shared.hasKey(for: .groq)
     @State private var openaiKey = ""
-    @State private var hasOpenAIKey = CredentialStore.hasKey(for: "openai")
+    @State private var hasOpenAIKey = KeychainHelper.shared.hasKey(for: .openai)
     @State private var anthropicKey = ""
-    @State private var hasAnthropicKey = CredentialStore.hasKey(for: "anthropic")
+    @State private var hasAnthropicKey = KeychainHelper.shared.hasKey(for: .anthropic)
     @State private var deepseekKey = ""
-    @State private var hasDeepseekKey = CredentialStore.hasKey(for: "deepseek")
+    @State private var hasDeepseekKey = KeychainHelper.shared.hasKey(for: .deepseek)
     @State private var mistralKey = ""
-    @State private var hasMistralKey = CredentialStore.hasKey(for: "mistral")
+    @State private var hasMistralKey = KeychainHelper.shared.hasKey(for: .mistral)
     @State private var openrouterKey = ""
-    @State private var hasOpenrouterKey = CredentialStore.hasKey(for: "openrouter")
+    @State private var hasOpenrouterKey = KeychainHelper.shared.hasKey(for: .openrouter)
     @State private var message: String?
     
     private var store: LearningStore { coordinator.store }
@@ -1389,7 +1389,7 @@ struct AISettingsSubView: View {
             if !openaiKey.isEmpty {
                 Button("Sauvegarder la clé OpenAI") {
                     do {
-                        try CredentialStore.save(openaiKey, for: "openai")
+                        try KeychainHelper.shared.save(openaiKey, for: .openai)
                         store.updatePreferences { $0.openaiAPIKey = openaiKey }
                         openaiKey = ""
                         hasOpenAIKey = true
@@ -1421,7 +1421,7 @@ struct AISettingsSubView: View {
             if !anthropicKey.isEmpty {
                 Button("Sauvegarder la clé Anthropic") {
                     do {
-                        try CredentialStore.save(anthropicKey, for: "anthropic")
+                        try KeychainHelper.shared.save(anthropicKey, for: .anthropic)
                         store.updatePreferences { $0.anthropicAPIKey = anthropicKey }
                         anthropicKey = ""
                         hasAnthropicKey = true
@@ -1475,8 +1475,8 @@ struct AISettingsSubView: View {
             if !groqKey.isEmpty {
                 Button("Sauvegarder la clé Groq") {
                     do {
-                        try CredentialStore.save(groqKey, for: "groq")
-                        try CredentialStore.save(groqKey, for: "owner")
+                        try KeychainHelper.shared.save(groqKey, for: .groq)
+                        try KeychainHelper.shared.save(groqKey, for: .owner)
                         groqKey = ""
                         hasGroqKey = true
                         message = "Clé Groq enregistrée."
@@ -1506,7 +1506,7 @@ struct AISettingsSubView: View {
             if !deepseekKey.isEmpty {
                 Button("Sauvegarder la clé DeepSeek") {
                     do {
-                        try CredentialStore.save(deepseekKey, for: "deepseek")
+                        try KeychainHelper.shared.save(deepseekKey, for: .deepseek)
                         store.updatePreferences { $0.deepseekAPIKey = deepseekKey }
                         deepseekKey = ""
                         hasDeepseekKey = true
@@ -1538,7 +1538,7 @@ struct AISettingsSubView: View {
             if !mistralKey.isEmpty {
                 Button("Sauvegarder la clé Mistral") {
                     do {
-                        try CredentialStore.save(mistralKey, for: "mistral")
+                        try KeychainHelper.shared.save(mistralKey, for: .mistral)
                         store.updatePreferences { $0.mistralAPIKey = mistralKey }
                         mistralKey = ""
                         hasMistralKey = true
@@ -1571,7 +1571,7 @@ struct AISettingsSubView: View {
             if !openrouterKey.isEmpty {
                 Button("Sauvegarder la clé OpenRouter") {
                     do {
-                        try CredentialStore.save(openrouterKey, for: "openrouter")
+                        try KeychainHelper.shared.save(openrouterKey, for: .openrouter)
                         store.updatePreferences { $0.openrouterAPIKey = openrouterKey }
                         openrouterKey = ""
                         hasOpenrouterKey = true
@@ -1962,7 +1962,7 @@ struct KidsSettingsSubView: View {
                 HStack {
                     Label("Code PIN Parental", systemImage: "lock.fill")
                     Spacer()
-                    SecureField("1234", text: Binding(
+                    SecureField("Entrez le code PIN", text: Binding(
                         get: { coordinator.store.preferences.kidsParentalPIN },
                         set: { val in
                             coordinator.store.updatePreferences { $0.kidsParentalPIN = String(val.prefix(4)) }

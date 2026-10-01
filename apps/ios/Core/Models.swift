@@ -262,39 +262,66 @@ public struct Preferences: Codable, Sendable {
     // Custom endpoint & model
     public var customEndpoint: String = ""
     public var customModel: String = ""
-    public var customAPIKey: String = ""
+    public var customAPIKey: String {
+        get { KeychainHelper.shared.read(for: .custom) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .custom) }
+    }
     
     // OpenAI
     public var openaiModel: String = "gpt-4o-mini"
-    public var openaiAPIKey: String = ""
+    public var openaiAPIKey: String {
+        get { KeychainHelper.shared.read(for: .openai) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .openai) }
+    }
     
     // Anthropic
     public var anthropicModel: String = "claude-3-5-sonnet-20241022"
-    public var anthropicAPIKey: String = ""
+    public var anthropicAPIKey: String {
+        get { KeychainHelper.shared.read(for: .anthropic) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .anthropic) }
+    }
     
     // Google Gemini
-    public var googleAPIKey: String = ""
+    public var googleAPIKey: String {
+        get { KeychainHelper.shared.read(for: .google) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .google) }
+    }
     public var geminiModel: String = "gemini-2.0-flash"
     
     // Groq
     public var groqModel: String = "llama-3.3-70b-versatile"
-    public var groqAPIKey: String = ""
+    public var groqAPIKey: String {
+        get { KeychainHelper.shared.read(for: .groq) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .groq) }
+    }
     
     // DeepSeek
     public var deepseekModel: String = "deepseek-chat"
-    public var deepseekAPIKey: String = ""
+    public var deepseekAPIKey: String {
+        get { KeychainHelper.shared.read(for: .deepseek) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .deepseek) }
+    }
     
     // Mistral AI
     public var mistralModel: String = "mistral-small-latest"
-    public var mistralAPIKey: String = ""
+    public var mistralAPIKey: String {
+        get { KeychainHelper.shared.read(for: .mistral) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .mistral) }
+    }
     
     // OpenRouter
     public var openrouterModel: String = "meta-llama/llama-3.3-70b-instruct:free"
-    public var openrouterAPIKey: String = ""
+    public var openrouterAPIKey: String {
+        get { KeychainHelper.shared.read(for: .openrouter) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .openrouter) }
+    }
     
     // Hermes VPS
     public var vpsEndpoint: String = "https://miscellaneous-rays-detect-relationships.trycloudflare.com/v1/chat/completions"
-    public var vpsAPIKey: String = ""
+    public var vpsAPIKey: String {
+        get { KeychainHelper.shared.read(for: .vps) ?? "" }
+        set { try? KeychainHelper.shared.save(newValue, for: .vps) }
+    }
     public var vpsModel: String = "auto/best-coding"
     
     public var speechRate: Float = 0.50
@@ -307,7 +334,7 @@ public struct Preferences: Codable, Sendable {
     
     // Mode Enfant & Contrôle Parental
     public var isKidsModeActive: Bool = false
-    public var kidsParentalPIN: String = "1234"
+    public var kidsParentalPIN: String = ""
     public var kidsChildName: String = "Champion"
     public var kidsChildAge: Int = 6
     public var kidsTargetLanguageID: String = "de"

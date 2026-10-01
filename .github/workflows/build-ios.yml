@@ -14,8 +14,62 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Diagnostic - Check environment
+        run: |
+          echo "=== macOS Version ==="
+          sw_vers
+          echo ""
+          echo "=== Xcode Version ==="
+          xcodebuild -version
+          echo ""
+          echo "=== Swift Version ==="
+          swift --version 2>&1 | head -3
+          echo ""
+          echo "=== Available SDKs ==="
+          xcodebuild -showsdks 2>&1 | grep -i iphone
+          echo ""
+          echo "=== Project Structure ==="
+          ls -la apps/ios/
+          echo ""
+          echo "=== Entitlements File ==="
+          cat apps/ios/App/Fluence.entitlements 2>&1 || echo "MISSING"
+          echo ""
+          echo "=== Scheme (first 20 lines) ==="
+          head -20 apps/ios/Fluence.xcodeproj/xcshareddata/xcschemes/Fluence.xcscheme 2>&1 || echo "MISSING"
+
+      - name: Diagnostic - Validate project structure
+        run: |
+          echo "=== Braces check ==="
+          python3 -c "c=open('apps/ios/Fluence.xcodeproj/project.pbxproj').read(); o=c.count('{'); c2=c.count('}'); print(f'  Braces: {o} vs {c2} - {\"OK\" if o==c2 else \"MISMATCH\"}')"
+          echo ""
+          echo "=== Scheme XML check ==="
+          python3 -c "import xml.etree.ElementTree as ET; ET.parse('apps/ios/Fluence.xcodeproj/xcshareddata/xcschemes/Fluence.xcscheme'); print('  Scheme XML: OK')" 2>&1 || echo "  Scheme XML: FAIL"
+          echo ""
+          echo "=== Source files check ==="
+          for f in App/FluenceApp.swift App/Info.plist App/Fluence.entitlements Widget/FluenceWidget.swift Widget/Info.plist Config/ManagedAccounts.xcconfig Config/Signing.xcconfig Package.swift; do
+            if [ -f "apps/ios/$f" ]; then echo "  $f: EXISTS"; else echo "  $f: MISSING"; fi
+          done
+
+      - name: Diagnostic - Check key files
+        run: |
+          echo "=== App/FluenceApp.swift (first 5 lines) ==="
+          head -5 apps/ios/App/FluenceApp.swift
+          echo ""
+          echo "=== Widget/FluenceWidget.swift (first 5 lines) ==="
+          head -5 apps/ios/Widget/FluenceWidget.swift
+          echo ""
+          echo "=== Core/FSRS.swift (first 3 lines) ==="
+          head -3 apps/ios/Core/FSRS.swift
+          echo ""
+          echo "=== Core/LearningEngine.swift (first 3 lines) ==="
+          head -3 apps/ios/Core/LearningEngine.swift
+          echo ""
+          echo "=== Package.swift ==="
+          cat apps/ios/Package.swift
+
       - name: Build main app and widget
         run: |
+          set +e
           xcodebuild -project apps/ios/Fluence.xcodeproj \
             -scheme Fluence \
             -sdk iphoneos \
@@ -26,46 +80,65 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             VALIDATE_WORKSPACE=NO \
-            clean build
+            clean build 2>&1 | tee build.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "BUILD_EXIT_CODE=$BUILD_EXIT" >> build.log
+          echo $BUILD_EXIT > build_exit.txt
+
+      - name: Upload build logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-logs
+          path: |
+            build.log
+            build_exit.txt
+          retention-days: 30
+
+      - name: Upload build directory
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-dir
+          path: build/
+          retention-days: 7
 
       - name: Find and package app
+        if: success()
         run: |
           mkdir -p Payload
 
-          # Main app from build directory
           APP_PATH=$(find build -name "*.app" -type d | head -n 1)
           echo "APP_PATH=$APP_PATH"
           if [ -n "$APP_PATH" ]; then
-            cp -R "$APP_PATH" Payload/Mural.app
+            cp -R "$APP_PATH" Payload/Fluence.app
           else
             echo "ERROR: App bundle not found in build/"
             exit 1
           fi
 
-          # Copy explicit icon files directly into app bundle root
-          cp -f apps/ios/App/Assets.xcassets/AppIcon.appiconset/*.png Payload/Mural.app/ || true
-
-          # Remove any embedded PlugIns that block Free Apple Developer signing
-          rm -rf Payload/Mural.app/PlugIns
+          cp -f apps/ios/App/Assets.xcassets/AppIcon.appiconset/*.png Payload/Fluence.app/ || true
+          rm -rf Payload/Fluence.app/PlugIns
 
           zip -r -y Fluence.ipa Payload
-          cp Fluence.ipa Mural-Gemini.ipa
+          cp Fluence.ipa Fluence-v3.0.ipa
           rm -rf Payload
 
       - name: Upload IPA Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Mural-Gemini-IPA
-          path: Mural-Gemini.ipa
+          name: Fluence-v3.0-IPA
+          path: Fluence-v3.0.ipa
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
         if: always()
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v2.0.0-mural-release
-          name: "Mural Native iOS v2.0.0 (SideStore / AltStore)"
-          body: "Application iOS native Mural issue du code source officiel avec 3 zones indépendantes (Hermes VPS, Gemini, Groq)."
-          files: Mural-Gemini.ipa
+          name: "Fluence iOS v3.0 (SideStore / AltStore)"
+          body: "Application iOS native Fluence issue du code source officiel avec moteur d'apprentissage FSRS, Whisper.cpp on-device, et conformité sécurité Keychain."
+          files: Fluence-v3.0.ipa
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

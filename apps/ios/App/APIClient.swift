@@ -47,7 +47,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
     }
 
     func fetchAvailableModels() async throws -> [String] {
-        let key = CredentialStore.read(for: "groq") ?? CredentialStore.read() ?? ""
+        let key = KeychainHelper.shared.read(for: .groq) ?? KeychainHelper.shared.read(for: .owner) ?? ""
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
         let endpoint = URL(string: "https://api.groq.com/openai/v1/models")!
         var request = URLRequest(url: endpoint)
@@ -61,6 +61,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
     }
 
     func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false, model: String = "", preferences: Preferences = Preferences()) async throws -> APIResult {
+        try checkAIConsent(preferences: preferences)
         return try await respondHistory(
             instructions: instructions,
             history: [["role": "user", "content": input]],
@@ -71,7 +72,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     // MARK: - 1. Groq Cloud (Ultra-Rapide)
     func executeGroq(instructions: String, history: [[String: String]], model: String = "", prefs: Preferences = Preferences()) async throws -> APIResult {
-        let key = prefs.groqAPIKey.isEmpty ? (CredentialStore.read(for: "groq") ?? CredentialStore.read() ?? "") : prefs.groqAPIKey
+        let key = prefs.groqAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .groq) ?? KeychainHelper.shared.read(for: .owner) ?? "") : prefs.groqAPIKey
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.groq.com/openai/v1/chat/completions"
         let selectedModel = model.isEmpty ? prefs.groqModel : sanitizeModel(model)
@@ -116,7 +117,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     // MARK: - 2. OpenAI (ChatGPT / GPT-4o / o1 / o3-mini)
     func executeOpenAI(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
-        let key = prefs.openaiAPIKey.isEmpty ? (CredentialStore.read(for: "openai") ?? "") : prefs.openaiAPIKey
+        let key = prefs.openaiAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .openai) ?? "") : prefs.openaiAPIKey
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.openai.com/v1/chat/completions"
         let model = prefs.openaiModel.isEmpty ? "gpt-4o-mini" : prefs.openaiModel
@@ -136,7 +137,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     // MARK: - 3. Anthropic Claude (Claude 3.5 Sonnet / Haiku / Opus)
     func executeAnthropic(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
-        let key = prefs.anthropicAPIKey.isEmpty ? (CredentialStore.read(for: "anthropic") ?? "") : prefs.anthropicAPIKey
+        let key = prefs.anthropicAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .anthropic) ?? "") : prefs.anthropicAPIKey
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.anthropic.com/v1/messages"
         let model = prefs.anthropicModel.isEmpty ? "claude-3-5-sonnet-20241022" : prefs.anthropicModel
@@ -169,7 +170,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     // MARK: - 4. Google Gemini (2.0 Flash / Pro)
     func executeGemini(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
-        let key = prefs.googleAPIKey.isEmpty ? (CredentialStore.read(for: "google") ?? "") : prefs.googleAPIKey
+        let key = prefs.googleAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .google) ?? "") : prefs.googleAPIKey
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
         let model = prefs.geminiModel.isEmpty ? "gemini-2.0-flash" : prefs.geminiModel
@@ -188,7 +189,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     // MARK: - 5. DeepSeek (DeepSeek V3 / R1)
     func executeDeepSeek(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
-        let key = prefs.deepseekAPIKey.isEmpty ? (CredentialStore.read(for: "deepseek") ?? "") : prefs.deepseekAPIKey
+        let key = prefs.deepseekAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .deepseek) ?? "") : prefs.deepseekAPIKey
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.deepseek.com/chat/completions"
         let model = prefs.deepseekModel.isEmpty ? "deepseek-chat" : prefs.deepseekModel
@@ -207,7 +208,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     // MARK: - 6. Mistral AI (Mistral Large / Small / Codestral)
     func executeMistral(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
-        let key = prefs.mistralAPIKey.isEmpty ? (CredentialStore.read(for: "mistral") ?? "") : prefs.mistralAPIKey
+        let key = prefs.mistralAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .mistral) ?? "") : prefs.mistralAPIKey
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://api.mistral.ai/v1/chat/completions"
         let model = prefs.mistralModel.isEmpty ? "mistral-small-latest" : prefs.mistralModel
@@ -226,7 +227,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     // MARK: - 7. OpenRouter (100+ Modèles)
     func executeOpenRouter(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
-        let key = prefs.openrouterAPIKey.isEmpty ? (CredentialStore.read(for: "openrouter") ?? "") : prefs.openrouterAPIKey
+        let key = prefs.openrouterAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .openrouter) ?? "") : prefs.openrouterAPIKey
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw APIError.missingKey }
         let endpoint = "https://openrouter.ai/api/v1/chat/completions"
         let model = prefs.openrouterModel.isEmpty ? "meta-llama/llama-3.3-70b-instruct:free" : prefs.openrouterModel
@@ -247,7 +248,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
     func executeCustom(instructions: String, history: [[String: String]], prefs: Preferences) async throws -> APIResult {
         let endpoint = prefs.customEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !endpoint.isEmpty else { throw APIError.missingKey }
-        let key = prefs.customAPIKey.isEmpty ? (CredentialStore.read(for: "custom") ?? "") : prefs.customAPIKey
+        let key = prefs.customAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .custom) ?? "") : prefs.customAPIKey
         let model = prefs.customModel.isEmpty ? "llama3" : prefs.customModel
         var messages: [[String: Any]] = [["role": "system", "content": instructions]]
         for msg in history {
@@ -283,6 +284,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
 
     // MARK: - Smart Failover Dispatcher
     func respondHistory(instructions: String, history: [[String: String]], model: String = "", preferences: Preferences = Preferences()) async throws -> APIResult {
+        try checkAIConsent(preferences: preferences)
         let mode = preferences.providerID.lowercased()
         
         let allProviders = ["groq", "openai", "anthropic", "google", "deepseek", "mistral", "openrouter", "hermes_vps", "custom"]
@@ -328,9 +330,16 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
     }
 
     func transcribe(audioData: Data, language: String = "en", preferences: Preferences = Preferences()) async throws -> String {
-        let groqKey = preferences.groqAPIKey.isEmpty ? (CredentialStore.read(for: "groq") ?? CredentialStore.read() ?? "") : preferences.groqAPIKey
-        let openaiKey = preferences.openaiAPIKey.isEmpty ? (CredentialStore.read(for: "openai") ?? "") : preferences.openaiAPIKey
-        let geminiKey = preferences.googleAPIKey.isEmpty ? (CredentialStore.read(for: "google") ?? "") : preferences.googleAPIKey
+        try checkAIConsent(preferences: preferences)
+
+        // ZDR / COPPA-RGPD-K : aucune voix d'enfant ne quitte l'appareil
+        if preferences.isKidsModeActive {
+            throw APIError.kidsModeAudioBlocked
+        }
+
+        let groqKey = preferences.groqAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .groq) ?? KeychainHelper.shared.read(for: .owner) ?? "") : preferences.groqAPIKey
+        let openaiKey = preferences.openaiAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .openai) ?? "") : preferences.openaiAPIKey
+        let geminiKey = preferences.googleAPIKey.isEmpty ? (KeychainHelper.shared.read(for: .google) ?? "") : preferences.googleAPIKey
         
         // 1. Try Groq Whisper Turbo
         if !groqKey.isEmpty {
@@ -472,6 +481,12 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private func checkAIConsent(preferences: Preferences) throws {
+        guard preferences.aiConsentVersion == AIProcessingConsent.version else {
+            throw APIError.consentRequired
+        }
+    }
+
     static func object(_ fields: [String: Any]) -> [String: Any] { ["type": "OBJECT", "properties": fields, "required": fields.keys.sorted()] }
     static let string: [String: Any] = ["type": "STRING"]
     static func assessmentSchema(language: LanguageModule) -> [String: Any] { object([
@@ -484,7 +499,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         ])]
     ]) }
     enum APIError: LocalizedError {
-        case missingKey, invalidResponse, incomplete, refused, http(Int)
+        case missingKey, invalidResponse, incomplete, refused, http(Int), consentRequired, kidsModeAudioBlocked
         var errorDescription: String? {
             switch self {
             case .missingKey: "Veuillez entrer votre clé API dans les Réglages pour le fournisseur sélectionné."
@@ -493,7 +508,9 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             case .http(401), .http(403): "Votre clé API ou endpoint n'a pas été accepté (Erreur HTTP 401/403)."
             case .http(404): "Le modèle sélectionné n'a pas été trouvé chez le fournisseur (Erreur HTTP 404)."
             case .http(429): "La limite de requêtes (Rate Limit) de l'API a été atteinte. Réessayez dans un instant."
-            case .http(let status): "Le service d'IA a rencontré une erreur (HTTP \(status))."
+            case .http(let status): "Le service d'IA a rencontré une erreur (HTTP \\(status))."
+            case .consentRequired: "Vous devez accepter le consentement IA avant d'utiliser les fonctionnalités de traitement par IA."
+            case .kidsModeAudioBlocked: "Mode Enfant actif : la transcription vocale cloud est désactivée pour protéger la voix de l'enfant (ZDR/COPPA). Utilisez l'instructeur d'accent sur l'appareil."
             }
         }
     }

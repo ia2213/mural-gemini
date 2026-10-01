@@ -129,7 +129,7 @@ struct StudyHubView: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
         }
-        .background(FluenceColor.cream)
+        .background(FluenceColor.background)
         .navigationTitle("Professeur & Assimil")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -260,7 +260,7 @@ struct StudyHubView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18))
         .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
     }
 
@@ -340,7 +340,7 @@ struct StudyHubView: View {
             .buttonStyle(.plain)
         }
         .padding(16)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18))
         .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
     }
     
@@ -405,7 +405,7 @@ struct StudyHubView: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 16))
                 .shadow(color: Color.black.opacity(0.03), radius: 6, y: 2)
             }
             .buttonStyle(.plain)
@@ -433,7 +433,7 @@ struct StudyHubView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.03), radius: 6, y: 2)
     }
     
@@ -522,7 +522,7 @@ struct StudyHubView: View {
                                 }
                             }
                             .padding(14)
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                            .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 14))
                             .shadow(color: Color.black.opacity(0.02), radius: 4, y: 1)
                         }
                         .buttonStyle(.plain)
@@ -585,7 +585,7 @@ struct StudyHubView: View {
                                 .foregroundStyle(FluenceColor.secondary)
                         }
                         .padding(14)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 14))
                         .shadow(color: Color.black.opacity(0.02), radius: 4, y: 1)
                     }
                     .buttonStyle(.plain)
@@ -683,7 +683,7 @@ struct StudyHubView: View {
                 .foregroundStyle(FluenceColor.secondary)
         }
         .padding(14)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 14))
         .shadow(color: Color.black.opacity(0.02), radius: 4, y: 1)
     }
     
@@ -715,7 +715,7 @@ struct StudyHubView: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.6), in: RoundedRectangle(cornerRadius: 14))
+        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 14))
     }
 }
 
@@ -786,7 +786,7 @@ struct FolderCourseSessionView: View {
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 16))
                         .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
                         
                         // Show/hide document content (read inline)
@@ -811,7 +811,7 @@ struct FolderCourseSessionView: View {
                                 .foregroundStyle(Color.blue)
                             }
                             .padding(12)
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                            .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 12))
                         }
                     }
                     .padding(20)
@@ -820,7 +820,7 @@ struct FolderCourseSessionView: View {
                 // Input bar
                 inputBar
             }
-            .background(FluenceColor.cream)
+            .background(FluenceColor.background)
             .navigationTitle("Cours : \(session.folderName)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -866,14 +866,14 @@ struct FolderCourseSessionView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
-        .background(Color.white)
+        .background(FluenceColor.surface)
     }
     
     private var inputBar: some View {
         HStack(spacing: 12) {
             TextField("Répondre au professeur…", text: $userReply)
                 .padding(12)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20))
             
             Button {
                 sendReply()
@@ -885,7 +885,7 @@ struct FolderCourseSessionView: View {
             .disabled(userReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
         }
         .padding(12)
-        .background(FluenceColor.cream)
+        .background(FluenceColor.background)
     }
     
     private func startFolderCourse() {
@@ -1034,7 +1034,7 @@ struct AssimilScannerView: View {
                 }
                 .padding(20)
             }
-            .background(FluenceColor.cream)
+            .background(FluenceColor.background)
             .navigationTitle("Scanner Assimil (Multi-Pages)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1114,14 +1114,14 @@ struct AssimilScannerView: View {
                         .foregroundStyle(FluenceColor.ink)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 14))
                 }
             }
             .padding(.top, 16)
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18))
     }
 
     private var multiImagePreviewSection: some View {
@@ -1164,7 +1164,7 @@ struct AssimilScannerView: View {
                         .padding(6)
                     }
                     .padding(8)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                    .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 14))
                     .shadow(color: Color.black.opacity(0.04), radius: 4, y: 2)
                 }
             }
@@ -1227,7 +1227,7 @@ struct AssimilScannerView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18))
     }
 
     private func lessonPreviewSection(_ lesson: AssimilLesson) -> some View {
@@ -1289,7 +1289,7 @@ struct AssimilScannerView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18))
     }
 
     private func processMultipleImages() {
@@ -1363,7 +1363,7 @@ struct DocumentImportView: View {
                 }
                 .padding(20)
             }
-            .background(FluenceColor.cream)
+            .background(FluenceColor.background)
             .navigationTitle("Importer un Fichier")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1428,7 +1428,7 @@ struct DocumentImportView: View {
                 }
             }
             .padding(22)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+            .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18))
 
             // Paste text option
             VStack(alignment: .leading, spacing: 12) {
@@ -1458,7 +1458,7 @@ struct DocumentImportView: View {
                 .disabled(pastedContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(18)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+            .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18))
 
             if isProcessing {
                 VStack(spacing: 8) {
@@ -1520,7 +1520,7 @@ struct DocumentImportView: View {
                     }
                 }
                 .padding(14)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 14))
             }
         }
     }
@@ -1646,7 +1646,7 @@ struct AssimilTeacherSessionView: View {
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 16))
                         .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
 
                         if currentStep == "dialogue" {
@@ -1662,7 +1662,7 @@ struct AssimilTeacherSessionView: View {
 
                 bottomControlBar
             }
-            .background(FluenceColor.cream)
+            .background(FluenceColor.background)
             .navigationTitle(lesson.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1688,7 +1688,7 @@ struct AssimilTeacherSessionView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color.white)
+        .background(FluenceColor.surface)
     }
 
     private func stepButton(id: String, title: String, icon: String) -> some View {
@@ -1734,7 +1734,7 @@ struct AssimilTeacherSessionView: View {
                             .foregroundStyle(FluenceColor.orange)
                     }
                     .padding(10)
-                    .background(selectedLineIndex == idx ? Color(red: 1.0, green: 0.95, blue: 0.9) : Color.white, in: RoundedRectangle(cornerRadius: 12))
+                    .background(selectedLineIndex == idx ? FluenceColor.accent.opacity(0.15) : FluenceColor.surface, in: RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
             }
@@ -1756,7 +1756,7 @@ struct AssimilTeacherSessionView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 12))
             }
         }
     }
@@ -1786,7 +1786,7 @@ struct AssimilTeacherSessionView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 12))
             }
         }
     }
@@ -1796,7 +1796,7 @@ struct AssimilTeacherSessionView: View {
             HStack(spacing: 12) {
                 TextField("Répondre au professeur...", text: $userReply)
                     .padding(12)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+                    .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20))
                 
                 Button {
                     sendUserReply()
@@ -1809,7 +1809,7 @@ struct AssimilTeacherSessionView: View {
             }
         }
         .padding(12)
-        .background(FluenceColor.cream)
+        .background(FluenceColor.background)
     }
 
     private func startStep(_ step: String) {
@@ -1942,7 +1942,7 @@ struct DocumentTeacherSessionView: View {
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 16))
                         .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
                         
                         // Inline document reader
@@ -1965,7 +1965,7 @@ struct DocumentTeacherSessionView: View {
                             .foregroundStyle(Color.blue)
                         }
                         .padding(12)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 12))
 
                         // Quick Quiz Cards
                         if !document.quizQuestions.isEmpty {
@@ -1982,7 +1982,7 @@ struct DocumentTeacherSessionView: View {
                                             .foregroundStyle(FluenceColor.ink)
                                             .padding(10)
                                             .frame(maxWidth: .infinity, alignment: .leading)
-                                            .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
+                                            .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 10))
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -1996,7 +1996,7 @@ struct DocumentTeacherSessionView: View {
                 HStack(spacing: 12) {
                     TextField("Poser une question sur le document...", text: $userReply)
                         .padding(12)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20))
                     
                     Button {
                         sendUserReply()
@@ -2008,9 +2008,9 @@ struct DocumentTeacherSessionView: View {
                     .disabled(userReply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
                 }
                 .padding(12)
-                .background(FluenceColor.cream)
+                .background(FluenceColor.background)
             }
-            .background(FluenceColor.cream)
+            .background(FluenceColor.background)
             .navigationTitle(document.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -2178,7 +2178,7 @@ struct FSRSVoiceReviewSessionView: View {
                         }
                         .padding(18)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 18))
+                        .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 18))
                         .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
 
                         // Quick action rating badges (auto or manual touch)
@@ -2209,7 +2209,7 @@ struct FSRSVoiceReviewSessionView: View {
                     HStack(spacing: 12) {
                         TextField("Parler ou taper votre réponse...", text: $userSpokenReply)
                             .padding(12)
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+                            .background(FluenceColor.surface, in: RoundedRectangle(cornerRadius: 20))
                         
                         Button {
                             sendOralReply()
@@ -2239,9 +2239,9 @@ struct FSRSVoiceReviewSessionView: View {
                     }
                 }
                 .padding(14)
-                .background(FluenceColor.cream)
+                .background(FluenceColor.background)
             }
-            .background(FluenceColor.cream)
+            .background(FluenceColor.background)
             .navigationTitle("Révision Vocale FSRS")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
