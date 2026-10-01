@@ -133,7 +133,7 @@ jobs:
 
       - name: Create GitHub Release
         if: always()
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v2.0.0-mural-release
           name: "Fluence iOS v3.0 (SideStore / AltStore)"
