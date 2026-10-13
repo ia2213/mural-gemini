@@ -86,7 +86,7 @@ jobs:
           echo $BUILD_EXIT > build_exit.txt
 
       - name: Upload build logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: build-logs
@@ -96,7 +96,7 @@ jobs:
           retention-days: 30
 
       - name: Upload build directory
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: build-dir
@@ -133,7 +133,7 @@ jobs:
 
       - name: Upload IPA Artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Fluence-v3.0-IPA
           path: Fluence-v3.0.ipa
