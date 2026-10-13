@@ -108,25 +108,31 @@ jobs:
         run: |
           mkdir -p Payload
 
-          # Find the .app bundle (may be in derivedData Build/Products subdirectory)
-          APP_PATH=$(find build -name "Fluence.app" -type d 2>/dev/null | head -n 1)
+          # Find the .app bundle: search for any .app in build directory
+          APP_PATH=$(find build -name "*.app" -type d 2>/dev/null | head -n 1)
           echo "APP_PATH=$APP_PATH"
 
           if [ -n "$APP_PATH" ]; then
             cp -R "$APP_PATH" Payload/Fluence.app
-            echo "Found app at: $APP_PATH"
+            echo "Found app (renamed to Fluence.app): $APP_PATH"
           else
             echo "ERROR: App bundle not found in build/"
             echo "=== Build directory contents ==="
-            find build -name "*.app" -type d 2>/dev/null
-            echo "=== All files in build ==="
-            find build -maxdepth 4 -type d 2>/dev/null | head -20
+            find build -name "*.app" -type d 2>/dev/null | sed 's/^/  found: /'
+            echo "=== All builds at any depth ==="
+            find build -type d -name "*" 2>/dev/null | head -30 | sed 's/^/  /'
+            echo "=== build/Build contents ==="
+            find build/Build -maxdepth 3 -type d 2>/dev/null | sed 's/^/  /' | head -20
             exit 1
           fi
 
+          # Copy app icons
           cp -f apps/ios/App/Assets.xcassets/AppIcon.appiconset/*.png Payload/Fluence.app/ || true
+
+          # Remove any PlugIns directory (not needed for IPA)
           rm -rf Payload/Fluence.app/PlugIns
 
+          # Create IPA
           zip -r -y Fluence.ipa Payload
           cp Fluence.ipa Fluence-v3.0.ipa
           rm -rf Payload
