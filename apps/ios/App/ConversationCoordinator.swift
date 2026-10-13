@@ -119,6 +119,13 @@ import FluenceCore
     }
     private var hasConfiguredProvider: Bool {
         if KeychainHelper.shared.hasKey(for: .owner) { return true }
+        if KeychainHelper.shared.hasKey(for: .groq) { return true }
+        if KeychainHelper.shared.hasKey(for: .openai) { return true }
+        if KeychainHelper.shared.hasKey(for: .anthropic) { return true }
+        if KeychainHelper.shared.hasKey(for: .google) { return true }
+        if KeychainHelper.shared.hasKey(for: .deepseek) { return true }
+        if KeychainHelper.shared.hasKey(for: .mistral) { return true }
+        if KeychainHelper.shared.hasKey(for: .openrouter) { return true }
         if !store.preferences.googleAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         if !store.preferences.vpsEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
         return false
